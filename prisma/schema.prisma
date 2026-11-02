@@ -1,0 +1,119 @@
+// RePal data model — see docs/TECH_PRD.md §6.
+// Deterministic money logic reads/writes these rows; the LLM never does.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooled (PgBouncer) — app runtime
+  directUrl = env("DIRECT_URL") // direct — migrations / introspection
+}
+
+model User {
+  id            String    @id
+  paypalPayerId String?
+  email         String?
+  createdAt     DateTime  @default(now())
+  mandates      Mandate[]
+  rewards       Reward[]
+  receipts      Receipt[]
+}
+
+model Mandate {
+  id                   String   @id @default(cuid())
+  userId               String
+  capUsd               Float
+  budgetUsd            Float
+  approvalThresholdUsd Float
+  allowCategories      String[]
+  allowMerchants       String[]
+  expiresAt            DateTime
+  paypalVaultTokenId   String?
+  signatureHash        String
+  status               String   @default("active")
+  user                 User     @relation(fields: [userId], references: [id])
+}
+
+model Reward {
+  id              String   @id @default(cuid())
+  userId          String
+  source          String // 'gmail' | 'paypal' | 'card' | 'loyalty' | 'channel3' | 'seed'
+  type            String
+  valueUsd        Float
+  termsRaw        String
+  rules           Json
+  status          String
+  parseConfidence Float
+  expiresAt       DateTime
+  lastSyncedAt    DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+model Offer {
+  id       String   @id
+  query    String
+  title    String
+  priceUsd Float
+  retailer String
+  buyUrl   String
+  cachedAt DateTime @default(now())
+}
+
+model AgentRun {
+  id        String   @id @default(cuid())
+  userId    String
+  status    String
+  step      String
+  planHash  String?
+  createdAt DateTime @default(now())
+}
+
+model Plan {
+  id         String @id @default(cuid())
+  runId      String
+  name       String
+  useRewards Json
+  savedUsd   Float
+  cashUsd    Float
+  rejected   Json
+}
+
+model Receipt {
+  id              String   @id @default(cuid())
+  userId          String
+  runId           String
+  item            String
+  merchant        String
+  category        String
+  priceUsd        Float
+  savedUsd        Float
+  cashUsd         Float
+  paypalOrderId   String
+  paypalCaptureId String
+  payoutBatchId   String?
+  fxInrPerUsd     Float?
+  sha256          String
+  signature       String
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+model ToolTrace {
+  id        String   @id @default(cuid())
+  runId     String
+  tool      String
+  kind      String
+  latencyMs Int
+  payload   Json
+  at        DateTime @default(now())
+}
+
+model WebhookEvent {
+  id       String   @id
+  type     String
+  verified Boolean
+  raw      Json
+  at       DateTime @default(now())
+}

@@ -1,0 +1,14 @@
+# Normalize line endings across the team (Windows + macOS + Linux + CI).
+* text=auto eol=lf
+
+# Binary assets — never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Generated / lock files
+package-lock.json -diff

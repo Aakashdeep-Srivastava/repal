@@ -1,0 +1,47 @@
+# RePal code ownership — a PR touching these paths auto-requests the owner.
+# Map GitHub usernames once invites are accepted. See docs/TEAM.md.
+#
+#   Aakashdeep Srivastava  @Aakashdeep-Srivastava
+#   Rachandeep Kaur        @rachandeepkaur
+#   Aviral Srivastava      @aviralsrivastava851
+#   Vishalika              @vishalika
+
+# ─── Lead / PayPal rails / deploy — Aakash ───────────────────────────
+*                           @Aakashdeep-Srivastava
+/lib/paypal/                @Aakashdeep-Srivastava
+/agents/orchestrator.ts     @Aakashdeep-Srivastava
+/app/api/pay/               @Aakashdeep-Srivastava
+/app/api/webhooks/          @Aakashdeep-Srivastava
+/app/api/auth/              @Aakashdeep-Srivastava
+/render.yaml                @Aakashdeep-Srivastava
+/.github/                   @Aakashdeep-Srivastava
+
+# ─── Backend domain services — Rachandeep Kaur ───────────────────────
+/lib/optimizer/             @rachandeepkaur
+/lib/policy/                @rachandeepkaur
+/lib/receipts/              @rachandeepkaur
+/lib/tnc/                   @rachandeepkaur
+/lib/fx.ts                  @rachandeepkaur
+/lib/types.ts               @rachandeepkaur
+/app/api/runs/              @rachandeepkaur
+/app/api/mandates/          @rachandeepkaur
+/app/api/wallet/            @rachandeepkaur
+/app/api/offers/            @rachandeepkaur
+/app/api/receipts/          @rachandeepkaur
+/evals/                     @rachandeepkaur
+
+# ─── Phase 2 (once the spine runs): AI agents layer — Aviral or Vishalika ──
+# /agents/tools/            @aviralsrivastava851
+# /agents/prompts/          @aviralsrivastava851
+# /workers/                 @aviralsrivastava851
+# /lib/channel3.ts          @aviralsrivastava851
+
+# ─── Phase 2 (once the spine runs): Frontend & design — Vishalika or Aviral ──
+# /components/               @vishalika
+# /app/globals.css           @vishalika
+# /app/agent/                @vishalika
+# /app/wallet/               @vishalika
+# /app/insights/             @vishalika
+# /app/rescue/               @vishalika
+# /app/profile/              @vishalika
+# /app/verify/               @vishalika

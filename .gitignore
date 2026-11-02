@@ -1,0 +1,48 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# env
+.env
+.env*.local
+.env.production
+
+# prisma
+/prisma/*.db
+/prisma/*.db-journal
+
+# misc
+.DS_Store
+*.pem
+Thumbs.db
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# testing
+/coverage
+
+# keys (never commit signing keys)
+*.key
+receipt-signing.key
