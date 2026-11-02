@@ -1,0 +1,33 @@
+{
+  "$comment": "Golden T&C eval — 20 free-text T&Cs with expected typed rules. Run in CI by the Terms agent (A2) + grounding guard. OWNER: Rachandeep Kaur. Seeded with 2 examples; fill to 20.",
+  "cases": [
+    {
+      "id": "amex-dining-10",
+      "termsRaw": "Spend $50 or more at participating restaurants and get $10 back. Offer valid through Dec 31, 2026. One-time use. Cannot be combined with other dining offers.",
+      "expected": {
+        "parseConfidence": 1.0,
+        "rules": [
+          { "predicate": "min_spend_usd", "value": 50, "quotedClause": "Spend $50 or more" },
+          { "predicate": "flat_off_usd", "value": 10, "quotedClause": "get $10 back" },
+          { "predicate": "category_allow", "value": ["dining"], "quotedClause": "at participating restaurants" },
+          { "predicate": "expires_on", "value": "2026-12-31", "quotedClause": "valid through Dec 31, 2026" },
+          { "predicate": "one_time_use", "value": "true", "quotedClause": "One-time use" },
+          { "predicate": "not_combinable_group", "value": "dining", "quotedClause": "Cannot be combined with other dining offers" }
+        ]
+      }
+    },
+    {
+      "id": "bestbuy-giftcard-40",
+      "termsRaw": "$40 Best Buy gift certificate. Redeemable on electronics only. Expires Jan 15, 2027.",
+      "expected": {
+        "parseConfidence": 1.0,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 40, "quotedClause": "$40 Best Buy gift certificate" },
+          { "predicate": "merchant_allow", "value": ["Best Buy"], "quotedClause": "Best Buy gift certificate" },
+          { "predicate": "category_allow", "value": ["electronics"], "quotedClause": "Redeemable on electronics only" },
+          { "predicate": "expires_on", "value": "2027-01-15", "quotedClause": "Expires Jan 15, 2027" }
+        ]
+      }
+    }
+  ]
+}

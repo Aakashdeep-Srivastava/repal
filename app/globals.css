@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/*
+ * RePal design tokens (OKLCH). Expand per PRD §12.
+ * Keep this file as the single source of truth for color/radius/space.
+ */
+@theme {
+  --color-bg: oklch(0.99 0 0);
+  --color-fg: oklch(0.2 0.02 265);
+  --color-brand: oklch(0.55 0.2 265);
+  --color-muted: oklch(0.6 0.01 265);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: oklch(0.18 0.01 265);
+    --color-fg: oklch(0.96 0 0);
+  }
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+}
+
+/* tabular figures for all money columns (PRD §13.6) */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}

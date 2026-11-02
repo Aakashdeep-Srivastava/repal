@@ -1,0 +1,51 @@
+# RePal — one repo → one Blueprint → web + worker + cron + Postgres.
+# See docs/TECH_PRD.md §14. Use PAID web + PAID Postgres via Render credits so
+# the DB survives to Dec 15 judging (free Postgres expires 30 days after creation).
+services:
+  - type: web
+    name: repal-web
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: PAYPAL_ENVIRONMENT
+        value: SANDBOX
+      - key: DEMO_MODE
+        value: "true"
+      - key: FX_INR_PER_USD
+        value: "84"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: repal-db
+          property: connectionString
+      # PAYPAL_CLIENT_ID / SECRET / WEBHOOK_ID / OIDC_REDIRECT,
+      # CHANNEL3_API_KEY, ANTHROPIC_API_KEY, RECEIPT_SIGNING_KEY → set in dashboard.
+
+  - type: worker
+    name: repal-worker
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npx prisma generate
+    startCommand: npm run worker:ingest
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: repal-db
+          property: connectionString
+
+  - type: cron
+    name: repal-expiry
+    runtime: node
+    schedule: "0 2 * * *"
+    buildCommand: npm ci && npx prisma generate
+    startCommand: npm run worker:expiry
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: repal-db
+          property: connectionString
+
+databases:
+  - name: repal-db
+    plan: basic-256mb
