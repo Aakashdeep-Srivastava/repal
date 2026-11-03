@@ -1,20 +1,28 @@
 /**
- * Nightly expiry scan (Render cron).
+ * Nightly expiry scan (Render cron) + DB keep-alive.
  *
  * Finds expiring reward value and books rescue events (Bryntum) / flags
- * Payouts liberation candidates. Also doubles as a DB keep-alive ping.
+ * Payouts liberation candidates. Also pings the DB so Neon stays healthy.
  * See docs/TECH_PRD.md §14.
  *
- * OWNER: AI agents layer (pending Aviral/Vishalika confirmation).
+ * OWNER: AI agents layer (rescue) + keep-alive (infra).
  */
-export {};
+import { prisma } from "@/lib/db";
 
 async function main() {
-  // TODO: query expiring rewards → book_rescue; ping DB to keep warm.
-  console.log("[expiry] cron stub — not yet implemented");
+  // Keep-alive: a trivial query keeps the Neon compute reachable and proves health.
+  await prisma.$queryRaw`SELECT 1`;
+  console.log("[expiry] db keep-alive ok");
+
+  // TODO: query expiring rewards → book_rescue; flag payout candidates.
+  console.log("[expiry] cron stub — rescue booking not yet implemented");
 }
 
-main().catch((err) => {
-  console.error("[expiry] fatal", err);
-  process.exit(1);
-});
+main()
+  .catch((err) => {
+    console.error("[expiry] fatal", err);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
