@@ -37,7 +37,8 @@ function loadEnv(file: string) {
   }
 }
 
-loadEnv(".env.local");
+loadEnv(".env"); // shared config
+loadEnv(".env.local"); // personal overrides (loaded after, but loader keeps first-set)
 
 async function main() {
   const { getAccessToken, PAYPAL_BASE } = await import("../lib/paypal/client");

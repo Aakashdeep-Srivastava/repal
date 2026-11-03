@@ -28,7 +28,8 @@ blueprint. Feature build in progress per `docs/TECH_PRD.md` §10.
 ## Quick start
 
 ```bash
-cp .env.example .env.local        # fill sandbox keys (see .env.example)
+# get the shared .env from the team channel (see docs/ENV.md), then:
+cp .env.example .env.local        # personal model key only
 npm install
 npm run prisma:generate
 npm run dev                       # http://localhost:3000

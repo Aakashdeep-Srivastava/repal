@@ -3,8 +3,9 @@
 How to connect RePal to the PayPal **sandbox** and put your credentials in
 safely. Sandbox only — no real money (`DEMO_MODE=true`).
 
-> 🔒 **Secrets go in `.env.local` only.** That file is git-ignored. Never commit
-> it, never paste these values into chat, PRs, or screenshots.
+> 🔒 **PayPal creds are SHARED team config → they go in `.env`** (git-ignored),
+> which is distributed via the private team channel. Never commit it, never
+> paste these values into chat, PRs, or screenshots. See [`docs/ENV.md`](ENV.md).
 
 ---
 
@@ -12,16 +13,12 @@ safely. Sandbox only — no real money (`DEMO_MODE=true`).
 
 ```
 .env.example   # template, committed — no real values
-.env.local     # YOUR secrets, git-ignored — fill this one
+.env           # SHARED secrets (DB, PayPal, Channel3, receipt key) — git-ignored
+.env.local     # PERSONAL (your model key) — git-ignored
 ```
 
-If you don't have `.env.local` yet:
-
-```bash
-cp .env.example .env.local
-```
-
-Then fill the values below.
+PayPal `CLIENT_ID` / `CLIENT_SECRET` go in **`.env`** (shared). If you're the one
+setting up the sandbox app, fill them here and share `.env` with the team.
 
 ---
 
@@ -95,16 +92,18 @@ Needed once we deploy (events verify our pay-in / payout state).
   node -e "const {generateKeyPairSync}=require('crypto');const {privateKey}=generateKeyPairSync('ed25519');console.log(privateKey.export({type:'pkcs8',format:'der'}).toString('base64'))"
   ```
 
-  Paste the output into `RECEIPT_SIGNING_KEY`. (Coordinate with Rachna — the
-  receipt signer in `lib/receipts/` reads this.)
+  Put the output in `RECEIPT_SIGNING_KEY` in **`.env`** (shared — it must match
+  across the whole team + deploy or receipts won't verify). The receipt signer
+  in `lib/receipts/` reads it. *(Already generated and in the shared `.env`.)*
 
-- **Channel3 / model keys** — `CHANNEL3_API_KEY`, `ANTHROPIC_API_KEY` (or
-  `OPENAI_API_KEY`). Get from each provider's dashboard.
+- **Channel3** — `CHANNEL3_API_KEY` in **`.env`** (shared). Model key
+  `ANTHROPIC_API_KEY` in **`.env.local`** (personal).
 
 ---
 
 ## Sharing with the team
 
-Share sandbox credentials over our **private team channel**, never in the repo.
-Each person keeps their own `.env.local`. For the shared deploy, the same keys
-go into Render's env group (see `docs/TECH_PRD.md` §14), not into git.
+Share the `.env` file over our **private team channel**, never in the repo.
+Each person keeps their own `.env.local` for personal keys. For the shared
+deploy, the same values go into Render's env group (see `docs/TECH_PRD.md` §14),
+not into git. Full workflow: [`docs/ENV.md`](ENV.md).
