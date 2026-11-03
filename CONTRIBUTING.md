@@ -49,8 +49,8 @@ rules keep us fast **and** professional. Read once; follow always.
 
 ## 6. Environment & secrets
 
-- Copy `.env.example` → `.env.local` and fill your own sandbox keys.
-- Share sandbox credentials via our private team channel, **never** in the repo or PRs.
+- Env has two files: **`.env`** (SHARED — DB, PayPal, Channel3, receipt key; get it from the team channel) and **`.env.local`** (PERSONAL — your own model key). Full workflow in [`docs/ENV.md`](docs/ENV.md).
+- Share the `.env` file via our private team channel, **never** in the repo or PRs.
 - PayPal is **sandbox only**. No real money, ever (`DEMO_MODE=true`).
 
 ## 7. Dependencies
@@ -69,7 +69,8 @@ rules keep us fast **and** professional. Read once; follow always.
 ### Quick start
 
 ```bash
-cp .env.example .env.local        # fill your sandbox keys
+# get the shared .env from the team channel (see docs/ENV.md), then:
+cp .env.example .env.local        # keep only ANTHROPIC_API_KEY, fill it
 npm install
 npm run prisma:generate
 npm run dev                       # http://localhost:3000
