@@ -3,44 +3,40 @@ import { z } from "zod";
 import { claude, assertBedrockConfigured } from "@/lib/ai/bedrock";
 import { prisma } from "@/lib/db";
 import { renderIntent } from "@/agents/intent";
+import { explainPlan } from "@/agents/explainer";
+import { planPurchase } from "@/lib/pipeline";
+import type { Plan } from "@/lib/types";
 
 /**
  * A0 Orchestrator — AI SDK `ToolLoopAgent` on the Bedrock Claude model.
  *
- * Parses intent and drives the deterministic tool chain:
- *   render_intent → scan_wallet → parse_terms → find_offers → optimize →
- *   explain → check_policy → [request_approval] → pay → payout → issue_receipt
+ * Drives the flow at a HIGH level:
+ *   render_intent → plan_purchase (deterministic: wallet+offers+optimize+policy)
+ *   → explain_plan → [ask approval above threshold] → (pay/payout/receipt: A7/A8)
  *
- * The orchestrator NEVER computes money — it only routes to deterministic
- * lib/ functions and reads / plans / explains / asks. See docs/TECH_PRD.md §3.
+ * The orchestrator NEVER computes money — `plan_purchase` runs the deterministic
+ * `lib/` pipeline server-side and hands back ready numbers + a policy decision.
+ * The LLM only routes, reads, explains, and asks. See docs/TECH_PRD.md §3.
  *
- * OWNER: Aakash (glue) with the AI agents layer owner for the remaining tools.
+ * OWNER: Aakash (glue); deterministic cores in lib/ (Rachna); PayPal tools (A7).
  */
 
 const SYSTEM = [
   "You are RePal's shopping orchestrator. You help a user buy the cheapest option",
-  "AFTER their rewards, then settle via PayPal. You never calculate prices,",
-  "discounts, budgets, or totals yourself — those come only from deterministic",
-  "tools. Your job is to route: call tools in a sensible order, read their",
-  "results, explain plainly, and ask the user to approve anything above their",
-  "mandate's approval threshold before paying. If a tool reports it is not yet",
-  "implemented, tell the user that step isn't available yet rather than guessing.",
+  "AFTER their rewards, then settle via PayPal. You NEVER calculate prices,",
+  "discounts, budgets, or totals yourself — those come only from the tools.",
+  "Flow: call render_intent on the user's request, then plan_purchase with the",
+  "category and any budget, then explain the top plan with explain_plan. Each",
+  "plan carries a policy decision: if it is 'ask', ask the user to approve before",
+  "any payment; if 'deny', tell them why (use the reasons) and do not proceed.",
+  "Pay/payout tools are not available yet — if asked to pay, say settlement is",
+  "coming once the PayPal step is wired. Never invent a number not returned by a tool.",
 ].join(" ");
 
-/**
- * The live tool registry. render_intent (A1) and scan_wallet are wired now;
- * the rest are registered as the backbone fills in — each maps to a lib/ unit:
- *   parse_terms   → lib/tnc (A2, Rachna)       find_offers → lib/channel3 (A3)
- *   optimize      → lib/optimizer (A4, Rachna)  explain     → A5 (post-check vs optimizer JSON)
- *   check_policy  → lib/policy (A6, Rachna)      pay/payout  → lib/paypal (A7, Aakash)
- *   issue_receipt → lib/receipts (A8, Rachna)
- * They're added here as their deterministic cores land so the loop lights up
- * incrementally without reworking this glue.
- */
 export const orchestrator = new ToolLoopAgent({
   model: claude,
   instructions: SYSTEM,
-  stopWhen: stepCountIs(12),
+  stopWhen: stepCountIs(10),
   tools: {
     render_intent: tool({
       description:
@@ -50,6 +46,7 @@ export const orchestrator = new ToolLoopAgent({
       }),
       execute: async ({ rawText }) => renderIntent(rawText),
     }),
+
     scan_wallet: tool({
       description:
         "List the user's auto-imported reward wallet (gift cards, cashback, points), each with its free-text terms.",
@@ -63,6 +60,41 @@ export const orchestrator = new ToolLoopAgent({
         });
         return { count: rewards.length, rewards };
       },
+    }),
+
+    plan_purchase: tool({
+      description:
+        "Run the deterministic plan: load the wallet + mandate, fetch offers, and compute up to 3 ranked plans (cheapest cash AFTER rewards) — each with a policy decision (allow/ask/deny) and the rewards it applied. Also returns why some rewards were rejected.",
+      inputSchema: z.object({
+        userId: z.string().default("demo-user"),
+        category: z.string().describe('What to buy, e.g. "headphones".'),
+        maxPriceUsd: z.number().positive().optional().describe("Budget ceiling in USD, if any."),
+      }),
+      execute: async ({ userId, category, maxPriceUsd }) =>
+        planPurchase({ userId, category, maxPriceUsd }),
+    }),
+
+    explain_plan: tool({
+      description:
+        "Explain a chosen plan to the user in one or two plain sentences, using only the numbers already in the plan.",
+      inputSchema: z.object({
+        plan: z
+          .object({
+            name: z.string(),
+            offer: z.object({
+              id: z.string(),
+              title: z.string(),
+              priceUsd: z.number(),
+              retailer: z.string(),
+              buyUrl: z.string(),
+            }),
+            useRewards: z.array(z.object({ rewardId: z.string(), appliedUsd: z.number() })),
+            savedUsd: z.number(),
+            cashUsd: z.number(),
+          })
+          .describe("One plan object from plan_purchase."),
+      }),
+      execute: async ({ plan }) => ({ explanation: await explainPlan(plan as Plan) }),
     }),
   },
 });

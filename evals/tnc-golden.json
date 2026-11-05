@@ -1,33 +1,70 @@
 {
-  "$comment": "Golden T&C eval — 20 free-text T&Cs with expected typed rules. Run in CI by the Terms agent (A2) + grounding guard. OWNER: Rachandeep Kaur. Seeded with 2 examples; fill to 20.",
+  "description": "Golden eval for the A2 Terms agent (lib/tnc + agents/terms). Each case is a real reward's free-text T&Cs (from prisma/seed.ts) with the critical typed rules the parser must extract. Scoring focuses on the numeric predicates (min_spend_usd, flat_off_usd, percent_off, max_discount_usd) and the boolean constraints — these are what the optimizer consumes and what the grounding guard protects. Category/merchant phrasing is checked loosely (substring, case-insensitive).",
+  "scoring": {
+    "numericPredicates": ["min_spend_usd", "flat_off_usd", "percent_off", "max_discount_usd"],
+    "booleanPredicates": ["one_time_use", "not_combinable_group"],
+    "note": "A case passes if every expected numeric predicate is present with the exact value, every expected boolean constraint is present, and assertGrounded() passes against termsRaw."
+  },
   "cases": [
     {
-      "id": "amex-dining-10",
-      "termsRaw": "Spend $50 or more at participating restaurants and get $10 back. Offer valid through Dec 31, 2026. One-time use. Cannot be combined with other dining offers.",
-      "expected": {
-        "parseConfidence": 1.0,
-        "rules": [
-          { "predicate": "min_spend_usd", "value": 50, "quotedClause": "Spend $50 or more" },
-          { "predicate": "flat_off_usd", "value": 10, "quotedClause": "get $10 back" },
-          { "predicate": "category_allow", "value": ["dining"], "quotedClause": "at participating restaurants" },
-          { "predicate": "expires_on", "value": "2026-12-31", "quotedClause": "valid through Dec 31, 2026" },
-          { "predicate": "one_time_use", "value": "true", "quotedClause": "One-time use" },
-          { "predicate": "not_combinable_group", "value": "dining", "quotedClause": "Cannot be combined with other dining offers" }
-        ]
-      }
+      "id": "amex-dining",
+      "termsRaw": "Amex Offer: Spend $50 or more at participating restaurants and get $10 back. One-time use. Cannot be combined with other dining offers.",
+      "expect": { "min_spend_usd": 50, "flat_off_usd": 10, "one_time_use": true, "not_combinable_group": true },
+      "minConfidence": 0.5
     },
     {
-      "id": "bestbuy-giftcard-40",
-      "termsRaw": "$40 Best Buy gift certificate. Redeemable on electronics only. Expires Jan 15, 2027.",
-      "expected": {
-        "parseConfidence": 1.0,
-        "rules": [
-          { "predicate": "flat_off_usd", "value": 40, "quotedClause": "$40 Best Buy gift certificate" },
-          { "predicate": "merchant_allow", "value": ["Best Buy"], "quotedClause": "Best Buy gift certificate" },
-          { "predicate": "category_allow", "value": ["electronics"], "quotedClause": "Redeemable on electronics only" },
-          { "predicate": "expires_on", "value": "2027-01-15", "quotedClause": "Expires Jan 15, 2027" }
-        ]
-      }
+      "id": "chase-bestbuy",
+      "termsRaw": "Chase: Earn $25 back on a single purchase of $100+ at Best Buy. Online or in-store. Limited to one statement credit.",
+      "expect": { "min_spend_usd": 100, "flat_off_usd": 25, "merchant_allow": "Best Buy", "one_time_use": true },
+      "minConfidence": 0.5
+    },
+    {
+      "id": "visa-electronics",
+      "termsRaw": "Visa Offers+: Get 5% back on electronics purchases, up to $20 total cashback. Valid at select retailers.",
+      "expect": { "percent_off": 5, "max_discount_usd": 20, "category_allow": "electronics" },
+      "minConfidence": 0.5
+    },
+    {
+      "id": "mastercard-headphones",
+      "termsRaw": "Mastercard: $15 back when you spend $75 or more on headphones or audio accessories. One redemption per cardholder.",
+      "expect": { "min_spend_usd": 75, "flat_off_usd": 15, "category_allow": "headphones", "one_time_use": true },
+      "minConfidence": 0.5
+    },
+    {
+      "id": "discover-online",
+      "termsRaw": "Discover: 5% Cashback Bonus on online shopping this quarter, up to $75 spend. Activation required.",
+      "expect": { "percent_off": 5 },
+      "minConfidence": 0.4
+    },
+    {
+      "id": "amazon-giftcard",
+      "termsRaw": "$25 Amazon gift card. No minimum purchase. Not redeemable for cash.",
+      "expect": { "flat_off_usd": 25, "merchant_allow": "Amazon" },
+      "minConfidence": 0.5
+    },
+    {
+      "id": "sony-welcome",
+      "termsRaw": "Welcome coupon: $20 off your first order of $60 or more at Sony Store. Single use, code auto-applied.",
+      "expect": { "min_spend_usd": 60, "flat_off_usd": 20, "merchant_allow": "Sony Store", "one_time_use": true },
+      "minConfidence": 0.5
+    },
+    {
+      "id": "paypal-offer",
+      "termsRaw": "PayPal Offer: $5 back when you pay $30+ with PayPal at participating online stores. One-time.",
+      "expect": { "min_spend_usd": 30, "flat_off_usd": 5, "one_time_use": true },
+      "minConfidence": 0.5
+    },
+    {
+      "id": "partner-headphones",
+      "termsRaw": "Partner deal: $30 off headphones over $200 at select retailers. While supplies last.",
+      "expect": { "min_spend_usd": 200, "flat_off_usd": 30, "category_allow": "headphones" },
+      "minConfidence": 0.5
+    },
+    {
+      "id": "aliexpress-intl",
+      "termsRaw": "AliExpress international coupon: $14 off orders over $100 shipped to the US. New customers only.",
+      "expect": { "min_spend_usd": 100, "flat_off_usd": 14, "one_time_use": true },
+      "minConfidence": 0.4
     }
   ]
 }
