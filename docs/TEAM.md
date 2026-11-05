@@ -5,7 +5,7 @@ front-to-back: code, tests, and the demo beat it powers. Cross-area changes
 go through the owner (see `CODEOWNERS`).
 
 We're building in **two phases**:
-- **Phase 1 — get the spine running (now).** Aakash + rachan take the system
+- **Phase 1 — get the spine running (now).** Aakash + Rachna take the system
   end-to-end: login+mandate → intent → optimize → policy → pay-in → payout →
   signed receipt. Minimal agents/UI, just enough to run the full flow once.
 - **Phase 2 — depth & polish (once the spine runs).** Aviral & Vishalika pick

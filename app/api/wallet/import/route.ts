@@ -7,6 +7,6 @@ import { NextResponse } from "next/server";
  * OWNER: Rachandeep Kaur (coordinate ingestion worker with the AI agents owner).
  */
 export async function POST() {
-  // TODO(rachan): enqueue ingestion for the current user's connected sources.
+  // TODO(rachna): enqueue ingestion for the current user's connected sources.
   return NextResponse.json({ error: "not implemented" }, { status: 501 });
 }

@@ -8,7 +8,7 @@ import type { ParsedTerms } from "@/lib/tnc/schema";
  * OWNER: Rachandeep Kaur.
  */
 export function assertGrounded(_parsed: ParsedTerms, _sourceText: string): void {
-  // TODO(rachan): extract numeric tokens from each rule value + quotedClause;
+  // TODO(rachna): extract numeric tokens from each rule value + quotedClause;
   // assert each appears in sourceText; throw with the offending number if not.
   throw new Error("assertGrounded() not implemented");
 }

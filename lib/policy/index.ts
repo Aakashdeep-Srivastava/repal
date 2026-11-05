@@ -19,7 +19,7 @@ export function checkPolicy(
   _plan: Plan,
   _mandate: Mandate,
 ): PolicyResult {
-  // TODO(rachan): implement the mandate checks above; accumulate human-readable
+  // TODO(rachna): implement the mandate checks above; accumulate human-readable
   // reasons for every non-allow decision (surfaced in the approval sheet).
   throw new Error("checkPolicy() not implemented");
 }
