@@ -24,7 +24,7 @@ export function optimize(
   _rewards: Reward[],
   _mandate: Mandate,
 ): OptimizeResult {
-  // TODO(rachna): implement branch-and-bound in ./stack.ts and rule
+  // TODO(rachan): implement branch-and-bound in ./stack.ts and rule
   // evaluation in ./evaluate.ts; compose them here into <=3 ranked plans.
   throw new Error("optimize() not implemented");
 }

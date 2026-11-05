@@ -10,7 +10,7 @@ export function evaluateReward(
   _reward: Reward,
   _offer: Offer,
 ): { appliedUsd: number } | RejectedReward {
-  // TODO(rachna): walk reward.rules against the offer (min spend, category
+  // TODO(rachan): walk reward.rules against the offer (min spend, category
   // allow/deny, merchant allow-list, expiry, max discount) and produce either
   // the applicable discount or a rejection citing the clause.
   throw new Error("evaluateReward() not implemented");

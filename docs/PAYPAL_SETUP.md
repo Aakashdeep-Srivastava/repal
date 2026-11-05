@@ -95,7 +95,7 @@ Needed once we deploy (events verify our pay-in / payout state).
   node -e "const {generateKeyPairSync}=require('crypto');const {privateKey}=generateKeyPairSync('ed25519');console.log(privateKey.export({type:'pkcs8',format:'der'}).toString('base64'))"
   ```
 
-  Paste the output into `RECEIPT_SIGNING_KEY`. (Coordinate with Rachna — the
+  Paste the output into `RECEIPT_SIGNING_KEY`. (Coordinate with rachan — the
   receipt signer in `lib/receipts/` reads this.)
 
 - **Channel3 / model keys** — `CHANNEL3_API_KEY`, `ANTHROPIC_API_KEY` (or

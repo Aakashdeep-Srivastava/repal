@@ -10,6 +10,6 @@ export function bestStack(
   _offer: Offer,
   _rewards: Reward[],
 ): { applied: AppliedReward[]; savedUsd: number } {
-  // TODO(rachna): branch-and-bound with pruning on not_combinable groups.
+  // TODO(rachan): branch-and-bound with pruning on not_combinable groups.
   throw new Error("bestStack() not implemented");
 }

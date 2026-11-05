@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
  *
  * Creates the mandate row now; the Vault setup→payment token and the signature
  * get wired in (lib/paypal/vault.ts = Aakash, lib/policy/mandate signing =
- * Rachna). OWNER: Rachandeep Kaur.
+ * rachan). OWNER: Rachandeep Kaur.
  */
 const Body = z.object({
   userId: z.string().default("demo-user"),
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   }
   const d = parsed.data;
   // TODO(aakash): Vault setup→payment token → paypalVaultTokenId.
-  // TODO(rachna): sign canonical mandate (lib/policy/mandate) → signatureHash.
+  // TODO(rachan): sign canonical mandate (lib/policy/mandate) → signatureHash.
   const mandate = await prisma.mandate.create({
     data: {
       userId: d.userId,
