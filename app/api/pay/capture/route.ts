@@ -1,18 +1,63 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { captureOrder } from "@/lib/paypal/orders";
+import { issueReceipt } from "@/lib/receipts/issue";
 
-/** POST /api/pay/capture — capture a created/approved order. */
-const Body = z.object({ orderId: z.string().min(1) });
+/**
+ * POST /api/pay/capture — capture an approved order and issue the signed
+ * decision receipt. The money lifecycle's final two legs: PayPal moves the cash,
+ * then RePal records a tamper-evident receipt verifiable at /verify/:id.
+ *
+ * `decision` carries the plan numbers the receipt attests to (deterministic,
+ * from the optimizer — never recomputed here). OWNER: Aakash.
+ */
+const Body = z.object({
+  orderId: z.string().min(1),
+  decision: z
+    .object({
+      userId: z.string().min(1).max(64).default("demo-user"),
+      runId: z.string().min(1),
+      item: z.string().min(1),
+      merchant: z.string().min(1),
+      category: z.string().min(1),
+      priceUsd: z.number().nonnegative(),
+      savedUsd: z.number().nonnegative(),
+      cashUsd: z.number().nonnegative(),
+      payoutBatchId: z.string().optional(),
+      fxInrPerUsd: z.number().optional(),
+    })
+    .optional(),
+});
+
+/** Pull the capture id out of the Orders v2 capture response (defensive). */
+function captureIdOf(result: unknown, fallback: string): string {
+  const r = result as {
+    purchase_units?: { payments?: { captures?: { id?: string }[] } }[];
+  };
+  return r?.purchase_units?.[0]?.payments?.captures?.[0]?.id ?? fallback;
+}
 
 export async function POST(req: Request) {
-  const parsed = Body.safeParse(await req.json());
+  const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
+  const { orderId, decision } = parsed.data;
+
   try {
-    const result = await captureOrder(parsed.data.orderId);
-    return NextResponse.json(result);
+    const capture = await captureOrder(orderId);
+
+    if (!decision) {
+      return NextResponse.json({ capture });
+    }
+
+    const captureId = captureIdOf(capture, orderId);
+    const receipt = await issueReceipt({
+      ...decision,
+      paypalOrderId: orderId,
+      paypalCaptureId: captureId,
+    });
+    return NextResponse.json({ capture, receiptId: receipt.id, verifyUrl: `/verify/${receipt.id}` });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "capture failed" },
