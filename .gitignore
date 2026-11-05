@@ -53,3 +53,8 @@ node_modules
 /.agents/
 /.claude/skills/
 .claude/settings.local.json
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/

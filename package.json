@@ -18,19 +18,26 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "worker:ingest": "tsx workers/ingest.ts",
     "worker:expiry": "tsx workers/expiryScan.cron.ts",
-    "paypal:smoke": "tsx scripts/paypal-smoke.ts"
+    "paypal:smoke": "tsx scripts/paypal-smoke.ts",
+    "bedrock:smoke": "tsx scripts/bedrock-smoke.ts",
+    "e2e": "playwright test",
+    "e2e:report": "playwright show-report"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^5.0.133",
     "@prisma/client": "^6.1.0",
+    "@tanstack/react-query": "^5.106.1",
+    "ai": "^7.0.163",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",

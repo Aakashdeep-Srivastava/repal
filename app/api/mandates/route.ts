@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { signMandate } from "@/lib/policy/mandate";
+import { MandateInputSchema } from "@/lib/schemas";
+import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
  * POST /api/mandates — create a Vault-backed mandate (cap, budget, allow-list,
@@ -11,20 +12,21 @@ import { signMandate } from "@/lib/policy/mandate";
  * gets wired in (lib/paypal/vault.ts = Aakash). Mandate signing (lib/policy/
  * mandate) is done. OWNER: Rachandeep Kaur.
  */
-const Body = z.object({
-  userId: z.string().default("demo-user"),
-  capUsd: z.number().positive(),
-  budgetUsd: z.number().positive(),
-  approvalThresholdUsd: z.number().positive(),
-  allowCategories: z.array(z.string()).default([]),
-  allowMerchants: z.array(z.string()).default([]),
-  expiresAt: z.string().datetime(),
-});
-
 export async function POST(req: Request) {
-  const parsed = Body.safeParse(await req.json());
+  const rl = rateLimit(clientKey(req, "mandates"), 10, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate limit exceeded — slow down", retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: rateLimitHeaders(rl) },
+    );
+  }
+
+  const parsed = MandateInputSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 400, headers: rateLimitHeaders(rl) },
+    );
   }
   const d = parsed.data;
   // TODO(aakash): Vault setup→payment token → paypalVaultTokenId.
