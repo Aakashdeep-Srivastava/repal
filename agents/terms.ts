@@ -1,4 +1,4 @@
-import { generateObject, type LanguageModel } from "ai";
+import { generateText, Output, type LanguageModel } from "ai";
 import { claude } from "@/lib/ai/bedrock";
 import { ParsedTermsSchema, type ParsedTerms } from "@/lib/tnc/schema";
 import { assertGrounded } from "@/lib/tnc/groundingGuard";
@@ -6,7 +6,8 @@ import { assertGrounded } from "@/lib/tnc/groundingGuard";
 /**
  * A2 Terms agent — a reward's free-text T&Cs → typed, grounded `ParsedTerms`.
  *
- * LLM (structured) via `generateObject` on the Bedrock Claude model. The model
+ * LLM (structured) via `generateText` + `Output.object` on the Bedrock Claude
+ * model. The model
  * may only emit rules drawn from the fixed predicate vocabulary, each carrying
  * a verbatim `quotedClause`. It never computes or invents a number — it only
  * extracts. After generation, `assertGrounded` deterministically rejects any
@@ -36,12 +37,12 @@ export async function parseTerms(
   termsRaw: string,
   model: LanguageModel = claude,
 ): Promise<ParsedTerms> {
-  const { object } = await generateObject({
+  const { output } = await generateText({
     model,
-    schema: ParsedTermsSchema,
     system: SYSTEM,
     prompt: termsRaw,
+    output: Output.object({ schema: ParsedTermsSchema }),
   });
-  assertGrounded(object, termsRaw);
-  return object;
+  assertGrounded(output, termsRaw);
+  return output;
 }

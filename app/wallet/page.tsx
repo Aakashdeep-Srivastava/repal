@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { fetchWallet } from "@/lib/client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchWallet, fetchMe, ingestWallet } from "@/lib/client";
+import { RepalLogo } from "@/components/brand/RepalLogo";
 
 const usd = (n: number) => `$${n.toFixed(n % 1 === 0 ? 0 : 2)}`;
 
@@ -25,24 +26,42 @@ const SOURCE_COLORS: Record<string, string> = {
 };
 
 export default function WalletPage() {
+  // Session-aware: show the logged-in user's wallet, else fall back to the
+  // demo user so the seeded wallet still renders when logged out.
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
+  const userId = me?.userId ?? "demo-user";
+  const whose = me ? (me.name ?? me.email ?? me.userId) : "demo wallet";
+
   const {
     data: rewards,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["wallet", "demo-user"],
-    queryFn: () => fetchWallet("demo-user"),
+    queryKey: ["wallet", userId],
+    queryFn: () => fetchWallet(userId),
   });
+
+  // Connect-source ingestion: collect rewards from every source into this
+  // user's wallet, then refetch so the new cards appear. Idempotent server-side.
+  const queryClient = useQueryClient();
+  const sync = useMutation({
+    mutationFn: () => ingestWallet(userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wallet", userId] }),
+  });
+  const synced = sync.data;
 
   return (
     <main className="min-h-dvh">
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <Link href="/" className="font-semibold tracking-tight">
-          Re<span className="text-[var(--color-brand)]">Pal</span>
+        <Link href="/" aria-label="RePal home" className="shrink-0">
+          <RepalLogo size="sm" />
         </Link>
         <div className="flex items-center gap-5 text-sm text-[var(--color-muted)]">
           <Link href="/" className="hover:text-[var(--color-fg)]">
             Agent
+          </Link>
+          <Link href="/shop" className="hover:text-[var(--color-fg)]">
+            Shop
           </Link>
           <Link href="/wallet" className="text-[var(--color-fg)]">
             Wallet
@@ -52,12 +71,36 @@ export default function WalletPage() {
 
       <div className="mx-auto max-w-5xl px-6 pb-24">
         <header className="pt-6">
-          <h1 className="text-3xl font-semibold tracking-tight">Reward wallet</h1>
-          <p className="mt-2 text-[var(--color-muted)]">
-            {isLoading
-              ? "Loading your auto-imported rewards…"
-              : `${rewards?.length ?? 0} rewards, auto-imported — no manual entry.`}
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight">Reward wallet</h1>
+              <p className="mt-2 text-[var(--color-muted)]">
+                {isLoading
+                  ? "Loading your auto-imported rewards…"
+                  : `${rewards?.length ?? 0} rewards, auto-imported — no manual entry.`}
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-muted)]">Showing: {whose}</p>
+            </div>
+            <button
+              onClick={() => sync.mutate()}
+              disabled={sync.isPending}
+              className="shrink-0 rounded-xl border border-[var(--color-brand)] px-4 py-2 text-sm font-medium text-[var(--color-brand)] disabled:opacity-60"
+            >
+              {sync.isPending ? "Syncing…" : "Sync rewards"}
+            </button>
+          </div>
+
+          {synced && (
+            <p className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">
+              Collected from {Object.keys(synced.bySource).length} sources —{" "}
+              {synced.totalAdded} added, {synced.totalUpdated} refreshed.
+            </p>
+          )}
+          {sync.error && (
+            <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+              {sync.error instanceof Error ? sync.error.message : "Sync failed."}
+            </p>
+          )}
         </header>
 
         {error && (

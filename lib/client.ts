@@ -8,6 +8,13 @@ import type { PlanCardData, RejectedRewardData } from "@/components/PlanCards";
 
 export type { WalletReward };
 
+/** Current session user shape — mirrors lib/auth/session `SessionUser`. */
+export interface SessionUser {
+  userId: string;
+  name?: string;
+  email?: string;
+}
+
 /**
  * Typed browser API client. Validates input with the SAME Zod schemas the
  * server enforces (lib/schemas) before sending, and normalizes transport/rate-
@@ -74,4 +81,52 @@ export async function fetchWallet(userId = "demo-user"): Promise<WalletReward[]>
   if (!res.ok) throw new Error(`wallet fetch failed (${res.status})`);
   // Zod validates the server payload before it reaches the UI.
   return WalletResponseSchema.parse(await res.json()).rewards;
+}
+
+// ─── Auth / session ───────────────────────────────────────────────────
+
+/** GET /api/me — the current session user, or null if logged out. */
+export async function fetchMe(): Promise<SessionUser | null> {
+  const res = await fetch("/api/me");
+  if (!res.ok) throw new Error(`me fetch failed (${res.status})`);
+  const data = (await res.json()) as { user: SessionUser | null };
+  return data.user;
+}
+
+/** POST /api/auth/demo-login — start a demo session for `demo-user`. */
+export async function demoLogin(): Promise<void> {
+  const { status } = await postJson("/api/auth/demo-login", {});
+  if (status !== 200) throw new Error(`demo login failed (${status})`);
+}
+
+/** POST /api/auth/logout — clear the current session. */
+export async function logout(): Promise<void> {
+  const { status } = await postJson("/api/auth/logout", {});
+  if (status !== 200) throw new Error(`logout failed (${status})`);
+}
+
+// ─── Wallet ingestion (connect sources) ───────────────────────────────
+
+/** Per-source + aggregate counts returned by POST /api/wallet/ingest. */
+export interface IngestSummary {
+  userId: string;
+  bySource: Record<string, { added: number; updated: number }>;
+  totalAdded: number;
+  totalUpdated: number;
+  parsed: number;
+  unparsed: number;
+}
+
+/**
+ * POST /api/wallet/ingest — collect rewards from every connected source into
+ * the current user's wallet. `userId` is optional; the server falls back to the
+ * session user. Returns the ingestion summary.
+ */
+export async function ingestWallet(userId?: string): Promise<IngestSummary> {
+  const { status, data } = await postJson(
+    "/api/wallet/ingest",
+    userId ? { userId } : {},
+  );
+  if (status !== 200) throw new Error(`ingest failed (${status})`);
+  return data as unknown as IngestSummary;
 }

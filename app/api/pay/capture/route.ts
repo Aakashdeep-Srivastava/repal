@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { captureOrder } from "@/lib/paypal/orders";
 import { issueReceipt } from "@/lib/receipts/issue";
+import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
  * POST /api/pay/capture — capture an approved order and issue the signed
@@ -38,9 +39,16 @@ function captureIdOf(result: unknown, fallback: string): string {
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimit(clientKey(req, "capture"), 10, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate limit exceeded — slow down", retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: rateLimitHeaders(rl) },
+    );
+  }
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400, headers: rateLimitHeaders(rl) });
   }
   const { orderId, decision } = parsed.data;
 

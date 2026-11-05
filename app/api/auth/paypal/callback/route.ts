@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { PAYPAL_BASE } from "@/lib/paypal/client";
 import { prisma } from "@/lib/db";
+import { setSession } from "@/lib/auth/session";
 
 /**
  * GET /api/auth/paypal/callback — Log in with PayPal (OIDC) code exchange.
  *
  * Exchanges the auth code for tokens, fetches userinfo, upserts the User, and
- * drops a minimal session cookie. Session hardening comes later. TECH_PRD §4.
+ * sets a signed session cookie (lib/auth/session). TECH_PRD §4.
+ *
+ * Note: if PayPal OIDC creds are not configured this returns 500 before any
+ * token exchange — `setSession` plugs in only on the success path below, once
+ * we have real userinfo.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -44,24 +49,24 @@ export async function GET(req: Request) {
       { headers: { Authorization: `Bearer ${access_token}` } },
     );
     if (!infoRes.ok) throw new Error(`userinfo failed: ${await infoRes.text()}`);
-    const info = (await infoRes.json()) as { payer_id?: string; email?: string };
+    const info = (await infoRes.json()) as {
+      payer_id?: string;
+      sub?: string;
+      name?: string;
+      email?: string;
+    };
 
-    const userId = info.payer_id ?? `pp_${Date.now()}`;
+    const userId = info.sub ?? info.payer_id ?? `pp_${Date.now()}`;
     await prisma.user.upsert({
       where: { id: userId },
       update: { paypalPayerId: info.payer_id, email: info.email },
       create: { id: userId, paypalPayerId: info.payer_id, email: info.email },
     });
 
-    const res = NextResponse.redirect(new URL("/", url.origin));
-    // Minimal session marker — replace with signed session later.
-    res.cookies.set("repal_uid", userId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-    });
-    return res;
+    // Signed, httpOnly session cookie — see lib/auth/session.
+    await setSession({ userId, name: info.name, email: info.email });
+
+    return NextResponse.redirect(new URL("/", url.origin));
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "oidc failed" },

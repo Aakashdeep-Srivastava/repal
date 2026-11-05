@@ -77,25 +77,26 @@ async function main() {
     create: { id: DEMO_USER_ID, email: "maya@example.com" },
   });
 
-  // Mandate (Vault token filled later by the real flow)
-  const existingMandate = await prisma.mandate.findFirst({
-    where: { userId: DEMO_USER_ID },
+  // Mandate (Vault token filled later by the real flow). Reset deterministically
+  // each seed so the demo mandate stays in sync. allowCategories is empty =
+  // "allow any category" (the policy engine only category-gates when the list is
+  // non-empty), so the shopping journey isn't blocked by product category; the
+  // amount caps still apply. With approvalThresholdUsd = 300, cheaper plans
+  // resolve to `allow` and pricier ones to `ask` — the demo shows both paths.
+  await prisma.mandate.deleteMany({ where: { userId: DEMO_USER_ID } });
+  await prisma.mandate.create({
+    data: {
+      userId: DEMO_USER_ID,
+      capUsd: 2000,
+      budgetUsd: 2000,
+      approvalThresholdUsd: 300,
+      allowCategories: [],
+      allowMerchants: [],
+      expiresAt: inDays(90),
+      signatureHash: "seed-unsigned",
+      status: "active",
+    },
   });
-  if (!existingMandate) {
-    await prisma.mandate.create({
-      data: {
-        userId: DEMO_USER_ID,
-        capUsd: 300,
-        budgetUsd: 500,
-        approvalThresholdUsd: 200,
-        allowCategories: ["electronics", "audio", "dining", "travel"],
-        allowMerchants: [],
-        expiresAt: inDays(90),
-        signatureHash: "seed-unsigned",
-        status: "active",
-      },
-    });
-  }
 
   // Rewards — reset the demo user's wallet, then load the 17.
   await prisma.reward.deleteMany({ where: { userId: DEMO_USER_ID } });
