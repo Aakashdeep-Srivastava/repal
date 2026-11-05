@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { PlanCards, type PlanCardData, type RejectedRewardData } from "@/components/PlanCards";
+import { useMutation } from "@tanstack/react-query";
+import { PlanCards } from "@/components/PlanCards";
+import { requestAgentRun, requestPlan } from "@/lib/client";
 
 function Nav() {
   return (
@@ -23,63 +25,24 @@ function Nav() {
 }
 
 export default function Home() {
-  // Agent (LLM) flow
+  // Input state (local); async/server state lives in TanStack Query mutations.
   const [goal, setGoal] = useState("");
-  const [agentBusy, setAgentBusy] = useState(false);
-  const [agentOut, setAgentOut] = useState<{ status: string; answer?: string; error?: string } | null>(
-    null,
-  );
-
-  // Deterministic optimizer flow
   const [category, setCategory] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
-  const [planBusy, setPlanBusy] = useState(false);
-  const [planOut, setPlanOut] = useState<{
-    plans?: PlanCardData[];
-    rejected?: RejectedRewardData[];
-    offerCount?: number;
-    needsOffers?: boolean;
-    error?: string;
-  } | null>(null);
 
-  async function runAgent() {
-    if (!goal.trim()) return;
-    setAgentBusy(true);
-    setAgentOut(null);
-    try {
-      const res = await fetch("/api/runs", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ goal }),
-      });
-      setAgentOut(await res.json());
-    } catch (e) {
-      setAgentOut({ status: "error", error: e instanceof Error ? e.message : String(e) });
-    } finally {
-      setAgentBusy(false);
-    }
-  }
+  const agent = useMutation({ mutationFn: (g: string) => requestAgentRun(g) });
+  const plan = useMutation({
+    mutationFn: (v: { category: string; maxPriceUsd?: number }) =>
+      requestPlan(v.category, v.maxPriceUsd),
+  });
 
-  async function findPlans() {
-    if (!category.trim()) return;
-    setPlanBusy(true);
-    setPlanOut(null);
-    try {
-      const res = await fetch("/api/plan", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          category,
-          ...(maxPrice ? { maxPriceUsd: Number(maxPrice) } : {}),
-        }),
-      });
-      setPlanOut(await res.json());
-    } catch (e) {
-      setPlanOut({ error: e instanceof Error ? e.message : String(e) });
-    } finally {
-      setPlanBusy(false);
-    }
-  }
+  const agentOut = agent.data ?? null;
+  const planOut = plan.data ?? null;
+
+  const runAgent = () => goal.trim() && agent.mutate(goal);
+  const findPlans = () =>
+    category.trim() &&
+    plan.mutate({ category, ...(maxPrice ? { maxPriceUsd: Number(maxPrice) } : {}) });
 
   return (
     <main className="min-h-dvh">
@@ -113,10 +76,10 @@ export default function Home() {
             />
             <button
               onClick={runAgent}
-              disabled={agentBusy}
+              disabled={agent.isPending}
               className="rounded-xl bg-[var(--color-brand)] px-5 py-3 text-sm font-medium text-white disabled:opacity-60"
             >
-              {agentBusy ? "Running…" : "Run"}
+              {agent.isPending ? "Running…" : "Run"}
             </button>
           </div>
 
@@ -162,10 +125,10 @@ export default function Home() {
             />
             <button
               onClick={findPlans}
-              disabled={planBusy}
+              disabled={plan.isPending}
               className="rounded-xl border border-[var(--color-brand)] px-5 py-3 text-sm font-medium text-[var(--color-brand)] disabled:opacity-60"
             >
-              {planBusy ? "Finding…" : "Find plans"}
+              {plan.isPending ? "Finding…" : "Find plans"}
             </button>
           </div>
 

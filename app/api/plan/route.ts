@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { planPurchase } from "@/lib/pipeline";
+import { PlanInputSchema } from "@/lib/schemas";
+import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
  * POST /api/plan — the deterministic cart pipeline, exposed directly (no LLM).
@@ -10,16 +11,21 @@ import { planPurchase } from "@/lib/pipeline";
  * the orchestrator's `plan_purchase` tool calls; exposing it lets the UI show
  * "cheapest after rewards" plans without waiting on the LLM. OWNER: Aakash.
  */
-const Body = z.object({
-  userId: z.string().default("demo-user"),
-  category: z.string().min(1),
-  maxPriceUsd: z.number().positive().optional(),
-});
-
 export async function POST(req: Request) {
-  const parsed = Body.safeParse(await req.json().catch(() => ({})));
+  const rl = rateLimit(clientKey(req, "plan"), 20, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate limit exceeded — slow down", retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: rateLimitHeaders(rl) },
+    );
+  }
+
+  const parsed = PlanInputSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 400, headers: rateLimitHeaders(rl) },
+    );
   }
   try {
     const result = await planPurchase(parsed.data);

@@ -27,6 +27,7 @@
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^5.0.133",
     "@prisma/client": "^6.1.0",
+    "@tanstack/react-query": "^5.106.1",
     "ai": "^7.0.163",
     "next": "^15.1.0",
     "react": "^19.0.0",

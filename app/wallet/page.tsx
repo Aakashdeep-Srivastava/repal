@@ -1,18 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-
-interface Reward {
-  id: string;
-  source: string;
-  type: string;
-  valueUsd: number;
-  termsRaw: string;
-  status: string;
-  parseConfidence: number;
-  expiresAt: string;
-}
+import { useQuery } from "@tanstack/react-query";
+import { fetchWallet } from "@/lib/client";
 
 const usd = (n: number) => `$${n.toFixed(n % 1 === 0 ? 0 : 2)}`;
 
@@ -35,15 +25,14 @@ const SOURCE_COLORS: Record<string, string> = {
 };
 
 export default function WalletPage() {
-  const [rewards, setRewards] = useState<Reward[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/wallet?userId=demo-user")
-      .then((r) => r.json())
-      .then((d) => setRewards(d.rewards ?? []))
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
-  }, []);
+  const {
+    data: rewards,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["wallet", "demo-user"],
+    queryFn: () => fetchWallet("demo-user"),
+  });
 
   return (
     <main className="min-h-dvh">
@@ -65,15 +54,15 @@ export default function WalletPage() {
         <header className="pt-6">
           <h1 className="text-3xl font-semibold tracking-tight">Reward wallet</h1>
           <p className="mt-2 text-[var(--color-muted)]">
-            {rewards === null
+            {isLoading
               ? "Loading your auto-imported rewards…"
-              : `${rewards.length} rewards, auto-imported — no manual entry.`}
+              : `${rewards?.length ?? 0} rewards, auto-imported — no manual entry.`}
           </p>
         </header>
 
         {error && (
           <p className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
-            {error}
+            {error instanceof Error ? error.message : "Failed to load wallet."}
           </p>
         )}
 
@@ -100,7 +89,7 @@ export default function WalletPage() {
           ))}
         </div>
 
-        {rewards?.length === 0 && (
+        {!isLoading && rewards?.length === 0 && (
           <p className="mt-8 rounded-xl border border-white/10 p-6 text-sm text-[var(--color-muted)]">
             No rewards yet. Seed the database (<code>npm run prisma:seed</code>) or connect a source.
           </p>
