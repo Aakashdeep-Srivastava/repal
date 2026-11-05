@@ -1,26 +1,59 @@
-# RePal — one repo → one Blueprint → web + worker + cron + Postgres.
-# See docs/TECH_PRD.md §14. Use PAID web + PAID Postgres via Render credits so
-# the DB survives to Dec 15 judging (free Postgres expires 30 days after creation).
+# RePal — one repo → one Blueprint → web + worker + cron.
+# See docs/TECH_PRD.md §14.
+#
+# Postgres: the app runs against the existing Neon DB (pooled DATABASE_URL +
+# direct DIRECT_URL, per prisma/schema.prisma). Set BOTH as secrets in the
+# Render dashboard — there is no managed Render database in this Blueprint.
+#
+# Model: Claude via AWS Bedrock (reclevo.in account, us-west-2). Auth is the
+# Bedrock API key AWS_BEARER_TOKEN_BEDROCK (see docs/BEDROCK.md). The old
+# ANTHROPIC_API_KEY path is gone — the agents layer is Bedrock-only.
+#
+# Every `sync: false` var below is a secret: the Blueprint creates the field
+# but you fill the value in the dashboard (nothing secret lives in git).
 services:
   - type: web
     name: repal-web
     runtime: node
     plan: starter
     buildCommand: npm ci && npx prisma generate && npm run build
+    # Apply any pending migrations to Neon before the new version goes live.
+    # Idempotent: a no-op when Neon is already at the latest migration.
+    preDeployCommand: npx prisma migrate deploy
     startCommand: npm run start
     envVars:
+      # ─── non-secret config ───
       - key: PAYPAL_ENVIRONMENT
         value: SANDBOX
       - key: DEMO_MODE
         value: "true"
       - key: FX_INR_PER_USD
         value: "84"
-      - key: DATABASE_URL
-        fromDatabase:
-          name: repal-db
-          property: connectionString
-      # PAYPAL_CLIENT_ID / SECRET / WEBHOOK_ID / OIDC_REDIRECT,
-      # CHANNEL3_API_KEY, ANTHROPIC_API_KEY, RECEIPT_SIGNING_KEY → set in dashboard.
+      - key: AWS_REGION
+        value: us-west-2
+      - key: BEDROCK_MODEL_ID
+        value: us.anthropic.claude-haiku-4-5-20251001-v1:0
+      # ─── secrets (set in dashboard) ───
+      - key: DATABASE_URL          # Neon POOLED (PgBouncer) connection string
+        sync: false
+      - key: DIRECT_URL            # Neon DIRECT connection string (migrations)
+        sync: false
+      - key: AWS_BEARER_TOKEN_BEDROCK
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: PAYPAL_OIDC_REDIRECT  # https://<web-url>/api/auth/paypal/callback
+        sync: false
+      - key: CHANNEL3_API_KEY
+        sync: false
+      - key: RECEIPT_SIGNING_KEY   # Ed25519 private key, base64
+        sync: false
+      - key: SESSION_SECRET        # 32+ random bytes; HMAC for the session cookie
+        sync: false
 
   - type: worker
     name: repal-worker
@@ -29,10 +62,18 @@ services:
     buildCommand: npm ci && npx prisma generate
     startCommand: npm run worker:ingest
     envVars:
+      - key: AWS_REGION
+        value: us-west-2
+      - key: BEDROCK_MODEL_ID
+        value: us.anthropic.claude-haiku-4-5-20251001-v1:0
       - key: DATABASE_URL
-        fromDatabase:
-          name: repal-db
-          property: connectionString
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: AWS_BEARER_TOKEN_BEDROCK   # optional — ingest degrades without T&C parsing
+        sync: false
+      - key: CHANNEL3_API_KEY
+        sync: false
 
   - type: cron
     name: repal-expiry
@@ -42,10 +83,6 @@ services:
     startCommand: npm run worker:expiry
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: repal-db
-          property: connectionString
-
-databases:
-  - name: repal-db
-    plan: basic-256mb
+        sync: false
+      - key: DIRECT_URL
+        sync: false
