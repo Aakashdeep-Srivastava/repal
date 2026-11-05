@@ -1,4 +1,7 @@
 import type { Offer, Reward, RewardRule, RejectedReward } from "@/lib/types";
+import { categoryMatches } from "@/lib/tnc/categories";
+import { merchantMatches } from "@/lib/tnc/merchants";
+import { toCents, fromCents, fmtUsd } from "@/lib/optimizer/money";
 
 /**
  * evaluateReward — can this reward apply to this offer?
@@ -6,117 +9,152 @@ import type { Offer, Reward, RewardRule, RejectedReward } from "@/lib/types";
  * Returns the applicable discount (usd) or a rejection with the quoted clause.
  * DETERMINISTIC. OWNER: Rachandeep Kaur.
  *
- * Order of checks (first failure wins the rejection):
- *   1. expiry (status === "expired" OR expiresAt in the past)
- *   2. merchant_allow / merchant_deny (offer.retailer vs the rule's list)
- *   3. min_spend_usd (offer.priceUsd floor)
- * then the discount is computed from the amount rules (percent_off /
- * flat_off_usd), or — for a giftcard/points/cashback with no amount rule —
- * from the reward's face value, and finally capped by max_discount_usd,
- * reward.valueUsd and offer.priceUsd.
- *
- * NOTE on category_allow/category_deny: an Offer carries no category field,
- * so those predicates cannot be decided here — they are enforced upstream
- * (intent/mandate) and intentionally ignored by evaluateReward.
+ * Checks, in order (first failure wins, so the reason shown is the most basic):
+ *  1. status "expired"/"used", Reward.expiresAt or an `expires_on` rule passed → Expired
+ *  2. parseConfidence below MIN_PARSE_CONFIDENCE → not auto-applied (needs review)
+ *  3. merchant_allow / merchant_deny vs offer.retailer → Merchant mismatch
+ *  4. category_allow / category_deny vs the purchase category (parent map) → Category mismatch
+ *  5. min_spend_usd vs the offer's sticker price → Minimum spend not met
+ *  6. discount = flat_off_usd + percent_off% of price (floored to the cent);
+ *     if neither rule exists, Reward.valueUsd (e.g. a gift card's balance);
+ *     capped by max_discount_usd and by the price itself → zero = No value
+ *  7. discount < LOW_VALUE_FRACTION of price → Low value for this purchase
  */
 
-const AMOUNT_TYPES = new Set(["giftcard", "points", "cashback"]);
+/** Rewards parsed with lower confidence are shown but never auto-applied. */
+export const MIN_PARSE_CONFIDENCE = 0.8;
+/** Rewards worth less than this fraction of the price are rejected as low value. */
+export const LOW_VALUE_FRACTION = 0.02;
 
-function round2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+export interface EvalContext {
+  /** The purchase category (from the intent) — Offers carry no category. */
+  category: string;
+  /** Clock for expiry — injectable for determinism. */
+  now: Date;
 }
 
-function findRule(reward: Reward, predicate: string): RewardRule | undefined {
-  return reward.rules.find((r) => r.predicate === predicate);
+export type EvalResult = { appliedUsd: number } | RejectedReward;
+
+export function isRejected(r: EvalResult): r is RejectedReward {
+  return "reason" in r;
 }
 
-function asNumber(value: RewardRule["value"]): number {
-  return typeof value === "number" ? value : Number(value);
+const rulesOf = (reward: Reward, predicate: string): RewardRule[] =>
+  reward.rules.filter((r) => r.predicate === predicate);
+
+const asList = (v: RewardRule["value"]): string[] =>
+  Array.isArray(v) ? v : typeof v === "string" ? [v] : [String(v)];
+
+const asNumber = (v: RewardRule["value"]): number | null =>
+  typeof v === "number" && Number.isFinite(v) ? v : null;
+
+/** End of the given YYYY-MM-DD day in UTC, or null if unparseable. */
+function endOfDayUtc(iso: string): number | null {
+  const t = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T23:59:59.999Z` : iso);
+  return Number.isNaN(t) ? null : t;
 }
 
-/** Normalize a rule value into a lowercased string list (merchant lists). */
-function asList(value: RewardRule["value"]): string[] {
-  const arr = Array.isArray(value) ? value : [String(value)];
-  return arr.map((s) => String(s).trim().toLowerCase());
-}
-
-export function evaluateReward(
-  reward: Reward,
-  offer: Offer,
-): { appliedUsd: number } | RejectedReward {
+export function evaluateReward(reward: Reward, offer: Offer, ctx: EvalContext): EvalResult {
   const reject = (reason: string, quotedClause?: string): RejectedReward =>
-    quotedClause === undefined
-      ? { rewardId: reward.id, reason }
-      : { rewardId: reward.id, reason, quotedClause };
+    quotedClause ? { rewardId: reward.id, reason, quotedClause } : { rewardId: reward.id, reason };
+  const now = ctx.now.getTime();
 
-  // 1. Expiry.
-  const expiresRule = findRule(reward, "expires_on");
-  const expired =
-    reward.status === "expired" ||
-    (Number.isFinite(Date.parse(reward.expiresAt)) &&
-      Date.parse(reward.expiresAt) < Date.now());
-  if (expired) {
-    return reject("reward expired", expiresRule?.quotedClause);
+  // 1. Expiry / status
+  if (reward.status === "expired" || reward.status === "used") {
+    return reject(reward.status === "used" ? "Already used" : "Expired");
+  }
+  const walletExpiry = Date.parse(reward.expiresAt);
+  if (!Number.isNaN(walletExpiry) && now >= walletExpiry) {
+    return reject(`Expired on ${reward.expiresAt.slice(0, 10)}`);
+  }
+  for (const rule of rulesOf(reward, "expires_on")) {
+    const end = typeof rule.value === "string" ? endOfDayUtc(rule.value) : null;
+    if (end !== null && now > end) {
+      return reject(`Expired on ${String(rule.value)}`, rule.quotedClause);
+    }
   }
 
-  // 2. Merchant allow / deny.
-  const retailer = offer.retailer.trim().toLowerCase();
-  const allowRule = findRule(reward, "merchant_allow");
-  if (allowRule && !asList(allowRule.value).includes(retailer)) {
+  // 2. Parse confidence
+  if (reward.parseConfidence < MIN_PARSE_CONFIDENCE) {
     return reject(
-      `reward not valid at ${offer.retailer}`,
-      allowRule.quotedClause,
+      `Terms not confidently parsed (confidence ${reward.parseConfidence.toFixed(2)} < ` +
+        `${MIN_PARSE_CONFIDENCE}) — shown for review, not auto-applied`,
     );
   }
-  const denyRule = findRule(reward, "merchant_deny");
-  if (denyRule && asList(denyRule.value).includes(retailer)) {
-    return reject(`reward excluded at ${offer.retailer}`, denyRule.quotedClause);
+
+  // 3. Merchant
+  for (const rule of rulesOf(reward, "merchant_allow")) {
+    if (!merchantMatches(offer.retailer, asList(rule.value))) {
+      return reject(
+        `Merchant mismatch: only valid at ${asList(rule.value).join(", ")}, not ${offer.retailer}`,
+        rule.quotedClause,
+      );
+    }
+  }
+  for (const rule of rulesOf(reward, "merchant_deny")) {
+    if (merchantMatches(offer.retailer, asList(rule.value))) {
+      return reject(`Merchant excluded: not valid at ${offer.retailer}`, rule.quotedClause);
+    }
   }
 
-  // 3. Minimum spend.
-  const minSpendRule = findRule(reward, "min_spend_usd");
-  if (minSpendRule) {
-    const min = asNumber(minSpendRule.value);
-    if (offer.priceUsd < min) {
+  // 4. Category
+  for (const rule of rulesOf(reward, "category_allow")) {
+    if (!categoryMatches(ctx.category, asList(rule.value))) {
       return reject(
-        `minimum spend $${min} not met`,
-        minSpendRule.quotedClause,
+        `Category mismatch: valid for ${asList(rule.value).join(", ")}, not ${ctx.category}`,
+        rule.quotedClause,
+      );
+    }
+  }
+  for (const rule of rulesOf(reward, "category_deny")) {
+    if (categoryMatches(ctx.category, asList(rule.value))) {
+      return reject(`Category excluded: not valid for ${ctx.category}`, rule.quotedClause);
+    }
+  }
+
+  // 5. Minimum spend (on the sticker price)
+  const price = toCents(offer.priceUsd);
+  for (const rule of rulesOf(reward, "min_spend_usd")) {
+    const min = asNumber(rule.value);
+    if (min !== null && price < toCents(min)) {
+      return reject(
+        `Minimum spend not met: requires ${fmtUsd(min)}, price is ${fmtUsd(offer.priceUsd)}`,
+        rule.quotedClause,
       );
     }
   }
 
-  // 4. Discount from amount rules.
-  const percentRule = findRule(reward, "percent_off");
-  const flatRule = findRule(reward, "flat_off_usd");
-  let discount = 0;
-  let hasAmountRule = false;
-  if (percentRule) {
-    discount += offer.priceUsd * (asNumber(percentRule.value) / 100);
-    hasAmountRule = true;
+  // 6. Discount amount
+  const flats = rulesOf(reward, "flat_off_usd").map((r) => asNumber(r.value)).filter((n): n is number => n !== null);
+  const pcts = rulesOf(reward, "percent_off").map((r) => asNumber(r.value)).filter((n): n is number => n !== null);
+  let discount: number;
+  if (flats.length === 0 && pcts.length === 0) {
+    discount = toCents(reward.valueUsd);
+  } else {
+    discount =
+      flats.reduce((s, f) => s + toCents(f), 0) +
+      pcts.reduce((s, p) => s + Math.floor((price * p) / 100), 0);
   }
-  if (flatRule) {
-    discount += asNumber(flatRule.value);
-    hasAmountRule = true;
+  for (const rule of rulesOf(reward, "max_discount_usd")) {
+    const cap = asNumber(rule.value);
+    if (cap !== null) discount = Math.min(discount, toCents(cap));
   }
-  // Giftcard / points / cashback with no explicit amount rule: use face value.
-  if (!hasAmountRule && AMOUNT_TYPES.has(reward.type)) {
-    discount = Math.min(reward.valueUsd, offer.priceUsd);
-    hasAmountRule = true;
-  }
-  if (!hasAmountRule) {
-    return reject("no applicable discount");
+  discount = Math.max(0, Math.min(discount, price));
+  if (discount === 0) return reject("No redeemable value for this purchase");
+
+  // 7. Low value
+  if (discount < price * LOW_VALUE_FRACTION) {
+    return reject(
+      `Low value for this purchase: ${fmtUsd(fromCents(discount))} is under ` +
+        `${LOW_VALUE_FRACTION * 100}% of ${fmtUsd(offer.priceUsd)}`,
+    );
   }
 
-  // 5. Caps: max_discount_usd, reward.valueUsd (a $50 card ≤ $50), priceUsd.
-  const maxRule = findRule(reward, "max_discount_usd");
-  if (maxRule) discount = Math.min(discount, asNumber(maxRule.value));
-  if (reward.valueUsd > 0) discount = Math.min(discount, reward.valueUsd);
-  discount = Math.min(discount, offer.priceUsd);
+  return { appliedUsd: fromCents(discount) };
+}
 
-  discount = round2(discount);
-  if (discount <= 0) {
-    return reject("no applicable discount");
-  }
-
-  return { appliedUsd: discount };
+/** The reward's not_combinable_group, if any (first rule wins). */
+export function stackingGroup(reward: Reward): { group: string; quotedClause: string } | null {
+  const rule = rulesOf(reward, "not_combinable_group")[0];
+  return rule ? { group: String(rule.value).trim().toLowerCase(), quotedClause: rule.quotedClause } : null;
 }

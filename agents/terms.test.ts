@@ -40,7 +40,7 @@ describe("parseTerms", () => {
       { predicate: "flat_off_usd", value: 999, quotedClause: "Flat $30 off headphones over $200" },
     ];
     await expect(parseTerms(termsRaw, mock({ rules, parseConfidence: 0.9 }))).rejects.toThrow(
-      /ungrounded number/i,
+      /does not appear in its quoted clause/i,
     );
   });
 
@@ -49,7 +49,7 @@ describe("parseTerms", () => {
       { predicate: "flat_off_usd", value: 30, quotedClause: "Buy one get one free" },
     ];
     await expect(parseTerms(termsRaw, mock({ rules, parseConfidence: 0.9 }))).rejects.toThrow(
-      /ungrounded clause/i,
+      /quoted clause not found in source/i,
     );
   });
 });

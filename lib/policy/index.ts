@@ -1,4 +1,7 @@
 import type { Mandate, Plan, PurchaseIntent, PolicyResult } from "@/lib/types";
+import { categoryMatches } from "@/lib/tnc/categories";
+import { merchantMatches } from "@/lib/tnc/merchants";
+import { toCents, fmtUsd } from "@/lib/optimizer/money";
 
 /**
  * checkPolicy — Intent + Cart mandate gate → allow | ask | deny.
@@ -6,72 +9,77 @@ import type { Mandate, Plan, PurchaseIntent, PolicyResult } from "@/lib/types";
  * Checked BEFORE approval and again BEFORE capture (see TECH_PRD §2 step 5).
  * DETERMINISTIC. No LLM. OWNER: Rachandeep Kaur.
  *
- * Rules (ALL are evaluated; a reason is accumulated for every non-allow hit):
- *  - mandate expired (expiresAt < now)      → deny
- *  - cashUsd > mandate.capUsd               → deny
- *  - category not in allowCategories (if set)→ deny
- *  - merchant not in allowMerchants (if set) → deny
- *  - cashUsd > mandate.approvalThresholdUsd  → ask
- *  - otherwise                               → allow
- *
- * Precedence: any deny condition → "deny" (all deny reasons retained); else any
- * ask condition → "ask"; else "allow" (reasons: []).
+ * Rules (every failing rule adds a human-readable reason):
+ *  - mandate expired (now ≥ expiresAt)                  → deny
+ *  - cashUsd > mandate.capUsd (per transaction)          → deny
+ *  - spentUsd + cashUsd > mandate.budgetUsd              → deny  (only when the
+ *    caller passes `spentUsd`; the caller decides the budget window)
+ *  - intent category not allowed (incl. parent map)      → deny  (empty list = any)
+ *  - offer retailer not allowed                          → deny  (empty list = any)
+ *  - cashUsd > mandate.approvalThresholdUsd              → ask
+ *  - otherwise                                           → allow (reasons = [])
+ * Any deny wins over ask. Amounts compared in integer cents.
  */
-
-/** Format a USD amount to 2 decimal places for a user-facing reason string. */
-function usd(amount: number): string {
-  return `$${amount.toFixed(2)}`;
+export interface PolicyContext {
+  /** Clock for expiry checks — injectable so the gate stays deterministic. */
+  now?: Date;
+  /** Cash already spent under this mandate in the current budget window. */
+  spentUsd?: number;
 }
 
 export function checkPolicy(
   intent: PurchaseIntent,
   plan: Plan,
   mandate: Mandate,
+  ctx: PolicyContext = {},
 ): PolicyResult {
-  const denyReasons: string[] = [];
-  let askReason: string | null = null;
+  const now = ctx.now ?? new Date();
+  const deny: string[] = [];
+  const ask: string[] = [];
+  const cash = toCents(plan.cashUsd);
 
-  // mandate expired → deny
-  const expiresAt = new Date(mandate.expiresAt);
-  if (!Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() < Date.now()) {
-    denyReasons.push(`mandate expired on ${expiresAt.toISOString().slice(0, 10)}`);
+  const expiresAt = Date.parse(mandate.expiresAt);
+  if (Number.isNaN(expiresAt)) {
+    deny.push(`Mandate expiry "${mandate.expiresAt}" is not a valid date.`);
+  } else if (now.getTime() >= expiresAt) {
+    deny.push(`Mandate expired on ${new Date(expiresAt).toISOString()}.`);
   }
 
-  // over per-transaction cap → deny
-  if (plan.cashUsd > mandate.capUsd) {
-    denyReasons.push(
-      `${usd(plan.cashUsd)} exceeds per-transaction cap of ${usd(mandate.capUsd)}`,
+  if (cash > toCents(mandate.capUsd)) {
+    deny.push(
+      `${fmtUsd(plan.cashUsd)} exceeds the per-purchase cap of ${fmtUsd(mandate.capUsd)}.`,
     );
   }
 
-  // category not in allow-list (only when a list is set) → deny
-  if (
-    mandate.allowCategories.length > 0 &&
-    !mandate.allowCategories.includes(intent.category)
-  ) {
-    denyReasons.push(`category '${intent.category}' not in allow-list`);
+  if (ctx.spentUsd !== undefined) {
+    const after = toCents(ctx.spentUsd) + cash;
+    if (after > toCents(mandate.budgetUsd)) {
+      deny.push(
+        `Budget exceeded: ${fmtUsd(ctx.spentUsd)} already spent + ${fmtUsd(plan.cashUsd)} ` +
+          `is over the ${fmtUsd(mandate.budgetUsd)} budget.`,
+      );
+    }
   }
 
-  // merchant not in allow-list (only when a list is set) → deny
-  if (
-    mandate.allowMerchants.length > 0 &&
-    !mandate.allowMerchants.includes(plan.offer.retailer)
-  ) {
-    denyReasons.push(`merchant '${plan.offer.retailer}' not allowed`);
+  if (mandate.allowCategories.length > 0 && !categoryMatches(intent.category, mandate.allowCategories)) {
+    deny.push(
+      `Category "${intent.category}" is not allowed by the mandate (allowed: ${mandate.allowCategories.join(", ")}).`,
+    );
   }
 
-  // above approval threshold → ask (only matters if not otherwise denied)
-  if (plan.cashUsd > mandate.approvalThresholdUsd) {
-    askReason = `${usd(plan.cashUsd)} is above your approval threshold of ${usd(
-      mandate.approvalThresholdUsd,
-    )}`;
+  if (mandate.allowMerchants.length > 0 && !merchantMatches(plan.offer.retailer, mandate.allowMerchants)) {
+    deny.push(
+      `Merchant "${plan.offer.retailer}" is not allowed by the mandate (allowed: ${mandate.allowMerchants.join(", ")}).`,
+    );
   }
 
-  if (denyReasons.length > 0) {
-    return { decision: "deny", reasons: denyReasons };
+  if (cash > toCents(mandate.approvalThresholdUsd)) {
+    ask.push(
+      `${fmtUsd(plan.cashUsd)} is above the ${fmtUsd(mandate.approvalThresholdUsd)} approval threshold — needs your OK.`,
+    );
   }
-  if (askReason !== null) {
-    return { decision: "ask", reasons: [askReason] };
-  }
+
+  if (deny.length > 0) return { decision: "deny", reasons: [...deny, ...ask] };
+  if (ask.length > 0) return { decision: "ask", reasons: ask };
   return { decision: "allow", reasons: [] };
 }

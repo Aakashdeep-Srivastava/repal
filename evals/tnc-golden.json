@@ -1,70 +1,246 @@
 {
-  "description": "Golden eval for the A2 Terms agent (lib/tnc + agents/terms). Each case is a real reward's free-text T&Cs (from prisma/seed.ts) with the critical typed rules the parser must extract. Scoring focuses on the numeric predicates (min_spend_usd, flat_off_usd, percent_off, max_discount_usd) and the boolean constraints — these are what the optimizer consumes and what the grounding guard protects. Category/merchant phrasing is checked loosely (substring, case-insensitive).",
-  "scoring": {
-    "numericPredicates": ["min_spend_usd", "flat_off_usd", "percent_off", "max_discount_usd"],
-    "booleanPredicates": ["one_time_use", "not_combinable_group"],
-    "note": "A case passes if every expected numeric predicate is present with the exact value, every expected boolean constraint is present, and assertGrounded() passes against termsRaw."
-  },
+  "$comment": "Golden T&C eval — 20 free-text T&Cs with expected typed rules. Run in CI by the Terms agent (A2) + grounding guard. OWNER: Rachandeep Kaur. Cases 3-18 use the exact termsRaw from prisma/seed.ts. Conventions: (1) percent_off is a whole percent (5% -> 5); (2) every number must appear in its own quotedClause; (3) expires_on only for absolute dates written in the text - relative expiry ('in 7 days') lives in Reward.expiresAt, not a rule; (4) parseConfidence 1.0 = every material condition is encoded; lower it for each condition the predicate vocabulary cannot express (activation, new-customer-only, 'participating'/'select' stores, spend caps, FX amounts). Below 0.8 the optimizer shows the reward but never auto-applies it (lib/optimizer/evaluate.ts MIN_PARSE_CONFIDENCE).",
   "cases": [
     {
-      "id": "amex-dining",
-      "termsRaw": "Amex Offer: Spend $50 or more at participating restaurants and get $10 back. One-time use. Cannot be combined with other dining offers.",
-      "expect": { "min_spend_usd": 50, "flat_off_usd": 10, "one_time_use": true, "not_combinable_group": true },
-      "minConfidence": 0.5
+      "id": "amex-dining-10",
+      "termsRaw": "Spend $50 or more at participating restaurants and get $10 back. Offer valid through Dec 31, 2026. One-time use. Cannot be combined with other dining offers.",
+      "expected": {
+        "parseConfidence": 1.0,
+        "rules": [
+          { "predicate": "min_spend_usd", "value": 50, "quotedClause": "Spend $50 or more" },
+          { "predicate": "flat_off_usd", "value": 10, "quotedClause": "get $10 back" },
+          { "predicate": "category_allow", "value": ["dining"], "quotedClause": "at participating restaurants" },
+          { "predicate": "expires_on", "value": "2026-12-31", "quotedClause": "valid through Dec 31, 2026" },
+          { "predicate": "one_time_use", "value": "true", "quotedClause": "One-time use" },
+          { "predicate": "not_combinable_group", "value": "dining", "quotedClause": "Cannot be combined with other dining offers" }
+        ]
+      }
     },
     {
-      "id": "chase-bestbuy",
+      "id": "bestbuy-giftcard-40",
+      "termsRaw": "$40 Best Buy gift certificate. Redeemable on electronics only. Expires Jan 15, 2027.",
+      "expected": {
+        "parseConfidence": 1.0,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 40, "quotedClause": "$40 Best Buy gift certificate" },
+          { "predicate": "merchant_allow", "value": ["Best Buy"], "quotedClause": "Best Buy gift certificate" },
+          { "predicate": "category_allow", "value": ["electronics"], "quotedClause": "Redeemable on electronics only" },
+          { "predicate": "expires_on", "value": "2027-01-15", "quotedClause": "Expires Jan 15, 2027" }
+        ]
+      }
+    },
+    {
+      "id": "seed-chase-bestbuy-25",
       "termsRaw": "Chase: Earn $25 back on a single purchase of $100+ at Best Buy. Online or in-store. Limited to one statement credit.",
-      "expect": { "min_spend_usd": 100, "flat_off_usd": 25, "merchant_allow": "Best Buy", "one_time_use": true },
-      "minConfidence": 0.5
+      "expected": {
+        "parseConfidence": 1.0,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 25, "quotedClause": "Earn $25 back" },
+          { "predicate": "min_spend_usd", "value": 100, "quotedClause": "a single purchase of $100+" },
+          { "predicate": "merchant_allow", "value": ["Best Buy"], "quotedClause": "at Best Buy" },
+          { "predicate": "one_time_use", "value": "true", "quotedClause": "Limited to one statement credit" }
+        ]
+      }
     },
     {
-      "id": "visa-electronics",
+      "id": "seed-visa-electronics-5pct",
       "termsRaw": "Visa Offers+: Get 5% back on electronics purchases, up to $20 total cashback. Valid at select retailers.",
-      "expect": { "percent_off": 5, "max_discount_usd": 20, "category_allow": "electronics" },
-      "minConfidence": 0.5
+      "expected": {
+        "parseConfidence": 0.8,
+        "rules": [
+          { "predicate": "percent_off", "value": 5, "quotedClause": "Get 5% back" },
+          { "predicate": "category_allow", "value": ["electronics"], "quotedClause": "on electronics purchases" },
+          { "predicate": "max_discount_usd", "value": 20, "quotedClause": "up to $20 total cashback" }
+        ]
+      }
     },
     {
-      "id": "mastercard-headphones",
+      "id": "seed-mastercard-audio-15",
       "termsRaw": "Mastercard: $15 back when you spend $75 or more on headphones or audio accessories. One redemption per cardholder.",
-      "expect": { "min_spend_usd": 75, "flat_off_usd": 15, "category_allow": "headphones", "one_time_use": true },
-      "minConfidence": 0.5
+      "expected": {
+        "parseConfidence": 1.0,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 15, "quotedClause": "$15 back" },
+          { "predicate": "min_spend_usd", "value": 75, "quotedClause": "spend $75 or more" },
+          { "predicate": "category_allow", "value": ["headphones", "audio"], "quotedClause": "on headphones or audio accessories" },
+          { "predicate": "one_time_use", "value": "true", "quotedClause": "One redemption per cardholder" }
+        ]
+      }
     },
     {
-      "id": "discover-online",
+      "id": "seed-discover-online-5pct",
       "termsRaw": "Discover: 5% Cashback Bonus on online shopping this quarter, up to $75 spend. Activation required.",
-      "expect": { "percent_off": 5 },
-      "minConfidence": 0.4
+      "expected": {
+        "parseConfidence": 0.6,
+        "rules": [
+          { "predicate": "percent_off", "value": 5, "quotedClause": "5% Cashback Bonus" }
+        ]
+      }
     },
     {
-      "id": "amazon-giftcard",
+      "id": "seed-rupay-intl-inr",
+      "termsRaw": "RuPay Offer: Flat ₹1000 cashback on international spends above $120 (approx). Settles to statement. One-time.",
+      "expected": {
+        "parseConfidence": 0.5,
+        "rules": [
+          { "predicate": "min_spend_usd", "value": 120, "quotedClause": "international spends above $120 (approx)" },
+          { "predicate": "one_time_use", "value": "true", "quotedClause": "One-time" }
+        ]
+      }
+    },
+    {
+      "id": "seed-bestbuy-giftcard-40-relative",
+      "termsRaw": "$40 Best Buy gift certificate. Redeemable on electronics only. Expires in about 10 weeks.",
+      "expected": {
+        "parseConfidence": 1.0,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 40, "quotedClause": "$40 Best Buy gift certificate" },
+          { "predicate": "merchant_allow", "value": ["Best Buy"], "quotedClause": "Best Buy gift certificate" },
+          { "predicate": "category_allow", "value": ["electronics"], "quotedClause": "Redeemable on electronics only" }
+        ]
+      }
+    },
+    {
+      "id": "seed-amazon-giftcard-25",
       "termsRaw": "$25 Amazon gift card. No minimum purchase. Not redeemable for cash.",
-      "expect": { "flat_off_usd": 25, "merchant_allow": "Amazon" },
-      "minConfidence": 0.5
+      "expected": {
+        "parseConfidence": 1.0,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 25, "quotedClause": "$25 Amazon gift card" },
+          { "predicate": "merchant_allow", "value": ["Amazon"], "quotedClause": "Amazon gift card" }
+        ]
+      }
     },
     {
-      "id": "sony-welcome",
+      "id": "seed-target-egift-50",
+      "termsRaw": "Target eGiftCard worth $50 — EXPIRES IN 7 DAYS. Use it or lose it. Redeemable storewide.",
+      "expected": {
+        "parseConfidence": 1.0,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 50, "quotedClause": "worth $50" },
+          { "predicate": "merchant_allow", "value": ["Target"], "quotedClause": "Target eGiftCard" }
+        ]
+      }
+    },
+    {
+      "id": "seed-sony-welcome-20",
       "termsRaw": "Welcome coupon: $20 off your first order of $60 or more at Sony Store. Single use, code auto-applied.",
-      "expect": { "min_spend_usd": 60, "flat_off_usd": 20, "merchant_allow": "Sony Store", "one_time_use": true },
-      "minConfidence": 0.5
+      "expected": {
+        "parseConfidence": 0.8,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 20, "quotedClause": "$20 off" },
+          { "predicate": "min_spend_usd", "value": 60, "quotedClause": "order of $60 or more" },
+          { "predicate": "merchant_allow", "value": ["Sony Store"], "quotedClause": "at Sony Store" },
+          { "predicate": "one_time_use", "value": "true", "quotedClause": "Single use" }
+        ]
+      }
     },
     {
-      "id": "paypal-offer",
+      "id": "seed-delta-miles-3500",
+      "termsRaw": "Delta SkyMiles: 3,500 miles (~$35 value) expiring in 6 months. Redeemable for flights or seat upgrades.",
+      "expected": {
+        "parseConfidence": 0.9,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 35, "quotedClause": "(~$35 value)" },
+          { "predicate": "merchant_allow", "value": ["Delta"], "quotedClause": "Delta SkyMiles" },
+          { "predicate": "category_allow", "value": ["flights"], "quotedClause": "Redeemable for flights or seat upgrades" }
+        ]
+      }
+    },
+    {
+      "id": "seed-starbucks-stars-300",
+      "termsRaw": "Starbucks Rewards: 300 Stars. Redeem for food & drinks. Keep for travel? No — in-store only.",
+      "expected": {
+        "parseConfidence": 0.7,
+        "rules": [
+          { "predicate": "merchant_allow", "value": ["Starbucks"], "quotedClause": "Starbucks Rewards" },
+          { "predicate": "category_allow", "value": ["dining"], "quotedClause": "Redeem for food & drinks" }
+        ]
+      }
+    },
+    {
+      "id": "seed-amex-mr-6000",
+      "termsRaw": "Amex Membership Rewards: 6,000 points. Transferable to airline partners. Best value for travel.",
+      "expected": {
+        "parseConfidence": 0.6,
+        "rules": [
+          { "predicate": "category_allow", "value": ["travel"], "quotedClause": "Transferable to airline partners" }
+        ]
+      }
+    },
+    {
+      "id": "seed-chase-ur-2200",
+      "termsRaw": "Chase Ultimate Rewards: 2,200 points expiring soon. 1.25x value through the travel portal.",
+      "expected": {
+        "parseConfidence": 0.3,
+        "rules": []
+      }
+    },
+    {
+      "id": "seed-paypal-5-back",
       "termsRaw": "PayPal Offer: $5 back when you pay $30+ with PayPal at participating online stores. One-time.",
-      "expect": { "min_spend_usd": 30, "flat_off_usd": 5, "one_time_use": true },
-      "minConfidence": 0.5
+      "expected": {
+        "parseConfidence": 0.8,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 5, "quotedClause": "$5 back" },
+          { "predicate": "min_spend_usd", "value": 30, "quotedClause": "when you pay $30+" },
+          { "predicate": "one_time_use", "value": "true", "quotedClause": "One-time" }
+        ]
+      }
     },
     {
-      "id": "partner-headphones",
+      "id": "seed-partner-headphones-30",
       "termsRaw": "Partner deal: $30 off headphones over $200 at select retailers. While supplies last.",
-      "expect": { "min_spend_usd": 200, "flat_off_usd": 30, "category_allow": "headphones" },
-      "minConfidence": 0.5
+      "expected": {
+        "parseConfidence": 0.8,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 30, "quotedClause": "$30 off headphones" },
+          { "predicate": "category_allow", "value": ["headphones"], "quotedClause": "$30 off headphones" },
+          { "predicate": "min_spend_usd", "value": 200, "quotedClause": "headphones over $200" }
+        ]
+      }
     },
     {
-      "id": "aliexpress-intl",
+      "id": "seed-aliexpress-14",
       "termsRaw": "AliExpress international coupon: $14 off orders over $100 shipped to the US. New customers only.",
-      "expect": { "min_spend_usd": 100, "flat_off_usd": 14, "one_time_use": true },
-      "minConfidence": 0.4
+      "expected": {
+        "parseConfidence": 0.7,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 14, "quotedClause": "$14 off" },
+          { "predicate": "min_spend_usd", "value": 100, "quotedClause": "orders over $100" },
+          { "predicate": "merchant_allow", "value": ["AliExpress"], "quotedClause": "AliExpress international coupon" }
+        ]
+      }
+    },
+    {
+      "id": "macys-home-20pct",
+      "termsRaw": "Macy's Holiday Savings: 20% off home goods, maximum discount $50. Excludes electronics and mattresses. Valid through December 24, 2026.",
+      "expected": {
+        "parseConfidence": 1.0,
+        "rules": [
+          { "predicate": "percent_off", "value": 20, "quotedClause": "20% off home goods" },
+          { "predicate": "category_allow", "value": ["home"], "quotedClause": "off home goods" },
+          { "predicate": "max_discount_usd", "value": 50, "quotedClause": "maximum discount $50" },
+          { "predicate": "category_deny", "value": ["electronics", "mattresses"], "quotedClause": "Excludes electronics and mattresses" },
+          { "predicate": "merchant_allow", "value": ["Macy's"], "quotedClause": "Macy's Holiday Savings" },
+          { "predicate": "expires_on", "value": "2026-12-24", "quotedClause": "Valid through December 24, 2026" }
+        ]
+      }
+    },
+    {
+      "id": "walmart-plus-10",
+      "termsRaw": "Walmart+ member perk: $10 off any purchase of $50 or more, not valid at Walmart marketplace sellers. Cannot be combined with other Walmart coupons. Offer ends 11/30/2026.",
+      "expected": {
+        "parseConfidence": 0.9,
+        "rules": [
+          { "predicate": "flat_off_usd", "value": 10, "quotedClause": "$10 off" },
+          { "predicate": "min_spend_usd", "value": 50, "quotedClause": "purchase of $50 or more" },
+          { "predicate": "merchant_allow", "value": ["Walmart"], "quotedClause": "Walmart+ member perk" },
+          { "predicate": "merchant_deny", "value": ["Walmart marketplace sellers"], "quotedClause": "not valid at Walmart marketplace sellers" },
+          { "predicate": "not_combinable_group", "value": "walmart-coupons", "quotedClause": "Cannot be combined with other Walmart coupons" },
+          { "predicate": "expires_on", "value": "2026-11-30", "quotedClause": "Offer ends 11/30/2026" }
+        ]
+      }
     }
   ]
 }
