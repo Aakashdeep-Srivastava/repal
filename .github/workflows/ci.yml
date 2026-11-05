@@ -1,9 +1,14 @@
-name: CI
+name: CI/CD
 
 on:
   push:
     branches: [main]
   pull_request:
+
+# One deploy at a time; let an in-flight deploy finish rather than cancelling it.
+concurrency:
+  group: cicd-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -22,3 +27,72 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+
+  # CD — deploy to Render only after CI passes, only on main, and only once the
+  # Render wiring is in place (RENDER_WEB_SERVICE_ID repo variable is set after
+  # the Blueprint is created). Each service is deployed via the Render API and
+  # the job WAITS for it to go live, so a failed deploy fails the pipeline.
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      vars.RENDER_WEB_SERVICE_ID != ''
+    environment:
+      name: production
+      url: ${{ vars.RENDER_WEB_URL }}
+    steps:
+      - name: Deploy services to Render and wait for live
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          WEB_ID: ${{ vars.RENDER_WEB_SERVICE_ID }}
+          WORKER_ID: ${{ vars.RENDER_WORKER_SERVICE_ID }}
+          CRON_ID: ${{ vars.RENDER_CRON_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            echo "::error::RENDER_API_KEY secret is not set"; exit 1
+          fi
+
+          api="https://api.render.com/v1"
+          auth="Authorization: Bearer ${RENDER_API_KEY}"
+
+          deploy() {
+            local id="$1" name="$2"
+            if [ -z "${id}" ]; then
+              echo "::notice::${name}: no service id configured — skipping"
+              return 0
+            fi
+            echo "::group::Deploy ${name} (${id})"
+            local dep status
+            dep=$(curl -fsS -X POST "${api}/services/${id}/deploys" \
+              -H "${auth}" -H "Content-Type: application/json" \
+              -d '{"clearCache":"do_not_clear"}' | jq -r '.id')
+            echo "Triggered deploy ${dep}"
+
+            # Poll up to ~20 min (80 * 15s) for a terminal state.
+            for _ in $(seq 1 80); do
+              status=$(curl -fsS "${api}/services/${id}/deploys/${dep}" -H "${auth}" | jq -r '.status')
+              echo "  ${name}: ${status}"
+              case "${status}" in
+                live)
+                  echo "::endgroup::"
+                  echo "::notice::${name} deploy ${dep} is live"
+                  return 0 ;;
+                build_failed|update_failed|pre_deploy_failed|canceled)
+                  echo "::endgroup::"
+                  echo "::error::${name} deploy ${dep} failed (${status})"
+                  return 1 ;;
+              esac
+              sleep 15
+            done
+            echo "::endgroup::"
+            echo "::error::${name} deploy ${dep} did not reach 'live' in time"
+            return 1
+          }
+
+          # Web first (user-facing); then worker and cron.
+          deploy "${WEB_ID}" repal-web
+          deploy "${WORKER_ID}" repal-worker
+          deploy "${CRON_ID}" repal-expiry

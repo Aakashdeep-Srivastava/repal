@@ -16,6 +16,9 @@ services:
     name: repal-web
     runtime: node
     plan: starter
+    # CD is driven by GitHub Actions (deploy only after CI passes), not Render's
+    # push-triggered auto-deploy. See .github/workflows/ci.yml → deploy job.
+    autoDeploy: false
     buildCommand: npm ci && npx prisma generate && npm run build
     # Apply any pending migrations to Neon before the new version goes live.
     # Idempotent: a no-op when Neon is already at the latest migration.
@@ -59,6 +62,7 @@ services:
     name: repal-worker
     runtime: node
     plan: starter
+    autoDeploy: false
     buildCommand: npm ci && npx prisma generate
     startCommand: npm run worker:ingest
     envVars:
@@ -79,6 +83,7 @@ services:
     name: repal-expiry
     runtime: node
     schedule: "0 2 * * *"
+    autoDeploy: false
     buildCommand: npm ci && npx prisma generate
     startCommand: npm run worker:expiry
     envVars:
