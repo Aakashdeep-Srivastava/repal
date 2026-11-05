@@ -29,6 +29,7 @@ function loadEnv(file: string) {
 }
 
 export const E2E_RECEIPT_ID = "e2e-verified-receipt";
+export const E2E_RUN_ID = "e2e-run-traced";
 
 /** Canonical JSON for a flat primitive object — matches lib/receipts/canonical. */
 function canonicalFlat(obj: Record<string, string | number>): string {
@@ -71,5 +72,36 @@ export default async function globalSetup() {
     update: { sha256, signature },
     create: { id: E2E_RECEIPT_ID, ...input, sha256, signature },
   });
+
+  // Seed a completed run with tool traces + a plan for the SSE stream E2E.
+  await prisma.agentRun.upsert({
+    where: { id: E2E_RUN_ID },
+    update: { status: "done", step: "complete" },
+    create: { id: E2E_RUN_ID, userId: "demo-user", status: "done", step: "complete" },
+  });
+  await prisma.toolTrace.deleteMany({ where: { runId: E2E_RUN_ID } });
+  await prisma.toolTrace.createMany({
+    data: [
+      {
+        runId: E2E_RUN_ID,
+        tool: "render_intent",
+        kind: "tool",
+        latencyMs: 12,
+        payload: { input: { rawText: "headphones under $250" }, output: { category: "headphones", maxPriceUsd: 250 } },
+      },
+      {
+        runId: E2E_RUN_ID,
+        tool: "plan_purchase",
+        kind: "tool",
+        latencyMs: 40,
+        payload: { input: { category: "headphones" }, output: { offerCount: 3 } },
+      },
+    ],
+  });
+  await prisma.plan.deleteMany({ where: { runId: E2E_RUN_ID } });
+  await prisma.plan.create({
+    data: { runId: E2E_RUN_ID, name: "Cheapest after rewards", useRewards: [], savedUsd: 40, cashUsd: 208, rejected: [] },
+  });
+
   await prisma.$disconnect();
 }

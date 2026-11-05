@@ -1,4 +1,4 @@
-import { generateObject, type LanguageModel } from "ai";
+import { generateText, Output, type LanguageModel } from "ai";
 import { z } from "zod";
 import { claude } from "@/lib/ai/bedrock";
 import type { PurchaseIntent } from "@/lib/types";
@@ -6,7 +6,8 @@ import type { PurchaseIntent } from "@/lib/types";
 /**
  * A1 Intent agent — plain-language request → structured `PurchaseIntent`.
  *
- * LLM (structured) via `generateObject` on the Bedrock Claude model. The schema
+ * LLM (structured) via `generateText` + `Output.object` on the Bedrock Claude
+ * model. The schema
  * mirrors the `PurchaseIntent` contract (lib/types.ts). This is a pure read/
  * extract step — it never computes money, never invents a budget or merchant.
  * OWNER: Aakash.
@@ -49,11 +50,11 @@ export async function renderIntent(
   rawText: string,
   model: LanguageModel = claude,
 ): Promise<PurchaseIntent> {
-  const { object } = await generateObject({
+  const { output } = await generateText({
     model,
-    schema: intentSchema,
     system: SYSTEM,
     prompt: rawText,
+    output: Output.object({ schema: intentSchema }),
   });
-  return { rawText, ...object };
+  return { rawText, ...output };
 }

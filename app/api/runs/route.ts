@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { runAgent } from "@/agents/orchestrator";
 import { RunInputSchema } from "@/lib/schemas";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
+import { persistRunArtifacts } from "@/lib/run-trace";
 
 /**
  * POST /api/runs — start an agent run from a plain-language goal.
@@ -36,6 +37,8 @@ export async function POST(req: Request) {
 
   try {
     const result = await runAgent(parsed.data.goal);
+    // Persist tool_traces + plans for the live /stream replay (never fatal).
+    await persistRunArtifacts(run.id, result).catch(() => {});
     await prisma.agentRun.update({
       where: { id: run.id },
       data: { status: "done", step: "complete" },

@@ -45,6 +45,16 @@ function hasCredentials(): boolean {
 }
 
 /**
+ * True iff Bedrock is fully configured (credentials + model id). Lets callers
+ * cheaply decide whether to attempt an LLM call at all, instead of firing a
+ * request they know will fail — e.g. ingestion skips T&C parsing when this is
+ * false rather than making one doomed network round-trip per reward.
+ */
+export function isBedrockConfigured(): boolean {
+  return hasCredentials() && Boolean(BEDROCK_MODEL_ID);
+}
+
+/**
  * Fail fast with an actionable message if Bedrock isn't configured. Call this
  * at the entry of any flow that uses `claude`, so a missing key surfaces as a
  * clear error instead of a cryptic AWS auth failure deep in a request.

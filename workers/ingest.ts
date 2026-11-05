@@ -1,20 +1,27 @@
 /**
  * Reward ingestion worker.
  *
- * Pulls raw rewards from adapters (gmail / paypal / card / loyalty / channel3 /
- * seed), runs each through the Terms agent (A2) to parse termsRaw → rules, and
- * upserts normalized Reward rows. See docs/TECH_PRD.md §15.
+ * Pulls raw rewards from every adapter (gmail / paypal / card / loyalty /
+ * channel3), runs each through the Terms agent (A2) to parse termsRaw → rules
+ * (gracefully storing raw when the model is offline), and idempotently upserts
+ * normalized Reward rows. See docs/TECH_PRD.md §15.
  *
- * OWNER: AI agents layer (pending Aviral/Vishalika confirmation).
+ * Run:  npm run worker:ingest -- <userId>   (defaults to "demo-user")
+ *
+ * OWNER: AI agents layer (ingestion).
  */
-export {};
+import { prisma } from "@/lib/db";
+import { runIngestion } from "@/lib/ingest/registry";
 
 async function main() {
-  // TODO: adapter registry → RawReward[] → parseTerms → upsert Reward.
-  console.log("[ingest] worker stub — not yet implemented");
+  const userId = process.argv[2] ?? "demo-user";
+  const summary = await runIngestion(userId);
+  console.log(JSON.stringify(summary, null, 2));
+  await prisma.$disconnect();
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error("[ingest] fatal", err);
+  await prisma.$disconnect();
   process.exit(1);
 });

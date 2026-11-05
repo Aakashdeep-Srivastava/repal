@@ -102,6 +102,42 @@ async function getOffers(query: string, maxPriceUsd?: number): Promise<Offer[]> 
 }
 
 /**
+ * Eligibility + optimization for ONE already-chosen product (the shopping
+ * journey's product-detail step). Same deterministic engine as planPurchase,
+ * but the offer set is exactly the selected product — so the optimizer computes
+ * which of the user's rewards actually apply to THIS item, the resulting savings,
+ * and (for the winner) the rewards it rejected with the disqualifying clause.
+ * Reuses optimize() + checkPolicy() — no money is computed outside lib/.
+ */
+export async function eligibilityForProduct(args: {
+  userId: string;
+  offer: Offer;
+  category: string;
+  maxPriceUsd?: number;
+}): Promise<PlanPurchaseResult> {
+  const [rewardRows, mandateRow] = await Promise.all([
+    prisma.reward.findMany({ where: { userId: args.userId } }),
+    prisma.mandate.findFirst({ where: { userId: args.userId, status: "active" } }),
+  ]);
+
+  const rewards = rewardRows.map(toReward);
+  const mandate = mandateRow ? toMandate(mandateRow) : demoMandate();
+  const intent: PurchaseIntent = {
+    rawText: args.offer.title,
+    category: args.category,
+    maxPriceUsd: args.maxPriceUsd,
+  };
+
+  const { plans, rejected } = optimize(intent, [args.offer], rewards, mandate);
+  const gated: PlanWithPolicy[] = plans.map((p) => ({
+    ...p,
+    policy: checkPolicy(intent, p, mandate),
+  }));
+
+  return { intent, plans: gated, rejected, mandateId: mandate.id, offerCount: 1 };
+}
+
+/**
  * Run the full deterministic plan: wallet + mandate (DB) → offers (cache/Channel3)
  * → optimizer → policy gate per plan. Returns up to 3 policy-gated plans plus the
  * rejection list (each with the clause that disqualified a reward).

@@ -1,22 +1,57 @@
 @import "tailwindcss";
 
 /*
- * RePal design tokens (OKLCH). Expand per PRD §12.
- * Keep this file as the single source of truth for color/radius/space.
+ * RePal design tokens — the single source of truth for color / radius /
+ * elevation. Palette per the RePal Motion System brief (Step 7). Existing token
+ * names (--color-bg/-fg/-brand/-muted) are preserved so prior screens keep
+ * working; new brand + journey tokens are added alongside.
  */
 @theme {
-  --color-bg: oklch(0.99 0 0);
-  --color-fg: oklch(0.2 0.02 265);
-  --color-brand: oklch(0.55 0.2 265);
-  --color-muted: oklch(0.6 0.01 265);
+  /* Brand palette (fixed hues) */
+  --color-navy: #0b1220;
+  --color-repal-blue: #103e91;
+  --color-cyan: #11ace3;
+  --color-action: #2457e6;
+  --color-teal: #0f766e; /* eligible / success */
+  --color-violet: #7c3aed; /* AI */
+  --color-surface: #f7f9fc;
+
+  /* Semantic (light theme defaults) */
+  --color-bg: #f7f9fc;
+  --color-fg: #0b1220;
+  --color-brand: #2457e6; /* primary action */
+  --color-brand-deep: #103e91;
+  --color-muted: #5b6475;
+  --color-card: #ffffff;
+  --color-border: rgba(11, 18, 32, 0.1);
+
+  /* Radius scale */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+
+  /* Elevation (shadows) */
+  --shadow-sm: 0 1px 2px rgba(11, 18, 32, 0.06);
+  --shadow-md: 0 4px 16px rgba(11, 18, 32, 0.08);
+  --shadow-lg: 0 12px 40px rgba(11, 18, 32, 0.14);
+  --shadow-sheet: 0 -8px 40px rgba(11, 18, 32, 0.18);
+
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
+/* Dark theme — navy canvas. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: oklch(0.18 0.01 265);
-    --color-fg: oklch(0.96 0 0);
+    --color-bg: #0b1220;
+    --color-fg: #eef2f8;
+    --color-brand: #3b6cff;
+    --color-brand-deep: #11ace3;
+    --color-muted: #93a0b4;
+    --color-card: #121b2e;
+    --color-border: rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -25,9 +60,31 @@ body {
   background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-sans);
+  /* No accidental horizontal overflow (brief Step 5). */
+  overflow-x: hidden;
 }
 
-/* tabular figures for all money columns (PRD §13.6) */
+/* Safe-area helpers for mobile headers / sticky actions (brief Step 5). */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* tabular figures for all money columns (PRD §13.6) — stable during animation. */
 .tnum {
   font-variant-numeric: tabular-nums;
+}
+
+/* Respect reduced motion globally as a safety net (components also honor it). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -2,15 +2,29 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlanCards } from "@/components/PlanCards";
-import { requestAgentRun, requestPlan } from "@/lib/client";
+import { RepalLogo } from "@/components/brand/RepalLogo";
+import { requestAgentRun, requestPlan, fetchMe, demoLogin, logout } from "@/lib/client";
 
 function Nav() {
+  const queryClient = useQueryClient();
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
+
+  const login = useMutation({
+    mutationFn: demoLogin,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
+  });
+  const signOut = useMutation({
+    mutationFn: logout,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
+  });
+
   return (
     <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-      <Link href="/" className="font-semibold tracking-tight">
-        Re<span className="text-[var(--color-brand)]">Pal</span>
+      <Link href="/" aria-label="RePal home" className="shrink-0">
+        <RepalLogo size="sm" />
       </Link>
       <div className="flex items-center gap-5 text-sm text-[var(--color-muted)]">
         <Link href="/" className="hover:text-[var(--color-fg)]">
@@ -19,16 +33,52 @@ function Nav() {
         <Link href="/wallet" className="hover:text-[var(--color-fg)]">
           Wallet
         </Link>
+        {me ? (
+          <>
+            <span className="text-[var(--color-fg)]">{me.name ?? me.email ?? me.userId}</span>
+            <button
+              onClick={() => signOut.mutate()}
+              disabled={signOut.isPending}
+              className="rounded-lg border border-white/15 px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
+            >
+              Log out
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => login.mutate()}
+              disabled={login.isPending}
+              className="rounded-lg border border-white/15 px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
+            >
+              {login.isPending ? "Signing in…" : "Demo login"}
+            </button>
+            <a
+              href="/api/auth/paypal/login"
+              className="rounded-lg bg-[var(--color-brand)] px-3 py-1.5 font-medium text-white"
+            >
+              Log in with PayPal
+            </a>
+          </>
+        )}
       </div>
     </nav>
   );
 }
 
 export default function Home() {
+  const router = useRouter();
+
   // Input state (local); async/server state lives in TanStack Query mutations.
+  const [shopQuery, setShopQuery] = useState("");
   const [goal, setGoal] = useState("");
   const [category, setCategory] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+
+  const goShop = () => {
+    const q = shopQuery.trim();
+    router.push(q ? `/shop?q=${encodeURIComponent(q)}` : "/shop");
+  };
 
   const agent = useMutation({ mutationFn: (g: string) => requestAgentRun(g) });
   const plan = useMutation({
@@ -62,8 +112,32 @@ export default function Home() {
           </p>
         </header>
 
+        {/* Shop — the signature journey entry (search → results → pay). */}
+        <section className="mt-10 rounded-2xl border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/5 p-6">
+          <h2 className="text-sm font-semibold text-[var(--color-brand)]">Shop with your rewards</h2>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">
+            Search a product, see which rewards actually apply, and check out — the cheapest price after rewards.
+          </p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+            <input
+              aria-label="Shop for a product"
+              value={shopQuery}
+              onChange={(e) => setShopQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && goShop()}
+              placeholder="Sony noise-cancelling headphones"
+              className="flex-1 rounded-xl border border-white/15 bg-transparent px-4 py-3 text-sm outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)]"
+            />
+            <button
+              onClick={goShop}
+              className="rounded-xl bg-[var(--color-brand)] px-5 py-3 text-sm font-medium text-white"
+            >
+              Start shopping
+            </button>
+          </div>
+        </section>
+
         {/* Agent */}
-        <section className="mt-10 rounded-2xl border border-white/10 p-6">
+        <section className="mt-6 rounded-2xl border border-white/10 p-6">
           <h2 className="text-sm font-semibold text-[var(--color-muted)]">Ask the agent</h2>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
             <input
