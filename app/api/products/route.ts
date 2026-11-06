@@ -1,5 +1,24 @@
 import { NextResponse } from "next/server";
 import { getProducts } from "@/lib/shop/products";
+import { Channel3Failure } from "@/lib/channel3";
+
+/** Map a Channel3 failure kind to an HTTP status + stable error code. */
+function failureResponse(err: Channel3Failure) {
+  const status =
+    err.kind === "unauthorized"
+      ? 401
+      : err.kind === "rate_limited"
+        ? 429
+        : err.kind === "bad_request"
+          ? 400
+          : err.kind === "config"
+            ? 503
+            : 502;
+  return NextResponse.json(
+    { error: err.message, code: err.kind, provider: "channel3" },
+    { status },
+  );
+}
 
 /**
  * GET /api/products?q=&max= — product discovery for the shopping journey.
@@ -33,8 +52,9 @@ export async function GET(req: Request) {
     const result = await getProducts(q, { maxPriceUsd });
     return NextResponse.json(result);
   } catch (err) {
+    if (err instanceof Channel3Failure) return failureResponse(err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "product search failed" },
+      { error: err instanceof Error ? err.message : "product search failed", code: "upstream" },
       { status: 502 },
     );
   }
