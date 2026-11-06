@@ -242,6 +242,14 @@ export default function Home() {
           </div>
         </section>
       </div>
+      <footer className="mx-auto flex max-w-5xl justify-center gap-6 px-4 pb-10 text-xs text-[var(--color-muted)]">
+        <Link href="/privacy" className="hover:text-[var(--color-fg)]">
+          Privacy
+        </Link>
+        <Link href="/terms" className="hover:text-[var(--color-fg)]">
+          Terms
+        </Link>
+      </footer>
     </main>
   );
 }
