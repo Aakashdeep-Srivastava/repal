@@ -47,7 +47,7 @@ export function PlanCards({
 }) {
   if (!plans.length) {
     return (
-      <p className="rounded-xl border border-white/10 p-6 text-sm text-[var(--color-muted)]">
+      <p className="rounded-xl border border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
         No plans yet — run the optimizer above to see the cheapest option after your rewards.
       </p>
     );
@@ -60,7 +60,7 @@ export function PlanCards({
           <div
             key={plan.offer.id + i}
             className={`flex flex-col rounded-2xl border p-5 ${
-              i === 0 ? "border-[var(--color-brand)]/60 bg-[var(--color-brand)]/5" : "border-white/10"
+              i === 0 ? "border-[var(--color-brand)]/60 bg-[var(--color-brand)]/5" : "border-[var(--color-border)]"
             }`}
           >
             <div className="flex items-center justify-between gap-2">
@@ -68,7 +68,7 @@ export function PlanCards({
                 className={
                   i === 0
                     ? "border-[var(--color-brand)]/50 bg-[var(--color-brand)]/15 text-[var(--color-brand)]"
-                    : "border-white/15 text-[var(--color-muted)]"
+                    : "border-[var(--color-border)] text-[var(--color-muted)]"
                 }
               >
                 {i === 0 ? "Cheapest after rewards" : plan.name}
@@ -97,7 +97,7 @@ export function PlanCards({
                   you save {usd(plan.savedUsd)}
                 </Badge>
               )}
-              <Badge className="border-white/15 text-[var(--color-muted)]">
+              <Badge className="border-[var(--color-border)] text-[var(--color-muted)]">
                 {plan.useRewards.length} reward{plan.useRewards.length === 1 ? "" : "s"} applied
               </Badge>
             </div>
@@ -123,7 +123,7 @@ export function PlanCards({
       </div>
 
       {rejected.length > 0 && (
-        <div className="rounded-2xl border border-white/10 p-5">
+        <div className="rounded-2xl border border-[var(--color-border)] p-5">
           <h4 className="text-sm font-semibold">Rewards that didn&apos;t apply</h4>
           <ul className="mt-3 space-y-2">
             {rejected.map((r, i) => (

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlanCards } from "@/components/PlanCards";
 import { RepalLogo } from "@/components/brand/RepalLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { requestAgentRun, requestPlan, fetchMe, demoLogin, logout } from "@/lib/client";
 
 function Nav() {
@@ -26,7 +27,8 @@ function Nav() {
       <Link href="/" aria-label="RePal home" className="shrink-0">
         <RepalLogo size="sm" />
       </Link>
-      <div className="flex items-center gap-5 text-sm text-[var(--color-muted)]">
+      <div className="flex items-center gap-3 text-sm text-[var(--color-muted)] sm:gap-5">
+        <ThemeToggle />
         <Link href="/" className="hover:text-[var(--color-fg)]">
           Agent
         </Link>
@@ -39,7 +41,7 @@ function Nav() {
             <button
               onClick={() => signOut.mutate()}
               disabled={signOut.isPending}
-              className="rounded-lg border border-white/15 px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
+              className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
             >
               Log out
             </button>
@@ -49,7 +51,7 @@ function Nav() {
             <button
               onClick={() => login.mutate()}
               disabled={login.isPending}
-              className="rounded-lg border border-white/15 px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
+              className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
             >
               {login.isPending ? "Signing in…" : "Demo login"}
             </button>
@@ -95,25 +97,37 @@ export default function Home() {
     plan.mutate({ category, ...(maxPrice ? { maxPriceUsd: Number(maxPrice) } : {}) });
 
   return (
-    <main className="min-h-dvh">
+    <main className="hero-aura min-h-dvh">
       <Nav />
 
       <div className="mx-auto max-w-5xl px-6 pb-24">
         {/* Hero */}
-        <header className="pt-8">
-          <p className="font-mono text-sm text-[var(--color-brand)]">Re·wards + Pay·Pal</p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-            The cheapest price <em className="not-italic text-[var(--color-brand)]">after</em> your
+        <header className="pt-10 sm:pt-14">
+          <p className="rise inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1 font-mono text-xs tracking-wide text-[var(--color-brand)] shadow-sm">
+            <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-cyan)]" />
+            Re·wards + Pay·Pal
+          </p>
+          <h1
+            className="rise font-display mt-5 text-4xl font-medium leading-[1.05] tracking-tight sm:text-6xl"
+            style={{ animationDelay: "60ms" }}
+          >
+            The cheapest price <em className="italic text-[var(--color-brand)]">after</em> your
             rewards.
           </h1>
-          <p className="mt-3 max-w-2xl text-lg text-[var(--color-muted)]">
+          <p
+            className="rise mt-5 max-w-2xl text-base text-[var(--color-muted)] sm:text-lg"
+            style={{ animationDelay: "120ms" }}
+          >
             State a goal in plain language. RePal reads your rewards&apos; fine print, a deterministic
             optimizer finds the cheapest SKU after rewards, and PayPal moves the money.
           </p>
         </header>
 
         {/* Shop — the signature journey entry (search → results → pay). */}
-        <section className="mt-10 rounded-2xl border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/5 p-6">
+        <section
+          className="rise card-hover mt-10 rounded-2xl border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/5 p-6 shadow-sm"
+          style={{ animationDelay: "180ms" }}
+        >
           <h2 className="text-sm font-semibold text-[var(--color-brand)]">Shop with your rewards</h2>
           <p className="mt-1 text-sm text-[var(--color-muted)]">
             Search a product, see which rewards actually apply, and check out — the cheapest price after rewards.
@@ -125,7 +139,7 @@ export default function Home() {
               onChange={(e) => setShopQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && goShop()}
               placeholder="Sony noise-cancelling headphones"
-              className="flex-1 rounded-xl border border-white/15 bg-transparent px-4 py-3 text-sm outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)]"
+              className="flex-1 rounded-xl border border-[var(--color-border)] bg-transparent px-4 py-3 text-sm outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)]"
             />
             <button
               onClick={goShop}
@@ -137,7 +151,7 @@ export default function Home() {
         </section>
 
         {/* Agent */}
-        <section className="mt-6 rounded-2xl border border-white/10 p-6">
+        <section className="card card-hover rise mt-6 rounded-2xl p-6" style={{ animationDelay: "240ms" }}>
           <h2 className="text-sm font-semibold text-[var(--color-muted)]">Ask the agent</h2>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
             <input
@@ -146,7 +160,7 @@ export default function Home() {
               onChange={(e) => setGoal(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && runAgent()}
               placeholder="noise cancelling headphones under $250"
-              className="flex-1 rounded-xl border border-white/15 bg-transparent px-4 py-3 text-sm outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)]"
+              className="flex-1 rounded-xl border border-[var(--color-border)] bg-transparent px-4 py-3 text-sm outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)]"
             />
             <button
               onClick={runAgent}
@@ -176,7 +190,7 @@ export default function Home() {
         </section>
 
         {/* Deterministic optimizer */}
-        <section className="mt-6 rounded-2xl border border-white/10 p-6">
+        <section className="card card-hover rise mt-6 rounded-2xl p-6" style={{ animationDelay: "300ms" }}>
           <h2 className="text-sm font-semibold text-[var(--color-muted)]">
             Try it now — no AI needed
           </h2>
@@ -187,7 +201,7 @@ export default function Home() {
               onChange={(e) => setCategory(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && findPlans()}
               placeholder="headphones"
-              className="flex-1 rounded-xl border border-white/15 bg-transparent px-4 py-3 text-sm outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)]"
+              className="flex-1 rounded-xl border border-[var(--color-border)] bg-transparent px-4 py-3 text-sm outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)]"
             />
             <input
               aria-label="Max price USD"
@@ -195,7 +209,7 @@ export default function Home() {
               onChange={(e) => setMaxPrice(e.target.value.replace(/[^0-9.]/g, ""))}
               inputMode="decimal"
               placeholder="max $"
-              className="w-28 rounded-xl border border-white/15 bg-transparent px-4 py-3 text-sm outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)]"
+              className="w-28 rounded-xl border border-[var(--color-border)] bg-transparent px-4 py-3 text-sm outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-brand)]"
             />
             <button
               onClick={findPlans}
