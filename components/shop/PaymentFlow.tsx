@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { MotionButton, AnimatedStatus, type StatusTone } from "@/components/motion";
 import { useJourney } from "@/lib/store/journey";
 import { isPaymentSuccess, type PaymentStatus } from "@/lib/shop/types";
@@ -22,8 +22,13 @@ import type { Product, PlanWithPolicy } from "@/lib/shop/types";
  *    sandbox receipt id is stable per attempt.
  *
  * DEMO mode  → POST /api/pay/demo-capture → server-signed sandbox receipt.
- * LIVE mode  → POST /api/pay/order → (buyer approval happens in PayPal's own SDK
- *              UI, not recreated here) → POST /api/pay/capture → signed receipt.
+ * LIVE mode  → POST /api/pay/order → redirect to PayPal's approval page
+ *              (`approveUrl`) → PayPal redirects back to
+ *              /checkout?paypal=return&token=<orderId> → POST /api/pay/capture
+ *              → signed receipt. A capture is only ever attempted for the order
+ *              id stored before the redirect, and only after PayPal returns the
+ *              buyer with that same token. Cancelling on PayPal lands on
+ *              /checkout?paypal=cancel → "cancelled" (retry creates a new order).
  */
 export interface PaymentFlowProps {
   plan: PlanWithPolicy;
@@ -61,7 +66,7 @@ const LABEL: Record<PaymentStatus, string> = {
   idle: "Ready",
   review: "Review your order",
   preparing: "Preparing payment…",
-  awaiting_approval: "Awaiting approval…",
+  awaiting_approval: "Waiting for PayPal approval…",
   capturing: "Capturing payment…",
   verifying: "Verifying receipt…",
   complete: "Payment complete",
@@ -93,6 +98,88 @@ export function PaymentFlow({
   const inFlight = IN_FLIGHT.has(payment);
   const canRetry = payment === "failed" || payment === "cancelled";
 
+  // The numbers the receipt attests to. `runId` is the stable checkoutKey so a
+  // capture after the PayPal round-trip is tied to the same attempt.
+  const buildDecision = useCallback(
+    () => ({
+      runId: useJourney.getState().checkoutKey ?? checkoutKey ?? `co_${product.id}`,
+      item: plan.offer.title,
+      merchant: plan.offer.retailer,
+      category: product.category,
+      priceUsd: plan.offer.priceUsd,
+      savedUsd: plan.savedUsd,
+      cashUsd: plan.cashUsd,
+    }),
+    [checkoutKey, plan, product],
+  );
+
+  /** Live leg 2: capture an order the buyer approved on PayPal. */
+  const capture = useCallback(
+    async (orderId: string) => {
+      try {
+        setPayment("capturing");
+        const capRes = await fetch("/api/pay/capture", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ orderId, decision: buildDecision() }),
+        });
+        const cap = (await capRes.json().catch(() => ({}))) as {
+          receiptId?: string;
+          status?: string;
+          error?: unknown;
+        };
+        if (!capRes.ok) {
+          throw new Error(typeof cap.error === "string" ? cap.error : "Capture failed");
+        }
+        if (cap.status === "pending") {
+          setPayment("pending", "PayPal reports this payment as pending.");
+          submittingRef.current = false;
+          return;
+        }
+        // NEVER show success without a server-issued receiptId.
+        if (!cap.receiptId) {
+          throw new Error("Capture returned no receipt — not marking as paid.");
+        }
+        setPayment("verifying");
+        setReceiptId(cap.receiptId);
+        setPayment("complete");
+        onComplete(cap.receiptId);
+      } catch (err) {
+        setPayment("failed", err instanceof Error ? err.message : "Capture failed");
+        submittingRef.current = false;
+      }
+    },
+    [buildDecision, onComplete, setPayment, setReceiptId],
+  );
+
+  // Back from PayPal: /checkout?paypal=return&token=<orderId> (or =cancel).
+  // Runs once per return; the query is stripped immediately so a refresh can't
+  // re-trigger a capture, and submittingRef blocks a StrictMode double-run.
+  useEffect(() => {
+    if (mode !== "live" || typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const outcome = url.searchParams.get("paypal");
+    if (!outcome) return;
+    const token = url.searchParams.get("token");
+    url.searchParams.delete("paypal");
+    url.searchParams.delete("token");
+    url.searchParams.delete("PayerID");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+
+    const { orderId, payment: status } = useJourney.getState();
+    if (status !== "awaiting_approval" || !orderId) return;
+    if (outcome === "cancel") {
+      setPayment("cancelled", "You cancelled the payment on PayPal.");
+      return;
+    }
+    if (outcome === "return" && token === orderId && !submittingRef.current) {
+      submittingRef.current = true;
+      void capture(orderId);
+    } else if (outcome === "return") {
+      setPayment("failed", "PayPal returned a different order than this checkout started.");
+    }
+  }, [mode, capture, setPayment]);
+
   const pay = useCallback(async () => {
     // Guards: already working, or already finished successfully.
     if (submittingRef.current || isPaymentSuccess(useJourney.getState().payment)) {
@@ -100,17 +187,7 @@ export function PaymentFlow({
     }
     submittingRef.current = true;
 
-    // The idempotency key — stable per checkout attempt.
-    const runId = checkoutKey ?? `co_${product.id}`;
-    const decision = {
-      runId,
-      item: plan.offer.title,
-      merchant: plan.offer.retailer,
-      category: product.category,
-      priceUsd: plan.offer.priceUsd,
-      savedUsd: plan.savedUsd,
-      cashUsd: plan.cashUsd,
-    };
+    const decision = buildDecision();
 
     try {
       if (mode === "demo") {
@@ -138,7 +215,7 @@ export function PaymentFlow({
         return; // terminal success — do NOT re-arm submittingRef.
       }
 
-      // ── Live path: create order → (PayPal approval UI) → capture. ──
+      // ── Live path: create order → buyer approves on PayPal → capture. ──
       setPayment("preparing");
       const orderRes = await fetch("/api/pay/order", {
         method: "POST",
@@ -147,6 +224,7 @@ export function PaymentFlow({
       });
       const order = (await orderRes.json().catch(() => ({}))) as {
         id?: string;
+        approveUrl?: string;
         error?: unknown;
       };
       if (!orderRes.ok || !order.id) {
@@ -154,40 +232,16 @@ export function PaymentFlow({
           typeof order.error === "string" ? order.error : "Could not create order",
         );
       }
+      if (!order.approveUrl) {
+        throw new Error("PayPal returned no approval link — cannot continue.");
+      }
+      // Persisted (sessionStorage) so the return trip can match the token.
       setOrderId(order.id);
-      // Real buyer approval would occur in PayPal's own SDK UI; we only reflect it.
       setPayment("awaiting_approval");
-
-      setPayment("capturing");
-      const capRes = await fetch("/api/pay/capture", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ orderId: order.id, decision }),
-      });
-      const cap = (await capRes.json().catch(() => ({}))) as {
-        receiptId?: string;
-        status?: string;
-        error?: unknown;
-      };
-      if (!capRes.ok) {
-        throw new Error(
-          typeof cap.error === "string" ? cap.error : "Capture failed",
-        );
-      }
-      if (cap.status === "pending") {
-        setPayment("pending", "PayPal reports this payment as pending.");
-        submittingRef.current = false;
-        return;
-      }
-      // NEVER show success without a server-issued receiptId.
-      if (!cap.receiptId) {
-        throw new Error("Capture returned no receipt — not marking as paid.");
-      }
-      setPayment("verifying");
-      setReceiptId(cap.receiptId);
-      setPayment("complete");
-      onComplete(cap.receiptId);
-      return; // terminal success.
+      // Hand off to PayPal. Capture resumes in the effect above on return.
+      // submittingRef stays armed — this page is navigating away.
+      window.location.assign(order.approveUrl);
+      return;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Payment failed";
       // Treat an explicit user-abort as a cancel (warning), else a failure.
@@ -195,7 +249,7 @@ export function PaymentFlow({
       setPayment(cancelled ? "cancelled" : "failed", msg);
       submittingRef.current = false; // allow a fresh retry attempt.
     }
-  }, [checkoutKey, mode, onComplete, plan, product, setOrderId, setPayment, setReceiptId]);
+  }, [buildDecision, mode, onComplete, plan, setOrderId, setPayment, setReceiptId]);
 
   const retry = useCallback(() => {
     submittingRef.current = false;
