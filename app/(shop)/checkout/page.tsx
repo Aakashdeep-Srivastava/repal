@@ -82,8 +82,14 @@ export default function CheckoutPage() {
   // state with no receipt is reset to "review" so the user can pay/retry cleanly.
   useEffect(() => {
     if (!mounted) return;
-    const { payment: p, receiptId: rid } = useJourney.getState();
-    if (TRANSIENT.has(p) && !rid) beginCheckout();
+    const { payment: p, receiptId: rid, orderId } = useJourney.getState();
+    // Returning from PayPal's approval page (?paypal=return|cancel): keep the
+    // awaiting_approval state + orderId so PaymentFlow can capture / cancel it.
+    const backFromPayPal =
+      p === "awaiting_approval" &&
+      !!orderId &&
+      new URLSearchParams(window.location.search).has("paypal");
+    if (TRANSIENT.has(p) && !rid && !backFromPayPal) beginCheckout();
   }, [mounted, beginCheckout]);
 
   // Pre-hydration: neutral placeholder (prevents a premature "nothing here").
