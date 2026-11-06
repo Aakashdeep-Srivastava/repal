@@ -1,6 +1,5 @@
-import type { Offer } from "@/lib/types";
 import type { Product, ProductSearchResponse } from "@/lib/shop/types";
-import { findOffers } from "@/lib/channel3";
+import { searchChannel3Products, channel3DiscoveryMode } from "@/lib/channel3";
 
 /**
  * Product discovery for the shopping journey.
@@ -175,24 +174,33 @@ export interface GetProductsOptions {
   maxPriceUsd?: number;
 }
 
-/** Map a normalized Channel3 Offer to a journey Product. */
-function offerToProduct(offer: Offer, query: string): Product {
-  return {
-    ...offer,
-    category: query,
-    // The UI renders a deterministic generated visual keyed on id; Channel3's
-    // normalized Offer carries no image, so leave imageUrl undefined here.
-    imageUrl: undefined,
-    availability: "In stock",
-    source: "channel3",
-  };
+/** Filter the labelled sandbox catalog by query + price (demo path). */
+function sandboxSearch(q: string, maxPriceUsd?: number): Product[] {
+  const needle = q.trim().toLowerCase();
+  return SANDBOX_CATALOG.filter((p) => {
+    const matchesQuery =
+      needle === "" ||
+      p.title.toLowerCase().includes(needle) ||
+      p.category.toLowerCase().includes(needle);
+    const withinPrice = maxPriceUsd === undefined || p.priceUsd <= maxPriceUsd;
+    return matchesQuery && withinPrice;
+  }).map((p) => ({ ...p }));
+}
+
+/** Resolve one labelled sandbox product by id (demo path for /product/[id]). */
+export function getSandboxProduct(id: string): Product | null {
+  const p = SANDBOX_CATALOG.find((x) => x.id === id);
+  return p ? { ...p } : null;
 }
 
 /**
  * Discover products for a query.
  *
- * - Channel3 configured  → live results mapped to Product (source "channel3").
- * - Otherwise            → labelled SANDBOX catalog filtered by query + price.
+ * - Discovery mode "live"  → real Channel3 results (source "channel3"), with
+ *   photos and every merchant offer. Channel3 failures propagate as a
+ *   `Channel3Failure` so the route can surface the exact state
+ *   (unauthorized / rate_limited / …) instead of silently returning empty.
+ * - Discovery mode "demo"  → labelled SANDBOX catalog filtered by query + price.
  *
  * Empty query returns the full set (catalog) / a broad Channel3 search.
  */
@@ -203,25 +211,11 @@ export async function getProducts(
   const q = query.trim();
   const { maxPriceUsd } = opts;
 
-  if (process.env.CHANNEL3_API_KEY) {
-    const offers = await findOffers(q, { maxPriceUsd, limit: 12 });
-    return {
-      q,
-      source: "channel3",
-      products: offers.map((o) => offerToProduct(o, q)),
-    };
+  if (channel3DiscoveryMode() === "live") {
+    const products = await searchChannel3Products(q, { maxPriceUsd, limit: 12 });
+    return { q, source: "channel3", products, count: products.length };
   }
 
-  // Sandbox path: deterministic demo catalog, clearly labelled source:"sandbox".
-  const needle = q.toLowerCase();
-  const products = SANDBOX_CATALOG.filter((p) => {
-    const matchesQuery =
-      needle === "" ||
-      p.title.toLowerCase().includes(needle) ||
-      p.category.toLowerCase().includes(needle);
-    const withinPrice = maxPriceUsd === undefined || p.priceUsd <= maxPriceUsd;
-    return matchesQuery && withinPrice;
-  });
-
-  return { q, source: "sandbox", products: [...products] };
+  const products = sandboxSearch(q, maxPriceUsd);
+  return { q, source: "sandbox", products, count: products.length };
 }

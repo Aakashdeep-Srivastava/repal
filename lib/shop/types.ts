@@ -12,16 +12,49 @@ import type { PlanWithPolicy, PlanPurchaseResult } from "@/lib/pipeline";
 export type ProductSource = "channel3" | "sandbox";
 
 /**
+ * One merchant's offer for a product — the unit of offer comparison. Maps from
+ * Channel3's `ProductOffer` (domain, price, availability, condition, buy URL).
+ * `priceUsd` is the current price; `compareAtUsd` the pre-discount price (for a
+ * strike-through). `buyUrl` is an affiliate-tracked link — fetch fresh, never
+ * cache long. Multiple offers per product differ by merchant AND condition
+ * (e.g. tiffany.com `new` $395 vs therealreal.com `used` $225).
+ */
+export interface MerchantOffer {
+  /** Retailer domain, e.g. "bestbuy.com". */
+  domain: string;
+  priceUsd: number;
+  compareAtUsd?: number;
+  currency: string;
+  /** "InStock" | "OutOfStock" (Channel3's two public availability values). */
+  availability: string;
+  /** "new" | "used" | null (unknown). */
+  condition?: "new" | "used" | null;
+  /** Affiliate-tracked buy URL. */
+  buyUrl: string;
+  /** Max affiliate commission rate (decimal fraction), for ranking earning potential. */
+  maxCommissionRate?: number;
+}
+
+/**
  * A shoppable product. Extends the normalized `Offer` with the presentation
- * fields the journey UI needs. `imageUrl` is used when a real source provides
- * one; otherwise the UI renders a deterministic generated visual keyed on `id`
- * (offline-safe, CSP-safe, stable for shared-element morphs).
+ * fields the journey UI needs. The base `Offer` fields (priceUsd, retailer,
+ * buyUrl) always reflect the BEST (cheapest in-locale) offer so the optimizer
+ * and existing screens keep working with a single canonical price; `offers[]`
+ * carries the full merchant comparison. `imageUrl` is a real product photo when
+ * the source provides one; otherwise the UI renders a deterministic generated
+ * visual keyed on `id` (offline-safe, CSP-safe, stable for shared-element morphs).
  */
 export interface Product extends Offer {
   category: string;
   description?: string;
   availability?: string;
   imageUrl?: string;
+  brand?: string;
+  currency?: string;
+  /** Pre-discount price of the best offer (for strike-through). */
+  compareAtUsd?: number;
+  /** All merchant offers for this product, cheapest first. Present for live (channel3) products. */
+  offers?: MerchantOffer[];
   /** Provenance — "sandbox" must be shown as demo data, never as a live offer. */
   source: ProductSource;
 }
@@ -32,6 +65,8 @@ export interface ProductSearchResponse {
   /** "channel3" when live, "sandbox" when the labelled demo catalog served it. */
   source: ProductSource;
   products: Product[];
+  /** Number of products returned (convenience for the UI). */
+  count?: number;
 }
 
 /** The eligibility + optimization result for a selected product (from /api/plan). */

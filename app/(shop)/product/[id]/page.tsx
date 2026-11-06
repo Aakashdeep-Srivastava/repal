@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -15,30 +15,36 @@ import { SavingsBreakdown } from "@/components/shop/SavingsBreakdown";
 import { sharedId } from "@/lib/motion/tokens";
 import { useJourney } from "@/lib/store/journey";
 import { fetchWallet } from "@/lib/client";
-import type { Product, ProductSearchResponse } from "@/lib/shop/types";
+import type { Product, MerchantOffer } from "@/lib/shop/types";
 import type { PlanPurchaseResult } from "@/lib/pipeline";
 
 /**
  * /product/[id] — product DETAIL + the DESTINATION end of the shared-element
  * morph. Resolves the product from the journey store when it matches the route
  * (instant, carried from the results tap) or, on deep-link / refresh, by
- * fetching the full catalog and finding it by id — degrading gracefully if it
- * no longer exists rather than crashing.
+ * fetching fresh details by id from /api/products/[id] (real Channel3 data or
+ * the labelled sandbox) — degrading gracefully if it no longer exists.
  *
- * Eligibility + optimization come from POST /api/eligibility (wallet labels from
- * /api/wallet); the winner is plans[0]. No money is computed here — RewardMapping
- * and SavingsBreakdown only display backend values. The CTA respects policy:
- * deny → guided merchant checkout (never a fake auto-apply); ask → review &
- * approve; allow → review checkout.
+ * When a product has several merchant offers, the user picks one; eligibility is
+ * evaluated against the SELECTED offer's merchant + price. Eligibility +
+ * optimization come from POST /api/eligibility (wallet labels from /api/wallet);
+ * the winner is plans[0]. No money is computed here — RewardMapping and
+ * SavingsBreakdown only display backend values. The CTA respects policy: deny →
+ * guided merchant checkout (never a fake auto-apply); ask → review & approve;
+ * allow → review checkout.
  */
 
-async function fetchCatalog(): Promise<ProductSearchResponse> {
-  const res = await fetch("/api/products");
-  if (!res.ok) throw new Error(`Catalog fetch failed (${res.status})`);
+async function fetchProductById(id: string): Promise<Product> {
+  const res = await fetch(`/api/products/${encodeURIComponent(id)}`);
+  if (!res.ok) throw new Error(`Product fetch failed (${res.status})`);
   return res.json();
 }
 
-async function fetchEligibility(product: Product): Promise<PlanPurchaseResult> {
+/** Evaluate rewards against the chosen merchant offer (falls back to the best). */
+async function fetchEligibility(
+  product: Product,
+  offer?: MerchantOffer | null,
+): Promise<PlanPurchaseResult> {
   const res = await fetch("/api/eligibility", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -46,9 +52,9 @@ async function fetchEligibility(product: Product): Promise<PlanPurchaseResult> {
       product: {
         id: product.id,
         title: product.title,
-        priceUsd: product.priceUsd,
-        retailer: product.retailer,
-        buyUrl: product.buyUrl,
+        priceUsd: offer?.priceUsd ?? product.priceUsd,
+        retailer: offer?.domain ?? product.retailer,
+        buyUrl: offer?.buyUrl ?? product.buyUrl,
         category: product.category,
       },
     }),
@@ -71,28 +77,35 @@ export default function ProductDetailPage() {
   // Prefer the store when it already holds THIS product (carried from results).
   const storedMatch = stored && stored.id === routeId ? stored : null;
 
-  // Deep-link / refresh fallback: fetch the catalog and find the product by id.
-  const catalogQ = useQuery({
-    queryKey: ["catalog"],
-    queryFn: fetchCatalog,
-    enabled: !storedMatch,
+  // Deep-link / refresh fallback: fetch fresh details for THIS id.
+  const productQ = useQuery({
+    queryKey: ["product", routeId],
+    queryFn: () => fetchProductById(routeId),
+    enabled: !storedMatch && !!routeId,
   });
 
-  const product: Product | null =
-    storedMatch ?? catalogQ.data?.products.find((p) => p.id === routeId) ?? null;
+  const product: Product | null = storedMatch ?? productQ.data ?? null;
 
-  const resolving = !storedMatch && catalogQ.isLoading;
+  const resolving = !storedMatch && productQ.isLoading;
   const notFound = !product && !resolving;
+
+  // Merchant offers for this product; the user picks one (defaults to the best).
+  const offers = useMemo<MerchantOffer[]>(() => product?.offers ?? [], [product]);
+  const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+  const selectedOffer = useMemo(
+    () => offers.find((o) => o.domain === selectedDomain) ?? offers[0] ?? null,
+    [offers, selectedDomain],
+  );
 
   // Ensure the store carries the resolved product (so checkout works on deep-link).
   useEffect(() => {
     if (product && (!stored || stored.id !== product.id)) selectProduct(product);
   }, [product, stored, selectProduct]);
 
-  // Eligibility + optimization for the resolved product.
+  // Eligibility + optimization for the resolved product + SELECTED merchant offer.
   const eligQ = useQuery({
-    queryKey: ["eligibility", product?.id],
-    queryFn: () => fetchEligibility(product as Product),
+    queryKey: ["eligibility", product?.id, selectedOffer?.domain, selectedOffer?.priceUsd],
+    queryFn: () => fetchEligibility(product as Product, selectedOffer),
     enabled: !!product,
   });
 
@@ -162,11 +175,22 @@ export default function ProductDetailPage() {
               </h1>
             </SharedElementTransition>
 
-            <SharedElementTransition layoutId={sharedId.productPrice(routeId)}>
-              <span className="tnum text-2xl font-semibold text-[var(--color-fg)]">
-                {usd(product.priceUsd)}
-              </span>
-            </SharedElementTransition>
+            <div className="flex items-baseline gap-2">
+              <SharedElementTransition layoutId={sharedId.productPrice(routeId)}>
+                <span className="tnum text-2xl font-semibold text-[var(--color-fg)]">
+                  {usd(selectedOffer?.priceUsd ?? product.priceUsd)}
+                </span>
+              </SharedElementTransition>
+              {(() => {
+                const price = selectedOffer?.priceUsd ?? product.priceUsd;
+                const cmp = selectedOffer?.compareAtUsd ?? product.compareAtUsd;
+                return cmp && cmp > price ? (
+                  <span className="tnum text-base text-[var(--color-muted)] line-through">
+                    {usd(cmp)}
+                  </span>
+                ) : null;
+              })()}
+            </div>
 
             {/* Progressive reveal of secondary details. */}
             <AnimatedList className="flex flex-col gap-1 pt-1">
@@ -192,6 +216,54 @@ export default function ProductDetailPage() {
                 </p>
               )}
             </AnimatedList>
+
+            {/* Merchant offer comparison — selecting one re-evaluates rewards. */}
+            {offers.length > 1 && (
+              <div className="flex flex-col gap-2 pt-3">
+                <h2 className="text-sm font-semibold text-[var(--color-fg)]">
+                  Compare {offers.length} merchant offers
+                </h2>
+                {offers.map((o) => {
+                  const active = o.domain === selectedOffer?.domain;
+                  return (
+                    <button
+                      key={`${o.domain}-${o.priceUsd}`}
+                      type="button"
+                      onClick={() => setSelectedDomain(o.domain)}
+                      aria-pressed={active}
+                      className={`flex items-center justify-between gap-3 rounded-[var(--radius-md)] border px-3 py-2 text-left transition-colors ${
+                        active
+                          ? "border-[var(--color-brand)] bg-[var(--color-brand)]/5"
+                          : "border-[var(--color-border)] hover:border-[var(--color-brand)]"
+                      }`}
+                    >
+                      <span className="flex min-w-0 flex-col">
+                        <span className="truncate text-sm font-medium text-[var(--color-fg)]">
+                          {o.domain}
+                        </span>
+                        <span className="text-xs text-[var(--color-muted)]">
+                          {o.condition ?? "new"} ·{" "}
+                          {o.availability === "InStock" ? "In stock" : "Out of stock"}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-baseline gap-2">
+                        {o.compareAtUsd && o.compareAtUsd > o.priceUsd && (
+                          <span className="tnum text-xs text-[var(--color-muted)] line-through">
+                            {usd(o.compareAtUsd)}
+                          </span>
+                        )}
+                        <span className="tnum text-sm font-semibold text-[var(--color-fg)]">
+                          {usd(o.priceUsd)}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+                <p className="text-xs text-[var(--color-muted)]">
+                  Rewards below are evaluated against the selected merchant.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
