@@ -10,7 +10,7 @@ import { verifyReceipt, type VerifiableReceipt } from "@/lib/receipts/verify";
 
 function Row({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-white/5 py-2.5">
+    <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] py-2.5">
       <span className="text-sm text-[var(--color-muted)]">{label}</span>
       <span className={`text-sm ${mono ? "font-mono text-xs" : ""} max-w-[60%] break-all text-right`}>
         {value}
@@ -37,7 +37,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
 
   if (!receipt) {
     return shell(
-      <div className="mt-10 rounded-2xl border border-white/10 p-8 text-center">
+      <div className="mt-10 rounded-2xl border border-[var(--color-border)] p-8 text-center">
         <h1 className="text-xl font-semibold">Receipt not found</h1>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
           No signed decision receipt exists for id <span className="font-mono">{id}</span>.
@@ -64,7 +64,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
       <h1 className="text-2xl font-semibold tracking-tight">Decision receipt</h1>
       <div className={`mt-4 rounded-xl border p-4 text-sm font-medium ${banner.cls}`}>{banner.txt}</div>
 
-      <div className="mt-6 rounded-2xl border border-white/10 p-6">
+      <div className="mt-6 rounded-2xl border border-[var(--color-border)] p-6">
         <Row label="Item" value={receipt.item} />
         <Row label="Merchant" value={receipt.merchant} />
         <Row label="Category" value={receipt.category} />

@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { LayoutGroup } from "motion/react";
 import { AnimatedAppShell, MotionButton } from "@/components/motion";
 import { RepalLogo } from "@/components/brand/RepalLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useJourney } from "@/lib/store/journey";
 
 /**
@@ -62,6 +63,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
         />
       </div>
 
+      <ThemeToggle />
       <Link
         href="/wallet"
         className="shrink-0 text-sm text-[var(--color-muted)] hover:text-[var(--color-fg)]"

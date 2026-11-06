@@ -22,7 +22,7 @@ const SOURCE_COLORS: Record<string, string> = {
   card: "text-violet-300 border-violet-400/30",
   loyalty: "text-amber-300 border-amber-400/30",
   channel3: "text-emerald-300 border-emerald-400/30",
-  seed: "text-[var(--color-muted)] border-white/15",
+  seed: "text-[var(--color-muted)] border-[var(--color-border)]",
 };
 
 export default function WalletPage() {
@@ -111,12 +111,12 @@ export default function WalletPage() {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {rewards?.map((r) => (
-            <div key={r.id} className="flex flex-col rounded-2xl border border-white/10 p-5">
+            <div key={r.id} className="flex flex-col rounded-2xl border border-[var(--color-border)] p-5">
               <div className="flex items-start justify-between gap-2">
                 <span className="tnum text-2xl font-semibold">{usd(r.valueUsd)}</span>
                 <span
                   className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-                    SOURCE_COLORS[r.source] ?? "text-[var(--color-muted)] border-white/15"
+                    SOURCE_COLORS[r.source] ?? "text-[var(--color-muted)] border-[var(--color-border)]"
                   }`}
                 >
                   {r.source}
@@ -133,7 +133,7 @@ export default function WalletPage() {
         </div>
 
         {!isLoading && rewards?.length === 0 && (
-          <p className="mt-8 rounded-xl border border-white/10 p-6 text-sm text-[var(--color-muted)]">
+          <p className="mt-8 rounded-xl border border-[var(--color-border)] p-6 text-sm text-[var(--color-muted)]">
             No rewards yet. Seed the database (<code>npm run prisma:seed</code>) or connect a source.
           </p>
         )}

@@ -42,17 +42,32 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-/* Dark theme — navy canvas. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #0b1220;
-    --color-fg: #eef2f8;
-    --color-brand: #3b6cff;
-    --color-brand-deep: #11ace3;
-    --color-muted: #93a0b4;
-    --color-card: #121b2e;
-    --color-border: rgba(255, 255, 255, 0.1);
-  }
+/*
+ * Light is the product default on every device. Dark is OPT-IN via the toggle
+ * button (sets data-theme="dark" on <html>, persisted in localStorage). We
+ * intentionally do NOT auto-switch on prefers-color-scheme — white is the
+ * default even on dark-mode phones; users choose dark explicitly.
+ */
+:root {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0b1220;
+  --color-fg: #eef2f8;
+  --color-brand: #3b6cff;
+  --color-brand-deep: #11ace3;
+  --color-muted: #93a0b4;
+  --color-card: #121b2e;
+  --color-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Smooth the light⇄dark flip (the global reduced-motion rule neutralizes it). */
+html {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 html,
@@ -75,6 +90,72 @@ body {
 /* tabular figures for all money columns (PRD §13.6) — stable during animation. */
 .tnum {
   font-variant-numeric: tabular-nums;
+}
+
+/* Display type — the hero voice (Fraunces, optical-sized). */
+.font-display {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+}
+
+/*
+ * Atmospheric hero backdrop: two soft brand auras bleeding in from the top on
+ * the otherwise clean white canvas. Adapts to dark (brand vars shift per theme).
+ */
+.hero-aura {
+  position: relative;
+  isolation: isolate;
+}
+.hero-aura::before {
+  content: "";
+  position: absolute;
+  inset: -30% -15% auto -15%;
+  height: 460px;
+  z-index: -1;
+  background:
+    radial-gradient(
+      55% 80% at 12% 0%,
+      color-mix(in oklab, var(--color-cyan) 20%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      50% 75% at 88% 8%,
+      color-mix(in oklab, var(--color-brand) 18%, transparent),
+      transparent 72%
+    );
+  pointer-events: none;
+}
+
+/* Staggered entrance for hero children (neutralized by the reduced-motion rule). */
+@keyframes repal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: repal-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Elevated card: subtle hover lift for interactive surfaces. */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in oklab, var(--color-brand) 35%, var(--color-border));
 }
 
 /* Respect reduced motion globally as a safety net (components also honor it). */
