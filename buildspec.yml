@@ -1,0 +1,33 @@
+# AWS CodeBuild — build the RePal web image and push it to ECR.
+# Used by the `repal-web-build` CodeBuild project. Docker is available because
+# the project runs with privilegedMode=true on a standard Linux image.
+#
+# Required env (set on the CodeBuild project):
+#   AWS_ACCOUNT_ID, AWS_DEFAULT_REGION, IMAGE_REPO_NAME (=repal-web)
+# IMAGE_TAG defaults to the CodeBuild resolved source version (commit) or "latest".
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - REPO_URI="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME"
+      - if [ -z "$IMAGE_TAG" ]; then IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}"; fi
+      - IMAGE_TAG="${IMAGE_TAG:0:12}"
+      - if [ -z "$IMAGE_TAG" ]; then IMAGE_TAG="latest"; fi
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+  build:
+    commands:
+      - echo "Building image $REPO_URI:$IMAGE_TAG"
+      - docker build -t "$REPO_URI:$IMAGE_TAG" -t "$REPO_URI:latest" .
+  post_build:
+    commands:
+      - echo "Pushing to ECR..."
+      - docker push "$REPO_URI:$IMAGE_TAG"
+      - docker push "$REPO_URI:latest"
+      - printf '[{"name":"repal-web","imageUri":"%s:latest"}]' "$REPO_URI" > imagedefinitions.json
+      - echo "Done. Pushed $REPO_URI:latest and :$IMAGE_TAG"
+
+artifacts:
+  files:
+    - imagedefinitions.json

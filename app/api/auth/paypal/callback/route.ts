@@ -66,7 +66,12 @@ export async function GET(req: Request) {
     // Signed, httpOnly session cookie — see lib/auth/session.
     await setSession({ userId, name: info.name, email: info.email });
 
-    return NextResponse.redirect(new URL("/", url.origin));
+    // Redirect to the PUBLIC origin, not url.origin: behind a proxy (CloudFront
+    // → ALB) the request host is the internal ALB over http, so url.origin would
+    // bounce the user to the wrong, non-HTTPS host. PAYPAL_OIDC_REDIRECT is the
+    // registered public callback, so its origin is the app's true public base.
+    const publicBase = new URL(redirect).origin;
+    return NextResponse.redirect(new URL("/", publicBase));
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "oidc failed" },
