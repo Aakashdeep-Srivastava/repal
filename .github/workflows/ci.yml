@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ── CI: tests must pass before anything deploys (runs on every push + PR) ──
   verify:
     runs-on: ubuntu-latest
     steps:
@@ -28,71 +29,75 @@ jobs:
       - name: Build
         run: npm run build
 
-  # CD — deploy to Render only after CI passes, only on main, and only once the
-  # Render wiring is in place (RENDER_WEB_SERVICE_ID repo variable is set after
-  # the Blueprint is created). Each service is deployed via the Render API and
-  # the job WAITS for it to go live, so a failed deploy fails the pipeline.
+  # ── CD: build image → push to ECR → roll out to ECS → smoke-test ──
+  # Runs only on push to main, only after `verify` is green. Auth is GitHub OIDC
+  # → the repal-github-deploy IAM role (no AWS keys stored). The ECS service has
+  # a deployment circuit breaker with auto-rollback, so a bad image self-heals.
   deploy:
     needs: verify
     runs-on: ubuntu-latest
-    if: >-
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      vars.RENDER_WEB_SERVICE_ID != ''
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write   # mint the OIDC token to assume the AWS role
+      contents: read
     environment:
       name: production
-      url: ${{ vars.RENDER_WEB_URL }}
+      url: https://d14t147d5f4q6i.cloudfront.net
+    env:
+      AWS_REGION: us-west-2
+      ECR_REPOSITORY: repal-web
+      ECS_CLUSTER: repal
+      ECS_SERVICE: repal-web
+      CONTAINER_NAME: repal-web
     steps:
-      - name: Deploy services to Render and wait for live
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC — no stored keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: image
         env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          WEB_ID: ${{ vars.RENDER_WEB_SERVICE_ID }}
-          WORKER_ID: ${{ vars.RENDER_WORKER_SERVICE_ID }}
-          CRON_ID: ${{ vars.RENDER_CRON_SERVICE_ID }}
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
           set -euo pipefail
-          if [ -z "${RENDER_API_KEY:-}" ]; then
-            echo "::error::RENDER_API_KEY secret is not set"; exit 1
-          fi
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:${GITHUB_SHA}"
+          docker build -t "$IMAGE" -t "$REGISTRY/$ECR_REPOSITORY:latest" .
+          docker push "$IMAGE"
+          docker push "$REGISTRY/$ECR_REPOSITORY:latest"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
-          api="https://api.render.com/v1"
-          auth="Authorization: Bearer ${RENDER_API_KEY}"
+      - name: Render new task definition (inject image)
+        id: taskdef
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: deploy/ecs-task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.image.outputs.image }}
 
-          deploy() {
-            local id="$1" name="$2"
-            if [ -z "${id}" ]; then
-              echo "::notice::${name}: no service id configured — skipping"
-              return 0
-            fi
-            echo "::group::Deploy ${name} (${id})"
-            local dep status
-            dep=$(curl -fsS -X POST "${api}/services/${id}/deploys" \
-              -H "${auth}" -H "Content-Type: application/json" \
-              -d '{"clearCache":"do_not_clear"}' | jq -r '.id')
-            echo "Triggered deploy ${dep}"
+      - name: Deploy to ECS and wait for stability
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.taskdef.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
 
-            # Poll up to ~20 min (80 * 15s) for a terminal state.
-            for _ in $(seq 1 80); do
-              status=$(curl -fsS "${api}/services/${id}/deploys/${dep}" -H "${auth}" | jq -r '.status')
-              echo "  ${name}: ${status}"
-              case "${status}" in
-                live)
-                  echo "::endgroup::"
-                  echo "::notice::${name} deploy ${dep} is live"
-                  return 0 ;;
-                build_failed|update_failed|pre_deploy_failed|canceled)
-                  echo "::endgroup::"
-                  echo "::error::${name} deploy ${dep} failed (${status})"
-                  return 1 ;;
-              esac
-              sleep 15
-            done
-            echo "::endgroup::"
-            echo "::error::${name} deploy ${dep} did not reach 'live' in time"
-            return 1
-          }
-
-          # Web first (user-facing); then worker and cron.
-          deploy "${WEB_ID}" repal-web
-          deploy "${WORKER_ID}" repal-worker
-          deploy "${CRON_ID}" repal-expiry
+      - name: Smoke test (health must be 200)
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://d14t147d5f4q6i.cloudfront.net/api/health || true)
+            echo "attempt $i: HTTP $code"
+            [ "$code" = "200" ] && echo "healthy" && exit 0
+            sleep 10
+          done
+          echo "::error::post-deploy health check never returned 200"
+          exit 1

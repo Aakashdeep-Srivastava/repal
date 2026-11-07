@@ -1,0 +1,48 @@
+{
+  "family": "repal-web",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": { "cpuArchitecture": "X86_64", "operatingSystemFamily": "LINUX" },
+  "executionRoleArn": "arn:aws:iam::413790912706:role/repal-ecs-execution",
+  "taskRoleArn": "arn:aws:iam::413790912706:role/repal-ecs-task",
+  "containerDefinitions": [
+    {
+      "name": "repal-web",
+      "image": "413790912706.dkr.ecr.us-west-2.amazonaws.com/repal-web:latest",
+      "essential": true,
+      "portMappings": [{ "containerPort": 8080, "protocol": "tcp" }],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "AWS_REGION", "value": "us-west-2" },
+        { "name": "BEDROCK_MODEL_ID", "value": "us.anthropic.claude-haiku-4-5-20251001-v1:0" },
+        { "name": "PAYPAL_ENVIRONMENT", "value": "SANDBOX" },
+        { "name": "PAYPAL_OIDC_REDIRECT", "value": "https://d14t147d5f4q6i.cloudfront.net/api/auth/paypal/callback" },
+        { "name": "DEMO_MODE", "value": "true" },
+        { "name": "FX_INR_PER_USD", "value": "84" },
+        { "name": "CHANNEL3_COUNTRY", "value": "US" },
+        { "name": "CHANNEL3_CURRENCY", "value": "USD" },
+        { "name": "CHANNEL3_MODE", "value": "auto" }
+      ],
+      "secrets": [
+        { "name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/DATABASE_URL-us6Nfb" },
+        { "name": "DIRECT_URL", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/DIRECT_URL-l4mDfR" },
+        { "name": "RECEIPT_SIGNING_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/RECEIPT_SIGNING_KEY-S5pwOc" },
+        { "name": "SESSION_SECRET", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/SESSION_SECRET-uSlT0L" },
+        { "name": "PAYPAL_CLIENT_ID", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/PAYPAL_CLIENT_ID-IQ2BBI" },
+        { "name": "PAYPAL_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/PAYPAL_CLIENT_SECRET-qwaKw5" },
+        { "name": "PAYPAL_WEBHOOK_ID", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/PAYPAL_WEBHOOK_ID-AxxW3e" },
+        { "name": "CHANNEL3_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/CHANNEL3_API_KEY-zxAhOL" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/repal-web",
+          "awslogs-region": "us-west-2",
+          "awslogs-stream-prefix": "web"
+        }
+      }
+    }
+  ]
+}

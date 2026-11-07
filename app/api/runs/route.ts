@@ -49,7 +49,14 @@ export async function POST(req: Request) {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const blocked = /bedrock/i.test(message);
+    // "blocked" = an expected not-yet-ready state of the model backend, not a
+    // server fault: Bedrock unconfigured, the one-time Anthropic use-case form
+    // not yet submitted, or model-access/auth not granted. These surface as 200
+    // "blocked" so the UI can say "AI is warming up" instead of erroring.
+    const blocked =
+      /bedrock|use case details|have not been submitted|AccessDenied|not authorized|UnrecognizedClient|security token|ResourceNotFoundException/i.test(
+        message,
+      );
     await prisma.agentRun.update({
       where: { id: run.id },
       data: { status: blocked ? "blocked" : "error" },

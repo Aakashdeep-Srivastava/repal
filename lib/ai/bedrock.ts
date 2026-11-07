@@ -1,4 +1,5 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 
 /**
  * AWS Bedrock provider — Claude for RePal's AI agents layer (A0 orchestrator,
@@ -39,8 +40,16 @@ export const BEDROCK_MODEL_ID = process.env.BEDROCK_MODEL_ID;
 
 function hasCredentials(): boolean {
   return Boolean(
+    // 1. Bedrock API key (Option A) or explicit IAM keys (Option B) in the env.
     process.env.AWS_BEARER_TOKEN_BEDROCK ||
-      (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY),
+      (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) ||
+      // 2. Ambient container/instance role (Option C) — ECS Fargate sets
+      //    AWS_CONTAINER_CREDENTIALS_RELATIVE_URI; App Runner / EKS pod identity
+      //    set AWS_CONTAINER_CREDENTIALS_FULL_URI. In these cases the SDK resolves
+      //    role credentials with no keys in the env, so the gate must not treat
+      //    "no env keys" as "unconfigured". See docs/BEDROCK.md §Credentials C.
+      process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI ||
+      process.env.AWS_CONTAINER_CREDENTIALS_FULL_URI,
   );
 }
 
@@ -75,8 +84,24 @@ export function assertBedrockConfigured(): void {
   }
 }
 
-/** Shared Bedrock provider. Auth + region come from the environment. */
-export const bedrock = createAmazonBedrock({ region: AWS_REGION });
+/**
+ * Shared Bedrock provider. Region + auth resolve from the environment.
+ *
+ * Auth: when a Bedrock API key (AWS_BEARER_TOKEN_BEDROCK) is set, the provider
+ * uses bearer auth and we touch nothing. Otherwise we hand it the full AWS
+ * credential-provider chain (`fromNodeProviderChain`), which resolves — in SDK
+ * order — env keys (AWS_ACCESS_KEY_ID/SECRET, local & CI), shared config, and
+ * crucially the ambient container/instance role (ECS Fargate, App Runner, EKS).
+ * `@ai-sdk/amazon-bedrock` does NOT wire the ambient role by default, so without
+ * this the role-based "no keys in env" deployment can't authenticate. See
+ * docs/BEDROCK.md §Credentials (Option C).
+ */
+export const bedrock = createAmazonBedrock({
+  region: AWS_REGION,
+  ...(process.env.AWS_BEARER_TOKEN_BEDROCK
+    ? {}
+    : { credentialProvider: fromNodeProviderChain() }),
+});
 
 /**
  * The Claude model RePal's agents call, served via Bedrock. Constructing the

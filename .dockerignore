@@ -1,0 +1,36 @@
+# Keep the build context small and the image clean. node_modules is rebuilt
+# inside the image (npm ci), so never ship the host copy.
+node_modules
+.next
+out
+build
+dist
+
+# Local env / secrets — injected at runtime via App Runner, never baked in.
+.env
+.env.*
+!.env.example
+
+# VCS / tooling
+.git
+.gitignore
+.github
+
+# Tests, coverage, local artifacts
+e2e
+test-results
+playwright-report
+coverage
+*.tsbuildinfo
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Docs & local infra not needed in the image
+docker-compose.yml
+README.md
+CONTRIBUTING.md
+docs
