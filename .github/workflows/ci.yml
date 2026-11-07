@@ -101,3 +101,44 @@ jobs:
           done
           echo "::error::post-deploy health check never returned 200"
           exit 1
+
+  # ── Notify Discord with the CI/CD outcome (who pushed, pass/fail) ──
+  # Runs for every push to main regardless of success, so the team sees every
+  # deploy. The webhook is an encrypted repo secret; the step no-ops if unset.
+  notify:
+    needs: [verify, deploy]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post deploy status to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          ACTOR: ${{ github.actor }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          SERVER: ${{ github.server_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${WEBHOOK:-}" ]; then echo "DISCORD_WEBHOOK not set — skipping"; exit 0; fi
+          if [ "$DEPLOY_RESULT" = "success" ]; then
+            title="✅ RePal deployed to production"; color=3066993
+          elif [ "$VERIFY_RESULT" != "success" ]; then
+            title="❌ RePal CI failed — tests did not pass (no deploy)"; color=15158332
+          else
+            title="❌ RePal deploy failed (deploy=$DEPLOY_RESULT)"; color=15158332
+          fi
+          jq -n \
+            --arg t "$title" --argjson c "$color" \
+            --arg msg "${COMMIT_MSG:-}" --arg actor "$ACTOR" \
+            --arg commit "$SERVER/$REPO/commit/$SHA" --arg short "${SHA:0:7}" \
+            --arg run "$RUN_URL" --arg app "https://d14t147d5f4q6i.cloudfront.net" \
+            '{embeds:[{title:$t,color:$c,url:$app,fields:[
+               {name:"Commit",value:("["+$short+"]("+$commit+")"),inline:true},
+               {name:"By",value:$actor,inline:true},
+               {name:"Run",value:("[logs]("+$run+")"),inline:true},
+               {name:"Message",value:(($msg|split("\n")[0])[0:300])}]}]}' \
+          | curl -fsS -H 'Content-Type: application/json' -X POST "$WEBHOOK" -d @- && echo "notified"
