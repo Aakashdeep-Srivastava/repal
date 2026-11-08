@@ -182,7 +182,13 @@ export default function WalletPage() {
         ) : (
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {rewards?.map((r, i) => (
-              <RewardPass key={r.id} reward={r} index={i} />
+              <RewardPass
+                key={r.id}
+                reward={r}
+                index={i}
+                defaultEmail={me?.email}
+                onCashedOut={() => queryClient.invalidateQueries({ queryKey: ["wallet", userId] })}
+              />
             ))}
           </div>
         )}

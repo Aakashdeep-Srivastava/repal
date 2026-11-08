@@ -37,6 +37,18 @@ model Mandate {
   user                 User     @relation(fields: [userId], references: [id])
 }
 
+model Payout {
+  id            String   @id @default(cuid())
+  userId        String
+  rewardId      String?
+  receiptId     String?
+  amountUsd     Float
+  receiverEmail String
+  payoutBatchId String
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+}
+
 model Reward {
   id              String   @id @default(cuid())
   userId          String

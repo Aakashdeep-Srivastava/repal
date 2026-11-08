@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "motion/react";
-import type { WalletReward } from "@/lib/client";
+import { payoutReward, type WalletReward } from "@/lib/client";
 
 /**
  * RewardPass — a single reward rendered as a tactile "pass" (boarding-pass /
@@ -85,11 +86,48 @@ const EXPIRY_STYLE: Record<ExpiryTone, React.CSSProperties> = {
   },
 };
 
-export function RewardPass({ reward, index }: { reward: WalletReward; index: number }) {
+export function RewardPass({
+  reward,
+  index,
+  defaultEmail,
+  onCashedOut,
+}: {
+  reward: WalletReward;
+  index: number;
+  defaultEmail?: string;
+  onCashedOut?: () => void;
+}) {
   const src = sourceStyle(reward.source);
   const exp = expiry(reward.expiresAt);
   const dead = reward.status === "expired" || reward.status === "used" || exp.tone === "expired";
+  const liberated = reward.status === "liberated";
   const confPct = Math.round(reward.parseConfidence * 100);
+
+  // Cash-out state machine (reward → PayPal balance).
+  const canCashOut = !dead && !liberated && reward.valueUsd > 0 && reward.status === "active";
+  const [mode, setMode] = useState<"idle" | "form" | "busy" | "done" | "error">("idle");
+  const [email, setEmail] = useState(defaultEmail ?? "");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [verifyUrl, setVerifyUrl] = useState<string | null>(null);
+
+  async function cashOut() {
+    if (!email.trim()) {
+      setMode("error");
+      setMsg("Enter the PayPal email to receive the cash.");
+      return;
+    }
+    setMode("busy");
+    setMsg(null);
+    try {
+      const r = await payoutReward({ rewardId: reward.id, receiverEmail: email.trim(), amountUsd: reward.valueUsd });
+      setVerifyUrl(r.verifyUrl);
+      setMode("done");
+      onCashedOut?.();
+    } catch (e) {
+      setMode("error");
+      setMsg(e instanceof Error ? e.message : "Cash-out failed.");
+    }
+  }
 
   return (
     <motion.div
@@ -182,6 +220,57 @@ export function RewardPass({ reward, index }: { reward: WalletReward; index: num
             </span>
           )}
         </div>
+
+        {/* Reward liberation — turn this reward into real PayPal balance. */}
+        {liberated && (
+          <p className="mt-3 border-t border-dashed border-[var(--color-border)] pt-3 text-xs text-[var(--color-muted)]">
+            ✓ Cashed out to PayPal
+          </p>
+        )}
+        {canCashOut && (
+          <div className="mt-3 border-t border-dashed border-[var(--color-border)] pt-3">
+            {mode === "done" ? (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                ✓ Cashed out {usd(reward.valueUsd)}
+                {verifyUrl && (
+                  <>
+                    {" · "}
+                    <a href={verifyUrl} className="underline">receipt</a>
+                  </>
+                )}
+              </p>
+            ) : mode === "idle" ? (
+              <button
+                onClick={() => setMode("form")}
+                className="text-xs font-medium text-[var(--color-brand)] hover:underline"
+              >
+                💸 Cash out to PayPal →
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="sandbox buyer email"
+                  className="w-full rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 text-xs outline-none focus:border-[var(--color-brand)]"
+                />
+                {mode === "error" && msg && <p className="text-xs text-red-500">{msg}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={cashOut}
+                    disabled={mode === "busy"}
+                    className="rounded-lg bg-[var(--color-brand)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                  >
+                    {mode === "busy" ? "Sending…" : `Send ${usd(reward.valueUsd)}`}
+                  </button>
+                  <button onClick={() => setMode("idle")} className="rounded-lg px-2 py-1.5 text-xs text-[var(--color-muted)]">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );

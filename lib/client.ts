@@ -189,3 +189,30 @@ export async function revokeMandate(id: string): Promise<void> {
   const res = await fetch(`/api/mandates?id=${encodeURIComponent(id)}`, { method: "DELETE" });
   if (!res.ok) throw new Error(`revoke failed (${res.status})`);
 }
+
+// ─── Payout (reward → cash liberation) ────────────────────────────────
+
+export interface PayoutResult {
+  payoutBatchId: string;
+  amountUsd: number;
+  receiptId: string;
+  verifyUrl: string;
+  status?: string;
+}
+
+/**
+ * POST /api/pay/payout — liberate a reward to the user's PayPal balance. The
+ * server bounds the amount to the reward's value and marks it liberated.
+ */
+export async function payoutReward(input: {
+  rewardId: string;
+  receiverEmail: string;
+  amountUsd: number;
+}): Promise<PayoutResult> {
+  const { status, data } = await postJson("/api/pay/payout", input);
+  if (status === 429) throw new Error("Too many requests — give it a moment.");
+  if (status !== 200) {
+    throw new Error(typeof data.error === "string" ? data.error : `payout failed (${status})`);
+  }
+  return data as unknown as PayoutResult;
+}
