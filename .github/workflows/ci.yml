@@ -26,8 +26,15 @@ jobs:
         run: npm run typecheck
       - name: Test (deterministic core + tnc golden eval)
         run: npm test
-      - name: Build
-        run: npm run build
+      - name: Build (retry — next/font/google can transiently rate-limit on CI)
+        run: |
+          for i in 1 2 3; do
+            npm run build && exit 0
+            echo "::warning::build attempt $i failed; retrying in 10s"
+            sleep 10
+          done
+          echo "::error::build failed after 3 attempts"
+          exit 1
 
   # ── CD: build image → push to ECR → roll out to ECS → smoke-test ──
   # Runs only on push to main, only after `verify` is green. Auth is GitHub OIDC

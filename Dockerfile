@@ -28,7 +28,9 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # Generate the Prisma client (musl engine) and build the standalone server.
 RUN npx prisma generate
-RUN npm run build
+# Retry the build: next/font/google fetches from Google Fonts at build time and
+# can transiently rate-limit, failing with a cryptic null error. Retry 3x.
+RUN for i in 1 2 3; do npm run build && break; echo "build attempt $i failed; retrying"; sleep 10; [ "$i" = 3 ] && exit 1; done
 
 # ---- runner: minimal production runtime ----
 FROM node:20-alpine AS runner
