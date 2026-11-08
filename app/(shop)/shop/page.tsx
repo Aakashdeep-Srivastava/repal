@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatedList } from "@/components/motion";
 import { ProductCard } from "@/components/shop/ProductCard";
+import RepalLoader from "@/components/brand/RepalLoader";
 import { useJourney } from "@/lib/store/journey";
 import type { Product, ProductSearchResponse } from "@/lib/shop/types";
 
@@ -81,11 +82,16 @@ function ShopResults() {
             </p>
           )}
         </div>
-        {!isLoading && products.length > 0 && (
+        {isLoading ? (
+          <span className="inline-flex items-center gap-2 text-xs font-medium text-[var(--color-brand)]">
+            <RepalLoader size={22} speed={1.5} label="Searching" />
+            {q ? `Searching “${q}”…` : "Loading catalog…"}
+          </span>
+        ) : products.length > 0 ? (
           <span className="text-xs text-[var(--color-muted)]">
             {products.length} item{products.length === 1 ? "" : "s"}
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Provenance — never pass demo data off as live inventory. */}

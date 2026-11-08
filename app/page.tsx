@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlanCards } from "@/components/PlanCards";
 import { RepalLogo } from "@/components/brand/RepalLogo";
+import RepalLoader from "@/components/brand/RepalLoader";
+import AgentSearchLoader from "@/components/AgentSearchLoader";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { requestAgentRun, requestPlan, fetchMe, demoLogin, logout } from "@/lib/client";
 
@@ -175,7 +177,11 @@ export default function Home() {
             </button>
           </div>
 
-          {agentOut && (
+          {agent.isPending ? (
+            <div className="mt-4">
+              <AgentSearchLoader query={goal.trim() || undefined} />
+            </div>
+          ) : agentOut ? (
             <div className="mt-4 text-sm">
               {agentOut.status === "done" ? (
                 <p className="whitespace-pre-wrap">{agentOut.answer}</p>
@@ -190,7 +196,7 @@ export default function Home() {
                 </p>
               )}
             </div>
-          )}
+          ) : null}
         </section>
 
         {/* Deterministic optimizer */}
@@ -225,17 +231,23 @@ export default function Home() {
           </div>
 
           <div className="mt-5">
-            {planOut?.needsOffers && (
+            {plan.isPending && (
+              <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 text-sm text-[var(--color-muted)]">
+                <RepalLoader size={34} speed={1.6} label="Searching offers" />
+                <span>Searching live offers and optimizing the cheapest plan after your rewards…</span>
+              </div>
+            )}
+            {!plan.isPending && planOut?.needsOffers && (
               <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-300">
                 Connect Channel3 (set <code>CHANNEL3_API_KEY</code>) to fetch live offers.
               </p>
             )}
-            {planOut?.error && !planOut.needsOffers && (
+            {!plan.isPending && planOut?.error && !planOut.needsOffers && (
               <p className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
                 {planOut.error}
               </p>
             )}
-            {planOut?.plans && (
+            {!plan.isPending && planOut?.plans && (
               <>
                 <p className="mb-3 text-xs text-[var(--color-muted)]">
                   {planOut.offerCount ?? planOut.plans.length} offers considered
