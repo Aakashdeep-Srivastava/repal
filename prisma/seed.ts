@@ -6,6 +6,7 @@
  * See docs/TECH_PRD.md §15. Idempotent — safe to re-run.
  */
 import { PrismaClient } from "@prisma/client";
+import { signMandate } from "@/lib/policy/mandate";
 
 const prisma = new PrismaClient();
 
@@ -84,7 +85,7 @@ async function main() {
   // amount caps still apply. With approvalThresholdUsd = 300, cheaper plans
   // resolve to `allow` and pricier ones to `ask` — the demo shows both paths.
   await prisma.mandate.deleteMany({ where: { userId: DEMO_USER_ID } });
-  await prisma.mandate.create({
+  const seedMandate = await prisma.mandate.create({
     data: {
       userId: DEMO_USER_ID,
       capUsd: 2000,
@@ -93,8 +94,26 @@ async function main() {
       allowCategories: [],
       allowMerchants: [],
       expiresAt: inDays(90),
-      signatureHash: "seed-unsigned",
+      signatureHash: "",
       status: "active",
+    },
+  });
+  // Sign it with the real key so the server-side gate (verifyMandate) honors it.
+  await prisma.mandate.update({
+    where: { id: seedMandate.id },
+    data: {
+      signatureHash: signMandate(
+        {
+          id: seedMandate.id,
+          capUsd: seedMandate.capUsd,
+          budgetUsd: seedMandate.budgetUsd,
+          approvalThresholdUsd: seedMandate.approvalThresholdUsd,
+          allowCategories: seedMandate.allowCategories,
+          allowMerchants: seedMandate.allowMerchants,
+          expiresAt: seedMandate.expiresAt.toISOString(),
+        },
+        DEMO_USER_ID,
+      ),
     },
   });
 
