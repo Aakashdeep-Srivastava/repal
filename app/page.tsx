@@ -41,6 +41,9 @@ function Nav() {
         <Link href="/mandate" className="hidden hover:text-[var(--color-fg)] sm:inline">
           Mandate
         </Link>
+        <Link href="/insights" className="hidden hover:text-[var(--color-fg)] sm:inline">
+          Insights
+        </Link>
         {me ? (
           <>
             <span className="hidden max-w-[8rem] truncate text-[var(--color-fg)] sm:inline">
