@@ -130,3 +130,62 @@ export async function ingestWallet(userId?: string): Promise<IngestSummary> {
   if (status !== 200) throw new Error(`ingest failed (${status})`);
   return data as unknown as IngestSummary;
 }
+
+// ─── Spending mandate (delegated authority) ───────────────────────────
+
+export interface ActiveMandate {
+  id: string;
+  capUsd: number;
+  budgetUsd: number;
+  approvalThresholdUsd: number;
+  allowCategories: string[];
+  allowMerchants: string[];
+  expiresAt: string;
+  paypalVaultTokenId?: string | null;
+  status: string;
+}
+
+export interface MandateInput {
+  capUsd: number;
+  budgetUsd: number;
+  approvalThresholdUsd: number;
+  allowCategories: string[];
+  allowMerchants: string[];
+  expiresAt: string; // ISO
+}
+
+/** GET /api/mandates — the session user's active mandate, or null. */
+export async function fetchMandate(): Promise<ActiveMandate | null> {
+  const res = await fetch("/api/mandates");
+  if (!res.ok) throw new Error(`mandate fetch failed (${res.status})`);
+  const data = (await res.json()) as { mandate: ActiveMandate | null };
+  return data.mandate;
+}
+
+/**
+ * POST /api/mandates — create a Vault-backed mandate. If PayPal returns an
+ * `approveUrl`, the caller should redirect the buyer there to approve the Vault
+ * token; otherwise the mandate was activated as a signed policy-only mandate.
+ */
+export async function createMandate(
+  input: MandateInput,
+): Promise<{ mandateId: string; approveUrl?: string; vault?: string }> {
+  const { status, data } = await postJson("/api/mandates", input);
+  if (status === 429) throw new Error("Too many requests — give it a moment.");
+  if (status !== 201) {
+    throw new Error(
+      typeof data.error === "string" ? data.error : `mandate create failed (${status})`,
+    );
+  }
+  return {
+    mandateId: data.mandateId as string,
+    approveUrl: data.approveUrl as string | undefined,
+    vault: data.vault as string | undefined,
+  };
+}
+
+/** DELETE /api/mandates?id= — revoke a mandate. */
+export async function revokeMandate(id: string): Promise<void> {
+  const res = await fetch(`/api/mandates?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`revoke failed (${res.status})`);
+}

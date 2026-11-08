@@ -38,6 +38,9 @@ function Nav() {
         <Link href="/wallet" className="hover:text-[var(--color-fg)]">
           Wallet
         </Link>
+        <Link href="/mandate" className="hidden hover:text-[var(--color-fg)] sm:inline">
+          Mandate
+        </Link>
         {me ? (
           <>
             <span className="hidden max-w-[8rem] truncate text-[var(--color-fg)] sm:inline">

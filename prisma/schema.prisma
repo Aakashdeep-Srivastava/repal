@@ -31,6 +31,7 @@ model Mandate {
   allowMerchants       String[]
   expiresAt            DateTime
   paypalVaultTokenId   String?
+  vaultSetupTokenId    String?
   signatureHash        String
   status               String   @default("active")
   user                 User     @relation(fields: [userId], references: [id])
