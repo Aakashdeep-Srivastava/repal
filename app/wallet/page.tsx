@@ -8,6 +8,7 @@ import { RepalLogo } from "@/components/brand/RepalLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { RewardPass } from "@/components/wallet/RewardPass";
 import AgentSearchLoader, { type AgentStep } from "@/components/AgentSearchLoader";
+import { Onboarding } from "@/components/onboarding/Onboarding";
 
 /** Ingestion = pull from every source, then the Terms agent reads each T&C. */
 const INGEST_STEPS: AgentStep[] = [
@@ -151,10 +152,11 @@ export default function WalletPage() {
           )}
         </header>
 
-        {/* Ingestion in progress — the Terms agent reading every reward's fine print. */}
-        {sync.isPending && (
+        {/* Re-sync of an existing wallet — the Terms agent re-reading fine print.
+            (First-run import is handled by the onboarding empty-state below.) */}
+        {sync.isPending && (rewards?.length ?? 0) > 0 && (
           <div className="mt-8 flex justify-center">
-            <AgentSearchLoader title="Importing your rewards" steps={INGEST_STEPS} />
+            <AgentSearchLoader title="Refreshing your rewards" steps={INGEST_STEPS} />
           </div>
         )}
 
@@ -183,12 +185,11 @@ export default function WalletPage() {
         )}
 
         {!isLoading && rewards?.length === 0 && (
-          <div className="mt-8 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] p-8 text-center">
-            <p className="text-sm text-[var(--color-muted)]">
-              No rewards yet. Seed the database (<code className="font-mono">npm run prisma:seed</code>)
-              or connect a source with <span className="font-medium text-[var(--color-fg)]">Sync rewards</span>.
-            </p>
-          </div>
+          <Onboarding
+            name={me?.name ?? me?.email}
+            importing={sync.isPending}
+            onImport={() => sync.mutate()}
+          />
         )}
       </div>
     </main>
