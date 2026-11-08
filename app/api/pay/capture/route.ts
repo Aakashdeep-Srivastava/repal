@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { captureOrder } from "@/lib/paypal/orders";
 import { issueReceipt } from "@/lib/receipts/issue";
+import { gateSpend } from "@/lib/policy/gate";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
@@ -26,6 +27,8 @@ const Body = z.object({
       cashUsd: z.number().nonnegative(),
       payoutBatchId: z.string().optional(),
       fxInrPerUsd: z.number().optional(),
+      /** Explicit human approval — required when policy returns "ask". */
+      approved: z.boolean().optional(),
     })
     .optional(),
 });
@@ -53,6 +56,30 @@ export async function POST(req: Request) {
   const { orderId, decision } = parsed.data;
 
   try {
+    // SECOND policy check — gate against the real active mandate BEFORE money
+    // moves. deny → refuse; ask → require explicit approval. (No decision = a
+    // bare capture with no receipt; nothing to gate.)
+    if (decision) {
+      const gate = await gateSpend({
+        userId: decision.userId,
+        category: decision.category,
+        merchant: decision.merchant,
+        cashUsd: decision.cashUsd,
+      });
+      if (gate.decision === "deny") {
+        return NextResponse.json(
+          { error: "Blocked by your spending mandate.", policy: gate },
+          { status: 403, headers: rateLimitHeaders(rl) },
+        );
+      }
+      if (gate.decision === "ask" && !decision.approved) {
+        return NextResponse.json(
+          { needsApproval: true, policy: gate },
+          { status: 409, headers: rateLimitHeaders(rl) },
+        );
+      }
+    }
+
     const capture = await captureOrder(orderId);
 
     if (!decision) {
