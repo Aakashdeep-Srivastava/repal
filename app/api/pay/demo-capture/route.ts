@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { issueReceipt } from "@/lib/receipts/issue";
 import { getSessionUser } from "@/lib/auth/session";
+import { gateSpend } from "@/lib/policy/gate";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
@@ -33,6 +34,8 @@ const Body = z.object({
     savedUsd: z.number().nonnegative(),
     cashUsd: z.number().nonnegative(),
     fxInrPerUsd: z.number().optional(),
+    /** Explicit human approval — required when policy returns "ask". */
+    approved: z.boolean().optional(),
   }),
 });
 
@@ -56,6 +59,27 @@ export async function POST(req: Request) {
 
   // Resolve acting user: explicit → session → demo-user.
   const userId = decision.userId ?? (await getSessionUser()).userId ?? "demo-user";
+
+  // SECOND policy check — gate against the real active mandate before signing a
+  // receipt. deny → refuse; ask → require explicit approval.
+  const gate = await gateSpend({
+    userId,
+    category: decision.category,
+    merchant: decision.merchant,
+    cashUsd: decision.cashUsd,
+  });
+  if (gate.decision === "deny") {
+    return NextResponse.json(
+      { error: "Blocked by your spending mandate.", policy: gate },
+      { status: 403, headers: rateLimitHeaders(rl) },
+    );
+  }
+  if (gate.decision === "ask" && !decision.approved) {
+    return NextResponse.json(
+      { needsApproval: true, policy: gate },
+      { status: 409, headers: rateLimitHeaders(rl) },
+    );
+  }
 
   // Deterministic-ish demo ids. A caller-supplied checkoutKey makes repeated
   // POSTs stable/attributable (full dedupe is the UI's job via disabled submit).
