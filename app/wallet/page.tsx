@@ -7,6 +7,14 @@ import { fetchWallet, fetchMe, ingestWallet } from "@/lib/client";
 import { RepalLogo } from "@/components/brand/RepalLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { RewardPass } from "@/components/wallet/RewardPass";
+import AgentSearchLoader, { type AgentStep } from "@/components/AgentSearchLoader";
+
+/** Ingestion = pull from every source, then the Terms agent reads each T&C. */
+const INGEST_STEPS: AgentStep[] = [
+  { label: "Collecting from your sources", detail: "Gmail, cards, loyalty, PayPal", estimateMs: 2200 },
+  { label: "Reading terms & conditions", detail: "Caps, exclusions, expiry", estimateMs: 3400 },
+  { label: "Normalizing & saving rewards", detail: "Updating your wallet", estimateMs: 1800 },
+];
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
 const usdCompact = (n: number) =>
@@ -142,6 +150,13 @@ export default function WalletPage() {
             </p>
           )}
         </header>
+
+        {/* Ingestion in progress — the Terms agent reading every reward's fine print. */}
+        {sync.isPending && (
+          <div className="mt-8 flex justify-center">
+            <AgentSearchLoader title="Importing your rewards" steps={INGEST_STEPS} />
+          </div>
+        )}
 
         {error && (
           <p className="mt-8 rounded-[var(--radius-md)] border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-300">
