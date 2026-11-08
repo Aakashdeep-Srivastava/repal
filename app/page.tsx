@@ -23,13 +23,14 @@ function Nav() {
   });
 
   return (
-    <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
+    <nav className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-4 sm:px-6 sm:py-5">
       <Link href="/" aria-label="RePal home" className="shrink-0">
         <RepalLogo size="sm" />
       </Link>
-      <div className="flex items-center gap-3 text-sm text-[var(--color-muted)] sm:gap-5">
+      <div className="flex min-w-0 items-center gap-2 text-sm text-[var(--color-muted)] sm:gap-5">
         <ThemeToggle />
-        <Link href="/" className="hover:text-[var(--color-fg)]">
+        {/* "Agent" is the home page — redundant on mobile, so hide it there. */}
+        <Link href="/" className="hidden hover:text-[var(--color-fg)] sm:inline">
           Agent
         </Link>
         <Link href="/wallet" className="hover:text-[var(--color-fg)]">
@@ -37,11 +38,13 @@ function Nav() {
         </Link>
         {me ? (
           <>
-            <span className="text-[var(--color-fg)]">{me.name ?? me.email ?? me.userId}</span>
+            <span className="hidden max-w-[8rem] truncate text-[var(--color-fg)] sm:inline">
+              {me.name ?? me.email ?? me.userId}
+            </span>
             <button
               onClick={() => signOut.mutate()}
               disabled={signOut.isPending}
-              className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
+              className="shrink-0 whitespace-nowrap rounded-lg border border-[var(--color-border)] px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
             >
               Log out
             </button>
@@ -51,15 +54,16 @@ function Nav() {
             <button
               onClick={() => login.mutate()}
               disabled={login.isPending}
-              className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
+              className="shrink-0 whitespace-nowrap rounded-lg border border-[var(--color-border)] px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
             >
-              {login.isPending ? "Signing in…" : "Demo login"}
+              {login.isPending ? "…" : <><span className="sm:hidden">Demo</span><span className="hidden sm:inline">Demo login</span></>}
             </button>
             <a
               href="/api/auth/paypal/login"
-              className="rounded-lg bg-[var(--color-brand)] px-3 py-1.5 font-medium text-white"
+              className="shrink-0 whitespace-nowrap rounded-lg bg-[var(--color-brand)] px-3 py-1.5 font-medium text-white"
             >
-              Log in with PayPal
+              <span className="sm:hidden">PayPal</span>
+              <span className="hidden sm:inline">Log in with PayPal</span>
             </a>
           </>
         )}
