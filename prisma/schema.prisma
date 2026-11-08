@@ -49,6 +49,17 @@ model Payout {
   createdAt     DateTime @default(now())
 }
 
+model Refund {
+  id        String   @id @default(cuid())
+  userId    String
+  captureId String
+  receiptId String?
+  refundId  String
+  amountUsd Float?
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+}
+
 model Reward {
   id              String   @id @default(cuid())
   userId          String

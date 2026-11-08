@@ -32,7 +32,16 @@ export async function POST(req: Request) {
     }
   }
 
-  let event: { id?: string; event_type?: string };
+  let event: {
+    id?: string;
+    event_type?: string;
+    resource?: {
+      id?: string;
+      status?: string;
+      payout_batch_id?: string;
+      transaction_status?: string;
+    };
+  };
   try {
     event = JSON.parse(raw);
   } catch {
@@ -51,6 +60,38 @@ export async function POST(req: Request) {
     },
   });
 
+  // Act on the event — keep downstream state (payout / refund status) in sync.
+  // Idempotent (status overwrite) and never fatal to the 200 response.
+  await applyEffects(event).catch(() => {});
+
   // Always 200 so PayPal doesn't retry a stored-but-unverified event.
   return NextResponse.json({ received: true, verified });
+}
+
+async function applyEffects(event: {
+  event_type?: string;
+  resource?: {
+    id?: string;
+    status?: string;
+    payout_batch_id?: string;
+    transaction_status?: string;
+  };
+}): Promise<void> {
+  const type = event.event_type ?? "";
+  const r = event.resource ?? {};
+
+  if (type.startsWith("PAYMENT.PAYOUTS-ITEM")) {
+    // Reward liberation settled/failed — mirror the item status onto the Payout.
+    if (r.payout_batch_id && r.transaction_status) {
+      await prisma.payout.updateMany({
+        where: { payoutBatchId: r.payout_batch_id },
+        data: { status: r.transaction_status },
+      });
+    }
+  } else if (type === "PAYMENT.CAPTURE.REFUNDED" || type.startsWith("PAYMENT.REFUND")) {
+    // Refund completed — mirror the refund status onto the Refund row.
+    if (r.id && r.status) {
+      await prisma.refund.updateMany({ where: { refundId: r.id }, data: { status: r.status } });
+    }
+  }
 }
