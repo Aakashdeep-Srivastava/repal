@@ -88,6 +88,9 @@ export default function WalletPage() {
           <Link href="/mandate" className="hover:text-[var(--color-fg)]">
             Mandate
           </Link>
+          <Link href="/insights" className="hover:text-[var(--color-fg)]">
+            Insights
+          </Link>
         </div>
       </nav>
 

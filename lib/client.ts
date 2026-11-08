@@ -216,3 +216,37 @@ export async function payoutReward(input: {
   }
   return data as unknown as PayoutResult;
 }
+
+// ─── Insights ─────────────────────────────────────────────────────────
+
+export interface InsightsData {
+  kpis: {
+    totalSpent: number;
+    totalSaved: number;
+    totalLiberated: number;
+    totalRefunded: number;
+    purchases: number;
+    payouts: number;
+    refunds: number;
+    runs: number;
+    activeMandate: number;
+  };
+  series: { date: string; spent: number; saved: number }[];
+  recent: {
+    id: string;
+    item: string;
+    merchant: string;
+    category: string;
+    cashUsd: number;
+    savedUsd: number;
+    createdAt: string;
+    verifyUrl: string;
+  }[];
+}
+
+/** GET /api/insights — spend/savings dashboard data for the session user. */
+export async function fetchInsights(): Promise<InsightsData> {
+  const res = await fetch("/api/insights");
+  if (!res.ok) throw new Error(`insights fetch failed (${res.status})`);
+  return (await res.json()) as InsightsData;
+}
