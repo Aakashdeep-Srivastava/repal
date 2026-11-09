@@ -1,111 +1,90 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
+import type { LanguageModel } from "ai";
 
 /**
- * AWS Bedrock provider — Claude for RePal's AI agents layer (A0 orchestrator,
- * Terms agent). Claude is served through Amazon Bedrock in the reclevo.in AWS
- * account, via the Vercel AI SDK's Bedrock provider.
+ * Shared AI model handle for RePal's agent layer — provider-switchable.
  *
- * Auth precedence (resolved by the provider from the environment — never code):
- *   1. AWS_BEARER_TOKEN_BEDROCK          — a Bedrock API key (recommended; simplest)
- *   2. AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY (+ AWS_SESSION_TOKEN) — least-priv IAM
- *   3. the ambient AWS credential chain  — SSO / instance role, in AWS-hosted envs
+ *   AI_PROVIDER = bedrock (default) | anthropic | openai
  *
- * NEVER hardcode a key. Credentials come from .env / the deploy environment only,
- * both git-ignored. See docs/BEDROCK.md for how to mint the key (least privilege)
- * in the reclevo.in account and enable Claude model access.
+ * Bedrock (via the reclevo.in account) is the intended main provider, but it is
+ * gated behind the one-time Anthropic use-case form. Until that clears, set
+ * AI_PROVIDER=anthropic with an ANTHROPIC_API_KEY so live agent runs work now.
+ * The exported names are kept (`claude`, `isBedrockConfigured`,
+ * `assertBedrockConfigured`) so callers don't change; `isAiConfigured` /
+ * `assertAiConfigured` are clearer aliases.
  *
- * Prime directive: the LLM NEVER computes money. This provider backs only the
- * read / plan / explain / parse steps; all monetary math stays in the
- * deterministic, unit-tested lib/ core. See docs/TECH_PRD.md §3.
- *
- * OWNER: Aakash (provider + credential provisioning). The AI agents layer owner
- * consumes `claude` inside agents/ tools; this file stays provider-only.
+ * Prime directive: the LLM NEVER computes money. This handle backs only the
+ * read / plan / explain / parse steps. Callers run at temperature 0.
  */
+export const AI_PROVIDER = (process.env.AI_PROVIDER ?? "bedrock").toLowerCase();
 
-/** AWS region hosting Bedrock — us-west-2, co-located with the Oregon Neon DB. */
 export const AWS_REGION = process.env.AWS_REGION ?? "us-west-2";
-
-/**
- * Bedrock Claude model (inference-profile) id — kept in env so the exact id is
- * configuration, not code. reclevo.in / us-west-2 (ACTIVE):
- *   us.anthropic.claude-haiku-4-5-20251001-v1:0   ← our model (available, cheap)
- *   global.anthropic.claude-haiku-4-5-20251001-v1:0   (global routing alternative)
- * Opus 4.8 / Sonnet 5 are "not available for this account" in every region —
- * they need a separate access request (AWS Sales), not a region/quota change.
- * No default on purpose: a wrong id fails silently at call time. The only gate
- * is the one-time Anthropic use-case form (console). See docs/BEDROCK.md.
- */
 export const BEDROCK_MODEL_ID = process.env.BEDROCK_MODEL_ID;
+/** Direct-Anthropic model id (override via env). */
+export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
+export const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 
-function hasCredentials(): boolean {
+function hasBedrockCredentials(): boolean {
   return Boolean(
-    // 1. Bedrock API key (Option A) or explicit IAM keys (Option B) in the env.
     process.env.AWS_BEARER_TOKEN_BEDROCK ||
       (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) ||
-      // 2. Ambient container/instance role (Option C) — ECS Fargate sets
-      //    AWS_CONTAINER_CREDENTIALS_RELATIVE_URI; App Runner / EKS pod identity
-      //    set AWS_CONTAINER_CREDENTIALS_FULL_URI. In these cases the SDK resolves
-      //    role credentials with no keys in the env, so the gate must not treat
-      //    "no env keys" as "unconfigured". See docs/BEDROCK.md §Credentials C.
+      // Ambient container/instance role (ECS Fargate / App Runner) — no env keys.
       process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI ||
       process.env.AWS_CONTAINER_CREDENTIALS_FULL_URI,
   );
 }
 
-/**
- * True iff Bedrock is fully configured (credentials + model id). Lets callers
- * cheaply decide whether to attempt an LLM call at all, instead of firing a
- * request they know will fail — e.g. ingestion skips T&C parsing when this is
- * false rather than making one doomed network round-trip per reward.
- */
-export function isBedrockConfigured(): boolean {
-  return hasCredentials() && Boolean(BEDROCK_MODEL_ID);
+/** True iff the SELECTED provider is fully configured to make a call. */
+export function isAiConfigured(): boolean {
+  if (AI_PROVIDER === "anthropic") return Boolean(process.env.ANTHROPIC_API_KEY);
+  if (AI_PROVIDER === "openai") return Boolean(process.env.OPENAI_API_KEY);
+  return hasBedrockCredentials() && Boolean(BEDROCK_MODEL_ID);
+}
+
+/** Fail fast with an actionable, provider-specific message. */
+export function assertAiConfigured(): void {
+  if (isAiConfigured()) return;
+  if (AI_PROVIDER === "anthropic") {
+    throw new Error("AI_PROVIDER=anthropic but ANTHROPIC_API_KEY is not set.");
+  }
+  if (AI_PROVIDER === "openai") {
+    throw new Error("AI_PROVIDER=openai but OPENAI_API_KEY is not set.");
+  }
+  throw new Error(
+    "AWS Bedrock is not configured. Set AWS creds (key / bearer / role) + " +
+      "BEDROCK_MODEL_ID, or switch AI_PROVIDER=anthropic with an ANTHROPIC_API_KEY. " +
+      "See docs/BEDROCK.md.",
+  );
+}
+
+// Back-compat aliases (existing callers import the *Bedrock* names).
+export const isBedrockConfigured = isAiConfigured;
+export const assertBedrockConfigured = assertAiConfigured;
+
+/** Build the shared model handle for the selected provider (no network I/O). */
+function buildModel(): LanguageModel {
+  if (AI_PROVIDER === "anthropic") {
+    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    return anthropic(ANTHROPIC_MODEL);
+  }
+  if (AI_PROVIDER === "openai") {
+    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    return openai(OPENAI_MODEL);
+  }
+  const bedrock = createAmazonBedrock({
+    region: AWS_REGION,
+    ...(process.env.AWS_BEARER_TOKEN_BEDROCK
+      ? {}
+      : { credentialProvider: fromNodeProviderChain() }),
+  });
+  return bedrock(BEDROCK_MODEL_ID ?? "bedrock-model-id-not-set");
 }
 
 /**
- * Fail fast with an actionable message if Bedrock isn't configured. Call this
- * at the entry of any flow that uses `claude`, so a missing key surfaces as a
- * clear error instead of a cryptic AWS auth failure deep in a request.
+ * The model RePal's agents call. Named `claude` for history; it is whatever
+ * AI_PROVIDER selects. Constructing it does not touch the network.
  */
-export function assertBedrockConfigured(): void {
-  if (!hasCredentials()) {
-    throw new Error(
-      "AWS Bedrock is not configured. Set AWS_BEARER_TOKEN_BEDROCK (a Bedrock API " +
-        "key) OR AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY, plus AWS_REGION. " +
-        "See docs/BEDROCK.md §Credentials.",
-    );
-  }
-  if (!BEDROCK_MODEL_ID) {
-    throw new Error(
-      "BEDROCK_MODEL_ID is not set. Copy the Claude model / inference-profile id " +
-        "from the Bedrock console (Model access) into .env. See docs/BEDROCK.md.",
-    );
-  }
-}
-
-/**
- * Shared Bedrock provider. Region + auth resolve from the environment.
- *
- * Auth: when a Bedrock API key (AWS_BEARER_TOKEN_BEDROCK) is set, the provider
- * uses bearer auth and we touch nothing. Otherwise we hand it the full AWS
- * credential-provider chain (`fromNodeProviderChain`), which resolves — in SDK
- * order — env keys (AWS_ACCESS_KEY_ID/SECRET, local & CI), shared config, and
- * crucially the ambient container/instance role (ECS Fargate, App Runner, EKS).
- * `@ai-sdk/amazon-bedrock` does NOT wire the ambient role by default, so without
- * this the role-based "no keys in env" deployment can't authenticate. See
- * docs/BEDROCK.md §Credentials (Option C).
- */
-export const bedrock = createAmazonBedrock({
-  region: AWS_REGION,
-  ...(process.env.AWS_BEARER_TOKEN_BEDROCK
-    ? {}
-    : { credentialProvider: fromNodeProviderChain() }),
-});
-
-/**
- * The Claude model RePal's agents call, served via Bedrock. Constructing the
- * handle does not touch AWS — the first network call happens when a tool runs,
- * at which point `assertBedrockConfigured()` must already have passed.
- */
-export const claude = bedrock(BEDROCK_MODEL_ID ?? "bedrock-model-id-not-set");
+export const claude: LanguageModel = buildModel();

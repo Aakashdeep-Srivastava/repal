@@ -16,6 +16,7 @@
       "environment": [
         { "name": "NODE_ENV", "value": "production" },
         { "name": "AWS_REGION", "value": "us-west-2" },
+        { "name": "AI_PROVIDER", "value": "bedrock" },
         { "name": "BEDROCK_MODEL_ID", "value": "us.anthropic.claude-haiku-4-5-20251001-v1:0" },
         { "name": "PAYPAL_ENVIRONMENT", "value": "SANDBOX" },
         { "name": "PAYPAL_OIDC_REDIRECT", "value": "https://d14t147d5f4q6i.cloudfront.net/api/auth/paypal/callback" },
@@ -33,7 +34,8 @@
         { "name": "PAYPAL_CLIENT_ID", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/PAYPAL_CLIENT_ID-IQ2BBI" },
         { "name": "PAYPAL_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/PAYPAL_CLIENT_SECRET-qwaKw5" },
         { "name": "PAYPAL_WEBHOOK_ID", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/PAYPAL_WEBHOOK_ID-AxxW3e" },
-        { "name": "CHANNEL3_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/CHANNEL3_API_KEY-zxAhOL" }
+        { "name": "CHANNEL3_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/CHANNEL3_API_KEY-zxAhOL" },
+        { "name": "ANTHROPIC_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/ANTHROPIC_API_KEY-cD95F1" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

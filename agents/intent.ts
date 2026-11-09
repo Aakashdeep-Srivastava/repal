@@ -52,6 +52,7 @@ export async function renderIntent(
 ): Promise<PurchaseIntent> {
   const { output } = await generateText({
     model,
+    temperature: 0,
     system: SYSTEM,
     prompt: rawText,
     output: Output.object({ schema: intentSchema }),

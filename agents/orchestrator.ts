@@ -40,6 +40,7 @@ const SYSTEM = [
 
 export const orchestrator = new ToolLoopAgent({
   model: claude,
+  temperature: 0,
   instructions: SYSTEM,
   stopWhen: stepCountIs(10),
   tools: {
