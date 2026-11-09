@@ -5,21 +5,23 @@
  *
  * Browser-only: Bryntum touches the DOM (matchMedia) at import time and crashes
  * under SSR, so this module is loaded exclusively via next/dynamic({ssr:false})
- * from RescuePanel — never on the server. The static imports below are therefore
- * safe (they only ever run in the browser).
+ * from RescuePanel — never on the server.
  *
- * The license is registered on the `globalThis.bryntum.licenseKey` global (the
- * exact hook Bryntum's LicenseManager reads) BEFORE the Scheduler is created.
- * The key is passed down from the server (runtime env), not inlined at build.
+ * License timing matters: Bryntum's LicenseManager reads
+ * `globalThis.bryntum.licenseKey` as the module initializes, so the key MUST be
+ * set BEFORE the Scheduler module is imported — otherwise it initializes in
+ * trial mode (watermark) and a later assignment is ignored. We therefore set the
+ * global first and only then dynamically import the Scheduler. Only the CSS is a
+ * static import (safe — it loads no code). The key is passed from the server
+ * (runtime env), never inlined at build.
  */
 import { useEffect, useRef } from "react";
-import { Scheduler } from "@bryntum/scheduler-enterprise";
+import type { Scheduler as SchedulerType } from "@bryntum/scheduler-enterprise";
 import "@bryntum/scheduler-enterprise/material3.css";
 import type { WalletReward } from "@/lib/client";
 
 const DAY = 86_400_000;
 
-/** Urgency → Bryntum named event color. */
 function urgencyColor(daysLeft: number): "red" | "orange" | "green" {
   if (daysLeft <= 7) return "red";
   if (daysLeft <= 30) return "orange";
@@ -39,12 +41,13 @@ export default function RescueTimeline({
   license: string;
 }) {
   const el = useRef<HTMLDivElement>(null);
-  const scheduler = useRef<Scheduler | null>(null);
+  const scheduler = useRef<SchedulerType | null>(null);
 
   useEffect(() => {
     if (!el.current) return;
+    let destroyed = false;
 
-    // Register the license before any widget is constructed.
+    // Register the license BEFORE the Bryntum module loads (see file header).
     if (license) {
       const g = globalThis as unknown as { bryntum?: { licenseKey?: string } };
       g.bryntum = g.bryntum ?? {};
@@ -73,23 +76,26 @@ export default function RescueTimeline({
       };
     });
 
-    const s = new Scheduler({
-      appendTo: el.current,
-      startDate: new Date(now - DAY),
-      endDate: new Date(horizon),
-      viewPreset: "weekAndDayLetter",
-      rowHeight: 48,
-      barMargin: 6,
-      columns: [{ type: "resourceInfo", text: "Reward", field: "name", width: 200 }],
-      resources,
-      events,
-      // Read-only: this is a rescue view, not an editor.
-      readOnly: true,
+    // Dynamic import so the license global is already set when LicenseManager runs.
+    import("@bryntum/scheduler-enterprise").then(({ Scheduler }) => {
+      if (destroyed || !el.current) return;
+      scheduler.current = new Scheduler({
+        appendTo: el.current,
+        startDate: new Date(now - DAY),
+        endDate: new Date(horizon),
+        viewPreset: "weekAndDayLetter",
+        rowHeight: 48,
+        barMargin: 6,
+        columns: [{ type: "resourceInfo", text: "Reward", field: "name", width: 200 }],
+        resources,
+        events,
+        readOnly: true,
+      });
     });
-    scheduler.current = s;
 
     return () => {
-      s.destroy();
+      destroyed = true;
+      scheduler.current?.destroy();
       scheduler.current = null;
     };
   }, [rewards, license]);
