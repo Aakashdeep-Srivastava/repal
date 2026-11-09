@@ -39,6 +39,7 @@ export async function parseTerms(
 ): Promise<ParsedTerms> {
   const { output } = await generateText({
     model,
+    temperature: 0,
     system: SYSTEM,
     prompt: termsRaw,
     output: Output.object({ schema: ParsedTermsSchema }),

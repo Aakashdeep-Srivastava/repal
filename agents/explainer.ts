@@ -32,6 +32,7 @@ export async function explainPlan(
 ): Promise<string> {
   const { text } = await generateText({
     model,
+    temperature: 0,
     system: SYSTEM,
     prompt: `Explain why this plan is good for the shopper:\n\n${JSON.stringify(plan)}`,
   });
