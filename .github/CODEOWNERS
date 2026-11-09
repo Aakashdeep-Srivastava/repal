@@ -13,7 +13,7 @@
 /app/api/pay/               @Aakashdeep-Srivastava
 /app/api/webhooks/          @Aakashdeep-Srivastava
 /app/api/auth/              @Aakashdeep-Srivastava
-/render.yaml                @Aakashdeep-Srivastava
+/deploy/                    @Aakashdeep-Srivastava
 /.github/                   @Aakashdeep-Srivastava
 
 # ─── Backend domain services — Rachandeep Kaur ───────────────────────

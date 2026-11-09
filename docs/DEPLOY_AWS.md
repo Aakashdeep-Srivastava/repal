@@ -60,10 +60,10 @@ and/or require a shared secret header injected by CloudFront.
 
 The app, as it runs today, is a **single stateless HTTP container**: all durable
 state is in Postgres, sessions are signed cookies, there are no background loops,
-timers, local disk writes, or sticky connections. The `render.yaml` 3-service
-model (web + worker + cron) is an *intended* topology — the worker is currently a
-one-shot script (also reachable via `POST /api/wallet/ingest`) and the expiry
-cron is an unimplemented stub. So there is nothing that requires ECS's
+timers, local disk writes, or sticky connections. The logical three-part
+topology (web + worker + cron) maps cleanly onto AWS: the worker is a one-shot
+script (also reachable via `POST /api/wallet/ingest`) and the expiry cron runs
+daily via EventBridge → `POST /api/cron/expiry`. So there is nothing that requires ECS's
 service/scheduler machinery yet. App Runner covers 100% of what runs.
 
 When the worker becomes long-running or the expiry cron is implemented, add them
@@ -163,9 +163,9 @@ untouched:
   as a one-off ECS Fargate task (or keep using `POST /api/wallet/ingest`). If it
   becomes continuous/high-volume, introduce **SQS** (enqueue ingest jobs) + an
   **ECS Fargate** service consuming the queue. No EC2.
-- **Expiry cron** (`workers/expiryScan.cron.ts`): when implemented, schedule it
-  with **EventBridge Scheduler → ECS Fargate RunTask** (daily, mirrors the
-  `render.yaml` `0 2 * * *`). Stateless, Postgres-only.
+- **Expiry cron** (`lib/rewards/expiry.ts`, exposed at `POST /api/cron/expiry`):
+  scheduled daily (`0 2 * * *`) via **EventBridge Scheduler → Lambda → the cron
+  endpoint** (optionally guarded by `CRON_SECRET`). Stateless, Postgres-only.
 
 Both reuse the same image (or a slim worker image) and the same Secrets Manager
 entries; only the entrypoint/command differs.

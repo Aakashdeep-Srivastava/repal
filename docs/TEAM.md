@@ -13,7 +13,7 @@ We're building in **two phases**:
 
 | Member | Phase | Slice | Owns (folders) |
 | --- | --- | --- | --- |
-| **Aakashdeep Srivastava** (lead) | 1 | PayPal money rails + orchestration glue + deploy | `lib/paypal/`, `agents/orchestrator.ts`, `app/api/pay/*`, `app/api/webhooks/*`, `app/api/auth/*`, `render.yaml`, CI, repo coordination |
+| **Aakashdeep Srivastava** (lead) | 1 | PayPal money rails + orchestration glue + deploy | `lib/paypal/`, `agents/orchestrator.ts`, `app/api/pay/*`, `app/api/webhooks/*`, `app/api/auth/*`, `deploy/`, CI, repo coordination |
 | **Rachandeep Kaur** | 1 | **Backend domain services** | `lib/optimizer/`, `lib/policy/`, `lib/receipts/`, `lib/tnc/`, `lib/fx.ts`, `app/api/runs/*`, `app/api/mandates/*`, `app/api/wallet/*`, `app/api/offers/*`, `app/api/receipts/*`, `evals/` |
 | **Aviral Srivastava** | 2 | AI agents layer **or** frontend (TBD when they join) | `agents/tools/*`, `agents/prompts/*`, `agents/memory.ts`, `workers/*`, `lib/channel3.ts` |
 | **Vishalika** | 2 | Frontend & design **or** AI agents (TBD when they join) | `app/page.tsx`, `app/agent/*`, `app/wallet/*`, `app/insights/*`, `app/rescue/*`, `app/profile/*`, `app/verify/*`, `components/*`, `app/globals.css`, design system |
@@ -22,10 +22,9 @@ We're building in **two phases**:
 > which is decided when they join (after the spine runs). Fill the names into
 > `CODEOWNERS` then.
 
-**AI agents layer** — AI SDK 6 `ToolLoopAgent` tools: intent (A1), Terms agent +
-grounding hookup (A2), Channel3 discovery (A3), explainer (A5), Cognee memory
-(M), and the ingestion/expiry workers. Consumes `lib/` contracts; never computes
-money.
+**AI agents layer** — AI SDK `ToolLoopAgent` tools: intent (A1), Terms agent +
+grounding hookup (A2), Channel3 discovery (A3), explainer (A5), and the
+ingestion/expiry workers. Consumes `lib/` contracts; never computes money.
 
 **Frontend & design** — generative tool cards, wallet, AG Studio insights
 dashboard (A10 widgets), Bryntum rescue timeline, the pixel-perfect design
