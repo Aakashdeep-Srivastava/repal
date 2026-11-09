@@ -40,12 +40,12 @@ export function ConnectGmail() {
 
   return (
     <a
-      href="/api/connect/gmail/start"
+      href="/connect/gmail"
       className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-brand)]/30 bg-[var(--color-brand)]/5 px-4 py-3 text-sm hover:bg-[var(--color-brand)]/10"
     >
       <span className="text-[var(--color-fg)]">
         Connect Gmail to import real rewards
-        <span className="ml-2 text-xs text-[var(--color-muted)]">read-only · only reward emails · revocable</span>
+        <span className="ml-2 text-xs text-[var(--color-muted)]">read-only · consent-first · revocable</span>
       </span>
       <span className="shrink-0 rounded-lg bg-[var(--color-brand)] px-3 py-1.5 font-medium text-white">Connect</span>
     </a>
