@@ -1,10 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { RepalLogo } from "@/components/brand/RepalLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { fetchInsights, type InsightsData } from "@/lib/client";
+
+// AG Grid is browser-measured — load it client-side only.
+const TransactionGrid = dynamic(() => import("@/components/insights/TransactionGrid"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[460px] animate-pulse rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)]" />
+  ),
+});
 
 const usd = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
@@ -106,28 +115,16 @@ export default function InsightsPage() {
 
             <section className="mt-6">
               <h2 className="text-sm font-semibold text-[var(--color-fg)]">Recent activity</h2>
-              <div className="mt-3 overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)]">
+              <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+                Sort, filter, and search your signed receipts — each row links to its verifiable receipt.
+              </p>
+              <div className="mt-3">
                 {data.recent.length === 0 ? (
-                  <p className="bg-[var(--color-card)] p-6 text-sm text-[var(--color-muted)]">
+                  <p className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 text-sm text-[var(--color-muted)]">
                     No receipts yet — run the agent or check out a plan to see activity here.
                   </p>
                 ) : (
-                  data.recent.map((r) => (
-                    <Link
-                      key={r.id}
-                      href={r.verifyUrl}
-                      className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 last:border-0 hover:bg-[var(--color-bg)]"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[var(--color-fg)]">{r.item}</p>
-                        <p className="truncate text-xs text-[var(--color-muted)]">{r.merchant} · {r.category} · {new Date(r.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="tnum text-sm font-medium text-[var(--color-fg)]">{usd(r.cashUsd)}</p>
-                        {r.savedUsd > 0 && <p className="tnum text-xs text-[var(--color-brand)]">saved {usd(r.savedUsd)}</p>}
-                      </div>
-                    </Link>
-                  ))
+                  <TransactionGrid rows={data.recent} />
                 )}
               </div>
             </section>
