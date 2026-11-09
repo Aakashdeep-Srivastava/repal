@@ -35,7 +35,8 @@
         { "name": "PAYPAL_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/PAYPAL_CLIENT_SECRET-qwaKw5" },
         { "name": "PAYPAL_WEBHOOK_ID", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/PAYPAL_WEBHOOK_ID-AxxW3e" },
         { "name": "CHANNEL3_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/CHANNEL3_API_KEY-zxAhOL" },
-        { "name": "ANTHROPIC_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/ANTHROPIC_API_KEY-cD95F1" }
+        { "name": "ANTHROPIC_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/ANTHROPIC_API_KEY-cD95F1" },
+        { "name": "BRYNTUM_LICENSE", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/BRYNTUM_LICENSE-ULt48B" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
