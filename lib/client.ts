@@ -120,6 +120,27 @@ export async function logout(): Promise<void> {
   if (status !== 200) throw new Error(`logout failed (${status})`);
 }
 
+// ─── Gmail connection (consent-first ingestion) ───────────────────────
+
+export interface GmailStatus {
+  configured: boolean;
+  connected: boolean;
+  email: string | null;
+}
+
+/** GET /api/connect/gmail — whether Gmail ingestion is available + connected. */
+export async function fetchGmailStatus(): Promise<GmailStatus> {
+  const res = await fetch("/api/connect/gmail");
+  if (!res.ok) throw new Error(`gmail status failed (${res.status})`);
+  return (await res.json()) as GmailStatus;
+}
+
+/** DELETE /api/connect/gmail — disconnect the current user's Gmail. */
+export async function disconnectGmail(): Promise<void> {
+  const res = await fetch("/api/connect/gmail", { method: "DELETE" });
+  if (!res.ok) throw new Error(`disconnect failed (${res.status})`);
+}
+
 // ─── Wallet ingestion (connect sources) ───────────────────────────────
 
 /** Per-source + aggregate counts returned by POST /api/wallet/ingest. */
