@@ -15,9 +15,30 @@ const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
 
-/** Only reward-looking mail — never the whole inbox. */
-const REWARD_QUERY =
-  '(("gift card" OR "e-gift" OR cashback OR "cash back" OR reward OR coupon OR voucher OR "promo code")) newer_than:1y';
+/**
+ * Gmail search query by scan mode (GMAIL_SCAN_MODE):
+ *  - "rewards" (default): server-side filter to reward-looking mail — minimal,
+ *    privacy-strong, cheapest.
+ *  - "promotions": Gmail's Promotions category (broader, where offers live).
+ *  - "full": the agent reads across the inbox. Regardless of mode we only ever
+ *    EXTRACT + STORE reward rows (see hasRewardSignal), never other mail.
+ */
+const REWARD_KEYWORDS =
+  '"gift card" OR "e-gift" OR cashback OR "cash back" OR reward OR coupon OR voucher OR "promo code"';
+
+function scanQuery(): string {
+  const mode = (process.env.GMAIL_SCAN_MODE ?? "rewards").toLowerCase();
+  if (mode === "full") return "newer_than:1y";
+  if (mode === "promotions") return "category:promotions newer_than:1y";
+  return `(${REWARD_KEYWORDS}) newer_than:1y`;
+}
+
+/** True iff this text actually looks like a reward offer (gate for storage). */
+export function hasRewardSignal(text: string): boolean {
+  return /gift\s?card|e-?gift|cash\s?back|reward|coupon|voucher|promo\s?code|% off|\$\d+\s?off|points|miles|stars/i.test(
+    text,
+  );
+}
 
 export function isGmailConfigured(): boolean {
   return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
@@ -150,7 +171,7 @@ export async function fetchRewardEmails(userId: string, max = 20): Promise<Rewar
   const auth = { Authorization: `Bearer ${token}` };
 
   const listRes = await fetch(
-    `${GMAIL}/messages?q=${encodeURIComponent(REWARD_QUERY)}&maxResults=${Math.min(max, 50)}`,
+    `${GMAIL}/messages?q=${encodeURIComponent(scanQuery())}&maxResults=${Math.min(max, 50)}`,
     { headers: auth },
   );
   if (!listRes.ok) throw new Error(`Gmail list failed (${listRes.status})`);

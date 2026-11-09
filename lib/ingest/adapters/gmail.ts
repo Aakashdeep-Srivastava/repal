@@ -4,6 +4,7 @@ import {
   fetchRewardEmails,
   getConnectedEmail,
   guessType,
+  hasRewardSignal,
 } from "@/lib/ingest/google";
 
 /**
@@ -55,15 +56,19 @@ export const gmailAdapter: Adapter = {
 
     try {
       const emails = await fetchRewardEmails(userId);
-      // Value is unknown from the email alone (0); the Terms agent extracts
-      // amounts/rules from termsRaw. Expiry defaults to 60d until parsed.
-      return emails.map((e) => ({
-        source: "gmail",
-        type: guessType(`${e.subject} ${e.snippet}`),
-        valueUsd: 0,
-        expiresAt: inDays(60),
-        termsRaw: `${e.subject} — ${e.snippet}`.slice(0, 1000),
-      }));
+      // The agent may read broadly (GMAIL_SCAN_MODE), but we only STORE mail
+      // that actually looks like a reward — everything else is dropped here and
+      // never persisted. Value is unknown from the email alone (0); the Terms
+      // agent extracts amounts/rules from termsRaw; expiry defaults to 60d.
+      return emails
+        .filter((e) => hasRewardSignal(`${e.subject} ${e.snippet}`))
+        .map((e) => ({
+          source: "gmail",
+          type: guessType(`${e.subject} ${e.snippet}`),
+          valueUsd: 0,
+          expiresAt: inDays(60),
+          termsRaw: `${e.subject} — ${e.snippet}`.slice(0, 1000),
+        }));
     } catch {
       // Any Gmail error → safe labelled fallback, never a broken ingest.
       return SAMPLE;
