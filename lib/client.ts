@@ -99,6 +99,21 @@ export async function demoLogin(): Promise<void> {
   if (status !== 200) throw new Error(`demo login failed (${status})`);
 }
 
+/**
+ * POST /api/auth/judge-login — one-click judge sign-in. Seeds the self-contained
+ * "Maya" persona (signed mandate + labelled sample wallet) and starts a session.
+ */
+export async function judgeLogin(): Promise<void> {
+  const { status } = await postJson("/api/auth/judge-login", {});
+  if (status !== 200) throw new Error(`judge login failed (${status})`);
+}
+
+/** POST /api/auth/judge-reset — reset the judge persona to a fresh state. */
+export async function judgeReset(): Promise<void> {
+  const { status } = await postJson("/api/auth/judge-reset", {});
+  if (status !== 200) throw new Error(`judge reset failed (${status})`);
+}
+
 /** POST /api/auth/logout — clear the current session. */
 export async function logout(): Promise<void> {
   const { status } = await postJson("/api/auth/logout", {});

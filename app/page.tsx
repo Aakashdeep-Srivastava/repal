@@ -9,7 +9,7 @@ import { RepalLogo } from "@/components/brand/RepalLogo";
 import RepalLoader from "@/components/brand/RepalLoader";
 import AgentSearchLoader from "@/components/AgentSearchLoader";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { requestAgentRun, requestPlan, fetchMe, demoLogin, logout } from "@/lib/client";
+import { requestAgentRun, requestPlan, fetchMe, demoLogin, judgeLogin, logout } from "@/lib/client";
 
 function Nav() {
   const queryClient = useQueryClient();
@@ -17,6 +17,10 @@ function Nav() {
 
   const login = useMutation({
     mutationFn: demoLogin,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
+  });
+  const judge = useMutation({
+    mutationFn: judgeLogin,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
   });
   const signOut = useMutation({
@@ -60,11 +64,19 @@ function Nav() {
         ) : (
           <>
             <button
+              onClick={() => judge.mutate()}
+              disabled={judge.isPending}
+              title="One-click judge sign-in — a self-contained sample account"
+              className="shrink-0 whitespace-nowrap rounded-lg border border-[var(--color-cyan)]/50 bg-[var(--color-cyan)]/10 px-3 py-1.5 font-medium text-[var(--color-cyan)] hover:bg-[var(--color-cyan)]/20 disabled:opacity-60"
+            >
+              {judge.isPending ? "…" : <><span className="sm:hidden">Judge</span><span className="hidden sm:inline">Judge demo</span></>}
+            </button>
+            <button
               onClick={() => login.mutate()}
               disabled={login.isPending}
-              className="shrink-0 whitespace-nowrap rounded-lg border border-[var(--color-border)] px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
+              className="hidden shrink-0 whitespace-nowrap rounded-lg border border-[var(--color-border)] px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60 sm:inline-block"
             >
-              {login.isPending ? "…" : <><span className="sm:hidden">Demo</span><span className="hidden sm:inline">Demo login</span></>}
+              {login.isPending ? "…" : "Demo login"}
             </button>
             <a
               href="/api/auth/paypal/login"
