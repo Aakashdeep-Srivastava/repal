@@ -7,6 +7,7 @@ import { fetchWallet, fetchMe, ingestWallet } from "@/lib/client";
 import { RepalLogo } from "@/components/brand/RepalLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { RewardPass } from "@/components/wallet/RewardPass";
+import { ConnectGmail } from "@/components/wallet/ConnectGmail";
 import AgentSearchLoader, { type AgentStep } from "@/components/AgentSearchLoader";
 import { Onboarding } from "@/components/onboarding/Onboarding";
 
@@ -157,6 +158,11 @@ export default function WalletPage() {
             </p>
           )}
         </header>
+
+        {/* Consent-first Gmail connect (dormant unless configured server-side). */}
+        <div className="mt-6">
+          <ConnectGmail />
+        </div>
 
         {/* Re-sync of an existing wallet — the Terms agent re-reading fine print.
             (First-run import is handled by the onboarding empty-state below.) */}
