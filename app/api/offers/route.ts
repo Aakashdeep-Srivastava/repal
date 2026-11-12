@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { findOffers } from "@/lib/channel3";
+import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
  * GET /api/offers?q=&max= — Channel3 proxy (cached).
@@ -10,6 +11,14 @@ import { findOffers } from "@/lib/channel3";
  * OWNER: Rachandeep Kaur (route) + AI agents layer (lib/channel3).
  */
 export async function GET(req: Request) {
+  const rl = rateLimit(clientKey(req, "offers"), 30, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate limit exceeded — slow down", retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: rateLimitHeaders(rl) },
+    );
+  }
+
   const url = new URL(req.url);
   const q = url.searchParams.get("q")?.trim() ?? "";
   const max = url.searchParams.get("max");

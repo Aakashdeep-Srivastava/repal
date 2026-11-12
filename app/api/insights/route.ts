@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/session";
+import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
  * GET /api/insights — a self-contained spend/savings dashboard built from
@@ -13,7 +14,15 @@ export const dynamic = "force-dynamic";
 const REVERSAL = new Set(["reversal", "reward-liberation"]);
 const dayKey = (d: Date) => d.toISOString().slice(0, 10);
 
-export async function GET() {
+export async function GET(req: Request) {
+  const rl = rateLimit(clientKey(req, "insights"), 20, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate limit exceeded — slow down", retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: rateLimitHeaders(rl) },
+    );
+  }
+
   const { userId } = await getSessionUser();
 
   const [receipts, payouts, refunds, runs, activeMandate] = await Promise.all([

@@ -33,11 +33,14 @@ export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-
 export const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 export const GROQ_MODEL = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
 export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+// OpenRouter: OpenAI-compatible gateway (openrouter.ai). Model id includes the
+// vendor prefix, e.g. "meta-llama/llama-3.3-70b-instruct:free".
+export const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL ?? "meta-llama/llama-3.3-70b-instruct:free";
 
 /** Legacy single-provider env (optional); becomes the primary when set. */
 export const AI_PROVIDER = (process.env.AI_PROVIDER ?? "").toLowerCase();
 
-const DEFAULT_ORDER = ["bedrock", "groq", "anthropic", "openai", "gemini"];
+const DEFAULT_ORDER = ["bedrock", "groq", "anthropic", "openai", "gemini", "openrouter"];
 
 function providerOrder(): string[] {
   if (process.env.AI_PROVIDER_ORDER) {
@@ -64,6 +67,7 @@ function providerConfigured(p: string): boolean {
     case "gemini": return Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY);
     case "anthropic": return Boolean(process.env.ANTHROPIC_API_KEY);
     case "openai": return Boolean(process.env.OPENAI_API_KEY);
+    case "openrouter": return Boolean(process.env.OPENROUTER_API_KEY);
     default: return false;
   }
 }
@@ -77,7 +81,10 @@ function buildProvider(p: string): LanguageModel {
         baseURL: "https://api.groq.com/openai/v1",
         apiKey: process.env.GROQ_API_KEY,
       });
-      return groq(GROQ_MODEL);
+      // .chat() forces /chat/completions. The SDK's default openai(model) hits
+      // the newer /responses endpoint, which these OpenAI-compatible gateways
+      // (Groq, Gemini) don't implement → 404. See docs/BEDROCK.md.
+      return groq.chat(GROQ_MODEL);
     }
     case "gemini": {
       const gemini = createOpenAI({
@@ -85,7 +92,17 @@ function buildProvider(p: string): LanguageModel {
         baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
         apiKey: process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY,
       });
-      return gemini(GEMINI_MODEL);
+      // Gemini's OpenAI-compat layer only serves /chat/completions, not /responses.
+      return gemini.chat(GEMINI_MODEL);
+    }
+    case "openrouter": {
+      const openrouter = createOpenAI({
+        name: "openrouter",
+        baseURL: "https://openrouter.ai/api/v1",
+        apiKey: process.env.OPENROUTER_API_KEY,
+      });
+      // .chat() forces /chat/completions (OpenRouter doesn't serve /responses).
+      return openrouter.chat(OPENROUTER_MODEL);
     }
     case "anthropic":
       return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(ANTHROPIC_MODEL);
@@ -114,7 +131,8 @@ export function assertAiConfigured(): void {
   if (isAiConfigured()) return;
   throw new Error(
     "No AI provider configured. Set one of: AWS Bedrock creds + BEDROCK_MODEL_ID, " +
-      "GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY. See docs/BEDROCK.md.",
+      "GROQ_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, or " +
+      "OPENROUTER_API_KEY. See docs/BEDROCK.md.",
   );
 }
 

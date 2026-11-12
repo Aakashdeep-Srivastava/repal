@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createOrder, approvalUrlOf } from "@/lib/paypal/orders";
+import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
  * POST /api/pay/order — create an Orders v2 order (pay-in).
@@ -20,6 +21,15 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  // Money op — create PayPal order. Guard against runaway/abuse.
+  const rl = rateLimit(clientKey(req, "pay-order"), 10, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate limit exceeded — slow down", retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: rateLimitHeaders(rl) },
+    );
+  }
+
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
