@@ -9,7 +9,8 @@ import { RepalLogo } from "@/components/brand/RepalLogo";
 import RepalLoader from "@/components/brand/RepalLoader";
 import AgentSearchLoader from "@/components/AgentSearchLoader";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { requestAgentRun, requestPlan, fetchMe, demoLogin, judgeLogin, logout } from "@/lib/client";
+import { UserMenu } from "@/components/nav/UserMenu";
+import { requestAgentRun, requestPlan, fetchMe, demoLogin, judgeLogin } from "@/lib/client";
 
 function Nav() {
   const queryClient = useQueryClient();
@@ -23,11 +24,6 @@ function Nav() {
     mutationFn: judgeLogin,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
   });
-  const signOut = useMutation({
-    mutationFn: logout,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
-  });
-
   return (
     <nav className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-4 sm:px-6 sm:py-5">
       <Link href="/" aria-label="RePal home" className="shrink-0">
@@ -52,18 +48,7 @@ function Nav() {
           Rescue
         </Link>
         {me ? (
-          <>
-            <span className="hidden max-w-[8rem] truncate text-[var(--color-fg)] sm:inline">
-              {me.name ?? me.email ?? me.userId}
-            </span>
-            <button
-              onClick={() => signOut.mutate()}
-              disabled={signOut.isPending}
-              className="shrink-0 whitespace-nowrap rounded-lg border border-[var(--color-border)] px-3 py-1.5 hover:text-[var(--color-fg)] disabled:opacity-60"
-            >
-              Log out
-            </button>
-          </>
+          <UserMenu />
         ) : (
           <>
             <button

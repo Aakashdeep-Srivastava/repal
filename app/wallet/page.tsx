@@ -11,6 +11,7 @@ import { ConnectGmail } from "@/components/wallet/ConnectGmail";
 import AgentSearchLoader, { type AgentStep } from "@/components/AgentSearchLoader";
 import { Onboarding } from "@/components/onboarding/Onboarding";
 import { RewardsFeed } from "@/components/rewards/RewardsFeed";
+import { UserMenu } from "@/components/nav/UserMenu";
 
 /** Ingestion = pull from every source, then the Terms agent reads each T&C. */
 const INGEST_STEPS: AgentStep[] = [
@@ -93,6 +94,7 @@ export default function WalletPage() {
           <Link href="/insights" className="hover:text-[var(--color-fg)]">
             Insights
           </Link>
+          <UserMenu />
         </div>
       </nav>
 
