@@ -92,6 +92,20 @@ export function classifyError(err: unknown): ErrorClass {
   const status = statusOf(err);
   const msg = messageOf(err);
 
+  // Auth/credential problems (bad or missing API key, unauthorized) — the
+  // PROVIDER is misconfigured, so fail over to the NEXT provider rather than
+  // hard-failing the whole chain. MUST precede the generic 400/"invalid" fatal
+  // checks below: providers report a bad key as "invalid api key" (often 401),
+  // which the "invalid" rule would otherwise misread as a fatal caller bug and
+  // stop the chain at the first provider with a wrong key.
+  if (
+    status === 401 ||
+    status === 403 ||
+    /x-api-key|api[-_ ]?key|unauthor|forbidden|access denied|not authorized|permission denied|authentication/.test(msg)
+  ) {
+    return "provider_down";
+  }
+
   // Caller bugs — never masked, never retried, never failed over.
   if (status === 400 || status === 404 || status === 422) return "fatal";
   if (/invalid|validation|malformed|unsupported|bad request|no body|schema/.test(msg) &&

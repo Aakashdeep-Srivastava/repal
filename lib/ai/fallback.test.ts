@@ -35,6 +35,17 @@ describe("classifyError", () => {
     expect(classifyError({ statusCode: 403, message: "forbidden" })).toBe("provider_down");
   });
 
+  it("fails over on a bad/invalid API key instead of hard-failing the chain", () => {
+    // Regression: "Invalid API Key" contains "invalid" but is an AUTH problem on
+    // ONE provider — must fail over, NOT be classified fatal (which stopped the
+    // chain at the first provider with a wrong key).
+    expect(classifyError({ statusCode: 401, message: "Invalid API Key" })).toBe("provider_down");
+    expect(classifyError({ message: "invalid x-api-key" })).toBe("provider_down");
+    expect(classifyError({ statusCode: 400, message: "invalid api key" })).toBe("provider_down");
+    // ...but a genuine model/validation bug is still fatal.
+    expect(classifyError({ message: "invalid model identifier" })).toBe("fatal");
+  });
+
   it("flags per-minute throttles / 5xx as transient", () => {
     expect(classifyError({ statusCode: 429, message: "rate limit, retry" })).toBe("transient");
     expect(classifyError({ statusCode: 503 })).toBe("transient");
