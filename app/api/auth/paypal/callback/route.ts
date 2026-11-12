@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PAYPAL_BASE } from "@/lib/paypal/client";
 import { prisma } from "@/lib/db";
 import { setSession } from "@/lib/auth/session";
+import { grantWelcomeReward } from "@/lib/rewards/welcome";
 
 /**
  * GET /api/auth/paypal/callback — Log in with PayPal (OIDC) code exchange.
@@ -65,6 +66,12 @@ export async function GET(req: Request) {
 
     // Signed, httpOnly session cookie — see lib/auth/session.
     await setSession({ userId, name: info.name, email: info.email });
+
+    // A brand-new PayPal user starts with no owned rewards, so grant the $5
+    // welcome bonus (idempotent) — their wallet opens non-empty while the
+    // cold-start feed offers more to claim and Gmail finds their real ones.
+    // Never let a grant failure block login.
+    await grantWelcomeReward(userId).catch(() => {});
 
     // Redirect to the PUBLIC origin, not url.origin: behind a proxy (CloudFront
     // → ALB) the request host is the internal ALB over http, so url.origin would
