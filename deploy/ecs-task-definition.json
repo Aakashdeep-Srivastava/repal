@@ -26,9 +26,9 @@
         { "name": "CHANNEL3_CURRENCY", "value": "USD" },
         { "name": "CHANNEL3_MODE", "value": "auto" },
         { "name": "GOOGLE_CLIENT_ID", "value": "139026594153-hqtk8gs0ln8toufho1io59v96ss3s3oh.apps.googleusercontent.com" },
-        { "name": "AI_PROVIDER_ORDER", "value": "groq,openrouter,gemini,bedrock" },
-        { "name": "GROQ_MODEL", "value": "openai/gpt-oss-120b" },
-        { "name": "OPENROUTER_MODEL", "value": "nvidia/nemotron-3-ultra-550b-a55b:free" },
+        { "name": "AI_PROVIDER_ORDER", "value": "gemini,groq,openrouter,bedrock" },
+        { "name": "GROQ_MODEL", "value": "llama-3.3-70b-versatile" },
+        { "name": "OPENROUTER_MODEL", "value": "meta-llama/llama-3.3-70b-instruct:free" },
         { "name": "GEMINI_MODEL", "value": "gemini-flash-latest" }
       ],
       "secrets": [
