@@ -19,7 +19,7 @@
 // visible "Logos provided by Logo.dev" link; paid from $300/yr).
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Size = 24 | 32 | 40 | 48 | 64;
 
@@ -63,8 +63,18 @@ export function MerchantLogo({
 }: { domain: string; name: string; size?: Size; className?: string }) {
   const candidates = logoCandidates(domain, size);
   const [idx, setIdx] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   const radius = Math.round(size * 0.28);
   const src = candidates[idx];
+
+  // Robustness: if a candidate neither loads nor errors (hangs — rate-limited or
+  // slow CDN), advance after a short timeout so we fall through to the lettermark
+  // instead of showing an empty box forever.
+  useEffect(() => {
+    if (!src || loaded) return;
+    const t = setTimeout(() => setIdx((i) => i + 1), 2500);
+    return () => clearTimeout(t);
+  }, [src, loaded]);
 
   if (!src) {
     // All sources exhausted (or offline / no key): deterministic lettermark so
@@ -91,6 +101,7 @@ export function MerchantLogo({
       height={size}
       loading="lazy"
       referrerPolicy="strict-origin-when-cross-origin"
+      onLoad={() => setLoaded(true)}
       onError={() => setIdx((i) => i + 1)} // advance to the next candidate, then lettermark
       className={`bg-white object-contain ring-1 ring-black/5 ${className}`}
       style={{ width: size, height: size, borderRadius: radius }}
