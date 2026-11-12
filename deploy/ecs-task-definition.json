@@ -24,7 +24,8 @@
         { "name": "FX_INR_PER_USD", "value": "84" },
         { "name": "CHANNEL3_COUNTRY", "value": "US" },
         { "name": "CHANNEL3_CURRENCY", "value": "USD" },
-        { "name": "CHANNEL3_MODE", "value": "auto" }
+        { "name": "CHANNEL3_MODE", "value": "auto" },
+        { "name": "GOOGLE_CLIENT_ID", "value": "139026594153-hqtk8gs0ln8toufho1io59v96ss3s3oh.apps.googleusercontent.com" }
       ],
       "secrets": [
         { "name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/DATABASE_URL-us6Nfb" },
@@ -36,7 +37,8 @@
         { "name": "PAYPAL_WEBHOOK_ID", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/PAYPAL_WEBHOOK_ID-AxxW3e" },
         { "name": "CHANNEL3_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/CHANNEL3_API_KEY-zxAhOL" },
         { "name": "ANTHROPIC_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/ANTHROPIC_API_KEY-cD95F1" },
-        { "name": "BRYNTUM_LICENSE", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/BRYNTUM_LICENSE-ULt48B" }
+        { "name": "BRYNTUM_LICENSE", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/BRYNTUM_LICENSE-ULt48B" },
+        { "name": "GOOGLE_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/GOOGLE_CLIENT_SECRET" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
