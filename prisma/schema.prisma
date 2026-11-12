@@ -16,6 +16,12 @@ model User {
   paypalPayerId String?
   email         String?
   createdAt     DateTime  @default(now())
+  // Cold-start onboarding: 3-tap interests + connection flags drive the day-one feed.
+  interests     String[]  @default([])
+  country       String    @default("US")
+  gmailLinked   Boolean   @default(false)
+  cardLinked    Boolean   @default(false)
+  onboardedAt   DateTime?
   mandates      Mandate[]
   rewards       Reward[]
   receipts      Receipt[]
@@ -84,6 +90,10 @@ model Reward {
   parseConfidence Float
   expiresAt       DateTime
   lastSyncedAt    DateTime @default(now())
+  // Set when the reward came from saving a CatalogOffer (cold-start feed).
+  offerId         String?
+  merchantId      String?
+  savedBy         String? // 'user' | 'agent'
   user            User     @relation(fields: [userId], references: [id])
 }
 
@@ -152,4 +162,34 @@ model WebhookEvent {
   verified Boolean
   raw      Json
   at       DateTime @default(now())
+}
+
+// Cold-start rewards catalog. Mirrors the code seed (lib/merchants/catalog.ts);
+// in production these rows come from affiliate/card-linked adapters. The
+// optimizer never reads these — saving an offer creates a Reward row (PRD rule).
+model Merchant {
+  id        String         @id // slug, e.g. "bestbuy"
+  name      String
+  domain    String         @unique // logo lookup key (Brandfetch by domain)
+  category  String
+  countries String[]
+  offers    CatalogOffer[]
+}
+
+model CatalogOffer {
+  id           String   @id
+  merchantId   String
+  source       String // repal | affiliate | paypal_offers | card_linked | seed
+  network      String? // amex | visa | mastercard | discover (card_linked only)
+  type         String // cashback_pct | pct_off | amount_off | free_shipping | welcome_cash
+  value        Float
+  minSpendUsd  Float?
+  maxRewardUsd Float?
+  audience     String // everyone | new_user | first_order | requires_gmail | requires_card
+  termsRaw     String
+  rules        Json? // Terms-agent output, cached once per offer (not per user)
+  popularity   Int      @default(0)
+  expiresAt    DateTime
+  isSample     Boolean  @default(true)
+  merchant     Merchant @relation(fields: [merchantId], references: [id])
 }

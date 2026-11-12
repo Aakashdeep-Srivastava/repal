@@ -10,6 +10,7 @@ import { RewardPass } from "@/components/wallet/RewardPass";
 import { ConnectGmail } from "@/components/wallet/ConnectGmail";
 import AgentSearchLoader, { type AgentStep } from "@/components/AgentSearchLoader";
 import { Onboarding } from "@/components/onboarding/Onboarding";
+import { RewardsFeed } from "@/components/rewards/RewardsFeed";
 
 /** Ingestion = pull from every source, then the Terms agent reads each T&C. */
 const INGEST_STEPS: AgentStep[] = [
@@ -128,6 +129,15 @@ export default function WalletPage() {
             · <span className="text-[var(--color-fg)]">{whose}</span>
           </p>
 
+          <Link
+            href="/stack"
+            className="rise mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-brand)] transition-opacity hover:opacity-80"
+            style={{ animationDelay: "150ms" }}
+          >
+            See how your wallet pays — one stacked PayPal payment
+            <span aria-hidden>→</span>
+          </Link>
+
           {/* Type breakdown chips. */}
           {!isLoading && summary.groups.length > 0 && (
             <div className="rise mt-5 flex flex-wrap gap-2" style={{ animationDelay: "180ms" }}>
@@ -209,6 +219,11 @@ export default function WalletPage() {
             onImport={() => sync.mutate()}
           />
         )}
+
+        {/* ── Cold-start discovery feed ────────────────────────────────────
+            Day-one offers for users with no history: welcome reward, interest-
+            personalised "For you", popular fallback, and connect-to-unlock. */}
+        <RewardsFeed />
       </div>
     </main>
   );

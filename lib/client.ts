@@ -286,3 +286,62 @@ export async function fetchInsights(): Promise<InsightsData> {
   if (!res.ok) throw new Error(`insights fetch failed (${res.status})`);
   return (await res.json()) as InsightsData;
 }
+
+// ─── Cold-start rewards feed ──────────────────────────────────────────
+export type RewardCategory =
+  | "electronics" | "groceries" | "dining" | "coffee" | "travel" | "fashion"
+  | "beauty" | "home" | "pets" | "streaming" | "rides" | "marketplace";
+
+export interface FeedOffer {
+  offer: {
+    id: string;
+    merchantId: string;
+    source: string;
+    network?: string;
+    type: string;
+    value: number;
+    minSpendUsd?: number;
+    maxRewardUsd?: number;
+    audience: string;
+    termsRaw: string;
+    expiresInDays: number;
+    popularity: number;
+  };
+  section: "welcome" | "for_you" | "popular" | "locked";
+  score: number;
+  saved: boolean;
+  why: string;
+  estValueUsd: number;
+  merchant: { id: string; name: string; domain: string; category: RewardCategory };
+  isSample: boolean;
+}
+
+export interface RewardsFeedData {
+  onboarded: boolean;
+  welcome: FeedOffer[];
+  forYou: FeedOffer[];
+  locked: FeedOffer[];
+  popular: FeedOffer[];
+}
+
+/** GET /api/rewards/feed — the grouped day-one wallet feed. */
+export async function fetchRewardsFeed(): Promise<RewardsFeedData> {
+  const res = await fetch("/api/rewards/feed");
+  if (!res.ok) throw new Error(`rewards feed failed (${res.status})`);
+  return (await res.json()) as RewardsFeedData;
+}
+
+/** POST /api/rewards/onboard — record 3-tap interest picks. */
+export async function onboardInterests(
+  interests: RewardCategory[],
+  country?: "US" | "IN",
+): Promise<void> {
+  const { status } = await postJson("/api/rewards/onboard", country ? { interests, country } : { interests });
+  if (status !== 200) throw new Error(`onboard failed (${status})`);
+}
+
+/** POST /api/rewards/save — save a catalog offer as a Reward (idempotent). */
+export async function saveOffer(offerId: string, savedBy: "user" | "agent" = "user"): Promise<void> {
+  const { status } = await postJson("/api/rewards/save", { offerId, savedBy });
+  if (status !== 200 && status !== 201) throw new Error(`save failed (${status})`);
+}
