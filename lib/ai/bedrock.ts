@@ -2,6 +2,7 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { LanguageModel } from "ai";
 import { createFallbackModel } from "@/lib/ai/fallback";
 
@@ -32,7 +33,7 @@ export const BEDROCK_MODEL_ID = process.env.BEDROCK_MODEL_ID;
 export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
 export const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 export const GROQ_MODEL = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
-export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+export const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 // OpenRouter: OpenAI-compatible gateway (openrouter.ai). Model id includes the
 // vendor prefix, e.g. "meta-llama/llama-3.3-70b-instruct:free".
 export const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL ?? "meta-llama/llama-3.3-70b-instruct:free";
@@ -87,13 +88,14 @@ function buildProvider(p: string): LanguageModel {
       return groq.chat(GROQ_MODEL);
     }
     case "gemini": {
-      const gemini = createOpenAI({
-        name: "gemini",
-        baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+      // Native Gemini API (X-goog-api-key). The OpenAI-compat layer rejects
+      // newer "AQ."-style Google API keys with 400 Bad Request, so use the
+      // first-party provider. Model must be current (e.g. gemini-flash-latest;
+      // gemini-2.0/2.5-flash were retired).
+      const gemini = createGoogleGenerativeAI({
         apiKey: process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY,
       });
-      // Gemini's OpenAI-compat layer only serves /chat/completions, not /responses.
-      return gemini.chat(GEMINI_MODEL);
+      return gemini(GEMINI_MODEL);
     }
     case "openrouter": {
       const openrouter = createOpenAI({
