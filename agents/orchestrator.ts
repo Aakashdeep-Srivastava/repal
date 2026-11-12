@@ -6,6 +6,12 @@ import { renderIntent } from "@/agents/intent";
 import { explainPlan } from "@/agents/explainer";
 import { planPurchase } from "@/lib/pipeline";
 import { agentPay, agentPayout } from "@/lib/agent/actions";
+import {
+  fetchRewardEmails,
+  isGmailConfigured,
+  getConnectedEmail,
+  guessType,
+} from "@/lib/ingest/google";
 import type { Plan } from "@/lib/types";
 
 /**
@@ -28,6 +34,9 @@ const SYSTEM = [
   "discounts, budgets, or totals yourself — those come only from the tools.",
   "Flow: call render_intent on the user's request, then plan_purchase with the",
   "category and any budget, then explain the top plan with explain_plan.",
+  "If the user asks what rewards they have (or to check their inbox), call",
+  "scan_inbox to read reward mail from their connected Gmail and tell them what",
+  "you found; if it returns connected:false, say so and use scan_wallet instead.",
   "Each plan carries a policy decision. To settle an 'allow' plan, call pay with",
   "that exact plan — it re-checks the mandate server-side and charges the user's",
   "Vault token. For an 'ask' plan, tell the user it is above their approval",
@@ -65,6 +74,58 @@ export const orchestrator = new ToolLoopAgent({
           orderBy: { expiresAt: "asc" },
         });
         return { count: rewards.length, rewards };
+      },
+    }),
+
+    scan_inbox: tool({
+      description:
+        "Read the user's CONNECTED Gmail for reward-looking mail (gift cards, cashback, coupons, points). READ-ONLY: returns only each email's subject, a short snippet, and a guessed reward type — never full bodies, never non-reward mail. Use this to tell the user what rewards you found in their inbox, e.g. 'I found a $40 Best Buy gift card in your inbox.' If it returns connected:false, surface the message and fall back to scan_wallet — do not retry.",
+      inputSchema: z.object({
+        userId: z.string().default("demo-user").describe("The user whose inbox to scan."),
+        max: z.number().int().positive().max(50).default(20).describe("Max emails to scan."),
+      }),
+      execute: async ({ userId, max }) => {
+        if (!isGmailConfigured()) {
+          return {
+            connected: false,
+            reason: "gmail_not_configured",
+            message:
+              "Gmail isn't configured on this deployment — use scan_wallet for the imported wallet instead.",
+          };
+        }
+        const account = await getConnectedEmail(userId);
+        if (!account) {
+          return {
+            connected: false,
+            reason: "not_connected",
+            connectUrl: "/wallet",
+            message:
+              "This user hasn't connected Gmail yet. Ask them to connect it on the Wallet page (Connect Gmail), then retry.",
+          };
+        }
+        try {
+          const emails = await fetchRewardEmails(userId, max);
+          return {
+            connected: true,
+            account,
+            count: emails.length,
+            rewards: emails.map((e) => ({
+              subject: e.subject,
+              snippet: e.snippet,
+              guessedType: guessType(`${e.subject} ${e.snippet}`),
+            })),
+          };
+        } catch {
+          // Token expired/revoked or Gmail API hiccup — stay graceful, never throw
+          // mid-run; the agent should continue with scan_wallet.
+          return {
+            connected: true,
+            account,
+            count: 0,
+            rewards: [],
+            message: "Couldn't read the inbox right now (token may need reconnecting). Use scan_wallet.",
+          };
+        }
       },
     }),
 

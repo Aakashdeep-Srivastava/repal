@@ -39,6 +39,30 @@ export async function POST(req: Request) {
 
   const { userId } = await getSessionUser();
 
+  // Integrity gate: "locked" offers represent value the user must actually hold
+  // (a gift card we find in Gmail, a linked card's card-linked offer). A saved
+  // offer becomes a spendable Reward the optimizer acts on, so a direct POST
+  // must NOT be able to fabricate one before the connection exists. The UI hides
+  // Save on these; this enforces it server-side too.
+  if (offer.audience === "requires_gmail" || offer.audience === "requires_card") {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { gmailLinked: true, cardLinked: true },
+    });
+    const unlocked = offer.audience === "requires_gmail" ? user?.gmailLinked : user?.cardLinked;
+    if (!unlocked) {
+      return NextResponse.json(
+        {
+          error:
+            offer.audience === "requires_gmail"
+              ? "Connect Gmail to claim this reward"
+              : "Link a card to claim this reward",
+        },
+        { status: 403, headers: rateLimitHeaders(rl) },
+      );
+    }
+  }
+
   // Idempotent: saving the same offer twice returns the existing Reward.
   const existing = await prisma.reward.findFirst({ where: { userId, offerId } });
   if (existing) {
