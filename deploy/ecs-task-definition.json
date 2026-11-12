@@ -25,7 +25,10 @@
         { "name": "CHANNEL3_COUNTRY", "value": "US" },
         { "name": "CHANNEL3_CURRENCY", "value": "USD" },
         { "name": "CHANNEL3_MODE", "value": "auto" },
-        { "name": "GOOGLE_CLIENT_ID", "value": "139026594153-hqtk8gs0ln8toufho1io59v96ss3s3oh.apps.googleusercontent.com" }
+        { "name": "GOOGLE_CLIENT_ID", "value": "139026594153-hqtk8gs0ln8toufho1io59v96ss3s3oh.apps.googleusercontent.com" },
+        { "name": "AI_PROVIDER_ORDER", "value": "groq,openrouter,bedrock" },
+        { "name": "GROQ_MODEL", "value": "openai/gpt-oss-120b" },
+        { "name": "OPENROUTER_MODEL", "value": "nvidia/nemotron-3-ultra-550b-a55b:free" }
       ],
       "secrets": [
         { "name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/DATABASE_URL-us6Nfb" },
@@ -38,7 +41,9 @@
         { "name": "CHANNEL3_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/CHANNEL3_API_KEY-zxAhOL" },
         { "name": "ANTHROPIC_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/ANTHROPIC_API_KEY-cD95F1" },
         { "name": "BRYNTUM_LICENSE", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/BRYNTUM_LICENSE-ULt48B" },
-        { "name": "GOOGLE_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/GOOGLE_CLIENT_SECRET" }
+        { "name": "GOOGLE_CLIENT_SECRET", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/GOOGLE_CLIENT_SECRET" },
+        { "name": "GROQ_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/GROQ_API_KEY" },
+        { "name": "OPENROUTER_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/OPENROUTER_API_KEY" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
