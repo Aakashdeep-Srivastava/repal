@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { JUDGE_USER_ID } from "@/lib/demo/judge";
 
 /**
  * Lightweight signed-cookie session for RePal.
@@ -29,7 +30,21 @@ const DEV_FALLBACK_SECRET =
   "repal-dev-only-session-secret-do-not-use-in-production";
 
 function getSecret(): string {
-  return process.env.SESSION_SECRET || DEV_FALLBACK_SECRET;
+  const secret = process.env.SESSION_SECRET;
+  if (secret) return secret;
+  // Fail closed: never sign prod sessions with the source-visible dev secret.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET must be set in production");
+  }
+  return DEV_FALLBACK_SECRET;
+}
+
+/** Raised by requireUserId() when there is no valid session. */
+export class UnauthorizedError extends Error {
+  constructor() {
+    super("Unauthorized");
+    this.name = "UnauthorizedError";
+  }
 }
 
 export interface SessionUser {
@@ -126,10 +141,22 @@ export async function clearSession(): Promise<void> {
 }
 
 /**
- * Resolve the acting user for existing routes. Falls back to the demo user so
- * routes that predate real auth keep working in dev / the demo.
+ * Resolve the *viewer* for public read-only demo surfaces. When nobody is
+ * logged in we fall back to the seeded judge persona ("Maya") so the demo
+ * renders with real sandbox data — NOT an anonymous privileged "demo-user".
+ * Money-moving and destructive routes must use requireUserId() instead.
  */
 export async function getSessionUser(): Promise<{ userId: string }> {
   const session = await getSession();
-  return { userId: session?.userId ?? "demo-user" };
+  return { userId: session?.userId ?? JUDGE_USER_ID };
+}
+
+/**
+ * Strict identity for money-moving / destructive routes: returns the logged-in
+ * userId or throws UnauthorizedError (→ 401). No demo fallback.
+ */
+export async function requireUserId(): Promise<string> {
+  const session = await getSession();
+  if (!session?.userId) throw new UnauthorizedError();
+  return session.userId;
 }
