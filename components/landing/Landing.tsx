@@ -149,9 +149,8 @@ export function Landing() {
         <a href="#flow" className="hero-in mx-auto mt-10 grid h-9 w-9 animate-bounce place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm"><Ic.arrowD className="h-4 w-4" /></a>
       </section>
 
-      {/* FLOW — pinned, illuminating lines, lavender glass-waves bg */}
+      {/* FLOW — pinned, illuminating lines (clean background) */}
       <section id="flow" className="flow relative grid min-h-dvh place-items-center overflow-hidden">
-        <Image src="/bg/glass-waves.png" alt="" fill priority className="pointer-events-none absolute inset-0 -z-10 object-cover opacity-90 dark:opacity-30" />
         <div className="mx-auto w-full max-w-5xl px-5 py-16 text-center">
           <div className="reveal mx-auto max-w-2xl"><Pill>How it flows</Pill><h2 className="font-display mt-4 text-[30px] font-bold tracking-tight text-[#1b1b4d] sm:text-[40px]">Rewards flow in. One payment flows out.</h2></div>
           <div className="relative mx-auto mt-10 h-[380px] max-w-4xl">
