@@ -10,6 +10,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { judgeLogin } from "@/lib/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SiteFooter } from "@/components/landing/SiteFooter";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -225,23 +226,8 @@ export function Landing() {
         </div>
       </section>
 
-      {/* FINAL CTA + FOOTER — neon horizon bg */}
-      <section className="relative isolate mt-24 overflow-hidden px-5 pb-10 pt-20 text-center text-white">
-        <Image src="/bg/neon-horizon.png" alt="" fill priority sizes="100vw" className="pointer-events-none absolute inset-0 object-cover" />
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#140c38]/45" />
-        <h2 className="reveal font-display relative text-[34px] font-bold tracking-tight sm:text-[46px]">Try RePal Now</h2>
-        <p className="reveal relative mx-auto mt-3 max-w-md text-[15px] text-white/80">Experience the full flow with a live, pre-filled demo.</p>
-        <div className="reveal relative mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <DemoCTA dark label="Try Live Demo (No Setup)" />
-          <span className="text-[13px] text-white/50">— or —</span>
-          <a href="/api/auth/paypal/login" className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-[15px] font-semibold text-[#2b1065]"><Mark className="h-5 w-5" />Login with PayPal</a>
-        </div>
-        <p className="reveal relative mt-5 text-[12.5px] text-white/50">ⓘ Uses sample data · No real payment</p>
-        <footer className="relative mx-auto mt-14 flex max-w-6xl flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-[13px] text-white/60 sm:flex-row">
-          <div className="flex items-center gap-2"><Mark className="h-5 w-5 brightness-0 invert" /><span className="font-semibold text-white">RePal</span> · rewards to real money, on PayPal</div>
-          <div className="flex gap-5"><Link href="/privacy" className="hover:text-white">Privacy</Link><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/wallet" className="hover:text-white">Dashboard</Link></div>
-        </footer>
-      </section>
+      {/* premium closing — CTA + multi-column footer */}
+      <SiteFooter />
     </main>
   );
 }
