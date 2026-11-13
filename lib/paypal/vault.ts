@@ -39,6 +39,26 @@ export async function createSetupToken(returnUrl: string, cancelUrl: string): Pr
   });
 }
 
+/** Funding detail PayPal returns for a stored payment token. Note: for a
+ * PayPal-wallet token PayPal exposes the payer's PayPal account (email), NOT the
+ * underlying card/bank — merchants never see a buyer's funding instruments. */
+export interface VaultTokenDetail {
+  id: string;
+  status: string;
+  payment_source?: {
+    paypal?: { email_address?: string; account_id?: string; name?: { given_name?: string; surname?: string } };
+    card?: { brand?: string; last_digits?: string; expiry?: string };
+  };
+}
+
+/** Read a stored payment (vault) token — the funding the buyer authorized. */
+export async function getPaymentToken(id: string): Promise<VaultTokenDetail> {
+  return paypalRequest<VaultTokenDetail>(`/v3/vault/payment-tokens/${encodeURIComponent(id)}`, {
+    method: "GET",
+    requestId: newRequestId(),
+  });
+}
+
 /** Exchange an approved setup token for a durable payment (vault) token. */
 export async function createPaymentToken(setupTokenId: string): Promise<PaymentToken> {
   return paypalRequest<PaymentToken>("/v3/vault/payment-tokens", {
