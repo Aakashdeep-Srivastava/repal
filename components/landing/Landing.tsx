@@ -38,7 +38,7 @@ const Ic = {
   receipt: (p: IP) => <svg viewBox="0 0 24 24" fill="none" className={p.className}><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9 8h6M9 12h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>,
 };
 
-const GRAD = "linear-gradient(100deg,#7c3aed 0%,#5b4be6 45%,#2457e6 100%)";
+const GRAD = "linear-gradient(100deg,#2563eb 0%,#3b82f6 45%,#2457e6 100%)";
 const Mark = ({ className = "" }: { className?: string }) => <Image src="/brand/repal-monogram.png" alt="RePal" width={32} height={32} className={className} />;
 /* Two-tone PayPal "PP" monogram (brand navy + cyan) — used in the How-It-Works "Pay" step. */
 const PayPalMark = ({ className = "" }: { className?: string }) => (
@@ -47,12 +47,12 @@ const PayPalMark = ({ className = "" }: { className?: string }) => (
     <path fill="#2790C3" d="M11.5 7h5.2c2.7 0 4.6 1.5 4.1 4.4-.5 3-2.8 4.6-5.8 4.6h-2.3c-.5 0-.9.4-1 .9l-.82 5.4c-.05.4-.3.6-.68.6H7.8c-.42 0-.64-.3-.58-.72L9.3 8c.2-.63.78-1 2.2-1z" />
   </svg>
 );
-const Pill = ({ children }: { children: React.ReactNode }) => <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)]/80 px-3.5 py-1.5 text-[12.5px] font-semibold tracking-wide text-[#6d28d9] shadow-sm backdrop-blur"><Ic.spark className="h-3.5 w-3.5" />{children}</span>;
+const Pill = ({ children }: { children: React.ReactNode }) => <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)]/80 px-3.5 py-1.5 text-[12.5px] font-semibold tracking-wide text-[#1d4ed8] shadow-sm backdrop-blur"><Ic.spark className="h-3.5 w-3.5" />{children}</span>;
 
 function Chip({ icon, label, value, cls = "" }: { icon: React.ReactNode; label: string; value: string; cls?: string }) {
   return (
-    <div className={`flow-chip flex items-center gap-2.5 rounded-2xl border border-white/60 bg-white/80 px-3.5 py-2.5 shadow-[0_10px_30px_-14px_rgba(80,40,200,.4)] backdrop-blur ${cls}`}>
-      <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#7c3aed]/10 text-[#7c3aed]">{icon}</span>
+    <div className={`flow-chip flex items-center gap-2.5 rounded-2xl border border-white/60 bg-white/80 px-3.5 py-2.5 shadow-[0_10px_30px_-14px_rgba(37,99,235,.4)] backdrop-blur ${cls}`}>
+      <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#2563eb]/10 text-[#2563eb]">{icon}</span>
       <div className="leading-tight"><div className="text-[11px] font-medium text-slate-500">{label}</div><div className="text-[14px] font-bold text-slate-800">{value}</div></div>
     </div>
   );
@@ -116,26 +116,26 @@ export function Landing() {
   const trust = [["You stay in control", Ic.shield], ["Pays with PayPal", Ic.bolt], ["Stacks only valid rewards", Ic.stack], ["Verifiable receipts", Ic.check]] as const;
 
   const PrimaryCTA = ({ cls = "" }: { cls?: string }) => (
-    <a href="/api/auth/paypal/login" className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(90,50,230,.7)] transition-transform hover:-translate-y-0.5 ${cls}`} style={{ background: GRAD }}><Mark className="h-5 w-5 brightness-0 invert" />Login with PayPal</a>
+    <a href="/api/auth/paypal/login" className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 ${cls}`} style={{ background: GRAD }}><Mark className="h-5 w-5 brightness-0 invert" />Login with PayPal</a>
   );
   const DemoCTA = ({ dark = false, label = "Try Live Demo", cls = "" }: { dark?: boolean; label?: string; cls?: string }) => (
-    <button onClick={() => demo.mutate()} disabled={demo.isPending} className={`inline-flex items-center justify-center gap-2 rounded-full border px-6 py-3 text-[15px] font-semibold transition-colors disabled:opacity-60 ${dark ? "border-white/30 bg-white/10 text-white hover:bg-white/20" : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-fg)] hover:border-[#7c3aed]/40"} ${cls}`}><Ic.play className="h-5 w-5 text-[#7c3aed]" />{demo.isPending ? "Starting…" : label}</button>
+    <button onClick={() => demo.mutate()} disabled={demo.isPending} className={`inline-flex items-center justify-center gap-2 rounded-full border px-6 py-3 text-[15px] font-semibold transition-colors disabled:opacity-60 ${dark ? "border-white/30 bg-white/10 text-white hover:bg-white/20" : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-fg)] hover:border-[#2563eb]/40"} ${cls}`}><Ic.play className="h-5 w-5 text-[#2563eb]" />{demo.isPending ? "Starting…" : label}</button>
   );
 
   return (
     <main ref={root} className="relative min-h-dvh overflow-x-hidden bg-[var(--color-bg)] text-[var(--color-fg)]">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-40 top-0 h-[520px] w-[520px] rounded-full opacity-40 blur-3xl" style={{ background: "radial-gradient(circle,#b79bff,transparent 60%)" }} />
+        <div className="absolute -left-40 top-0 h-[520px] w-[520px] rounded-full opacity-40 blur-3xl" style={{ background: "radial-gradient(circle,#93c5fd,transparent 60%)" }} />
         <div className="absolute -right-40 top-40 h-[560px] w-[560px] rounded-full opacity-40 blur-3xl" style={{ background: "radial-gradient(circle,#8fd0ff,transparent 60%)" }} />
       </div>
 
       {/* NAV */}
-      <header className="sticky top-4 z-50 mx-auto mt-4 flex max-w-6xl items-center justify-between gap-3 rounded-full border border-white/60 bg-[var(--color-card)]/75 px-4 py-2.5 shadow-[0_10px_30px_-18px_rgba(80,40,200,.5)] backdrop-blur-xl sm:px-5">
-        <Link href="/" className="flex items-center gap-2"><Mark className="h-7 w-7" /><span className="text-lg font-bold tracking-tight">Re<span className="text-[#7c3aed]">Pal</span></span></Link>
+      <header className="sticky top-4 z-50 mx-auto mt-4 flex max-w-6xl items-center justify-between gap-3 rounded-full border border-white/60 bg-[var(--color-card)]/75 px-4 py-2.5 shadow-[0_10px_30px_-18px_rgba(37,99,235,.5)] backdrop-blur-xl sm:px-5">
+        <Link href="/" className="flex items-center gap-2"><Mark className="h-7 w-7" /><span className="text-lg font-bold tracking-tight">Re<span className="text-[#2563eb]">Pal</span></span></Link>
         <nav className="hidden items-center gap-6 text-[14px] font-medium text-[var(--color-muted)] lg:flex">{NAV.map(([l, h]) => <a key={l} href={h} className="hover:text-[var(--color-fg)]">{l}</a>)}</nav>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <button onClick={() => demo.mutate()} className="hidden items-center gap-1.5 rounded-full border border-[var(--color-border)] px-4 py-2 text-[13.5px] font-semibold text-[var(--color-fg)] hover:border-[#7c3aed]/40 sm:inline-flex"><Ic.play className="h-4 w-4 text-[#7c3aed]" />Live Demo</button>
+          <button onClick={() => demo.mutate()} className="hidden items-center gap-1.5 rounded-full border border-[var(--color-border)] px-4 py-2 text-[13.5px] font-semibold text-[var(--color-fg)] hover:border-[#2563eb]/40 sm:inline-flex"><Ic.play className="h-4 w-4 text-[#2563eb]" />Live Demo</button>
           <a href="/api/auth/paypal/login" className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-semibold text-white" style={{ background: GRAD }}><span className="hidden sm:inline">Login with PayPal</span><span className="sm:hidden">Login</span></a>
         </div>
       </header>
@@ -146,7 +146,7 @@ export function Landing() {
         <h1 className="hero-in font-display mx-auto mt-6 max-w-3xl text-[44px] font-bold leading-[1.05] tracking-tight sm:text-[64px]">The cheapest price <em className="not-italic" style={{ background: GRAD, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", fontStyle: "italic" }}>after</em> your rewards.</h1>
         <p className="hero-in mx-auto mt-5 max-w-xl text-[16px] text-[var(--color-muted)] sm:text-[18px]">RePal reads your rewards, stacks the best offers, and pays for you with PayPal — within the limits you set.</p>
         <div className="hero-in mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"><PrimaryCTA /><DemoCTA /></div>
-        <div className="hero-in mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] font-medium text-[var(--color-muted)]">{trust.map(([l, I]) => <span key={l} className="inline-flex items-center gap-1.5"><I className="h-4 w-4 text-[#7c3aed]" />{l}</span>)}</div>
+        <div className="hero-in mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] font-medium text-[var(--color-muted)]">{trust.map(([l, I]) => <span key={l} className="inline-flex items-center gap-1.5"><I className="h-4 w-4 text-[#2563eb]" />{l}</span>)}</div>
         <a href="#flow" className="hero-in mx-auto mt-10 grid h-9 w-9 animate-bounce place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm"><Ic.arrowD className="h-4 w-4" /></a>
       </section>
 
@@ -159,7 +159,7 @@ export function Landing() {
             <svg aria-hidden viewBox="0 0 900 380" className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid meet">
               <defs><filter id="pglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
               {/* inputs: start at the reward chips (left) and converge on the agent's left edge */}
-              {[94, 158, 222, 286].map((y, i) => <path key={i} className="flow-line flow-line-in" d={`M175 ${y} C 300 ${y}, 330 190, 378 190`} pathLength={1} strokeDasharray={1} fill="none" stroke="#a78bfa" strokeWidth="3" strokeLinecap="round" filter="url(#pglow)" opacity={0.25} />)}
+              {[94, 158, 222, 286].map((y, i) => <path key={i} className="flow-line flow-line-in" d={`M175 ${y} C 300 ${y}, 330 190, 378 190`} pathLength={1} strokeDasharray={1} fill="none" stroke="#93b4fb" strokeWidth="3" strokeLinecap="round" filter="url(#pglow)" opacity={0.25} />)}
               {/* output: from the agent's right edge to the payment card */}
               <path className="flow-line flow-line-out" d="M524 190 C 610 190, 670 190, 748 190" pathLength={1} strokeDasharray={1} fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" filter="url(#pglow)" opacity={0.25} />
             </svg>
@@ -172,7 +172,7 @@ export function Landing() {
             </div>
             {/* orb */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-              <div className="flow-orb relative grid h-36 w-36 place-items-center rounded-[32px] shadow-[0_30px_70px_-20px_rgba(90,50,230,.7)]" style={{ background: GRAD }}>
+              <div className="flow-orb relative grid h-36 w-36 place-items-center rounded-[32px] shadow-[0_30px_70px_-20px_rgba(37,99,235,.7)]" style={{ background: GRAD }}>
                 <div aria-hidden className="flow-glow absolute -inset-6 -z-10 rounded-full opacity-40 blur-2xl" style={{ background: GRAD }} />
                 <div className="grid h-[76px] w-[76px] place-items-center rounded-[22px] bg-white shadow-[0_10px_26px_-10px_rgba(20,10,60,.5)]">
                   <Mark className="h-12 w-12" />
@@ -195,7 +195,7 @@ export function Landing() {
       <section id="how" className="mx-auto max-w-6xl px-5 pt-24 text-center">
         <div className="reveal flex flex-col items-center"><Pill>How It Works</Pill>
           <h2 className="font-display mt-5 text-[34px] font-bold leading-[1.08] tracking-tight sm:text-[48px]">From scattered rewards to a{" "}
-            <em className="italic" style={{ background: "linear-gradient(100deg,#2457e6 0%,#5b4be6 42%,#8b3cf0 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>real purchase.</em>
+            <em className="italic" style={{ background: "linear-gradient(100deg,#2457e6 0%,#3b82f6 42%,#1d4ed8 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>real purchase.</em>
           </h2>
           <p className="mt-4 max-w-2xl text-[16px] text-[var(--color-muted)] sm:text-[17px]">A simple, transparent flow — powered by an AI agent with guardrails.</p>
         </div>
@@ -205,20 +205,20 @@ export function Landing() {
           {/* connector — a single hairline that draws on scroll (no dots) */}
           <div aria-hidden className="pointer-events-none absolute inset-x-0 top-16 z-0 hidden lg:block">
             <div className="relative mx-[13.5%] h-px">
-              <div className="absolute inset-0 bg-[#e6e0f6] dark:bg-white/10" />
-              <div className="hiw-line absolute inset-0 origin-left bg-[#b9a9ee]" style={{ transform: "scaleX(0)" }} />
-              <div className="hiw-spark absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#7c3aed] shadow-[0_0_8px_2px_rgba(124,58,237,.5)]" style={{ left: "0%", opacity: 0 }} />
+              <div className="absolute inset-0 bg-[#dbe6fe] dark:bg-white/10" />
+              <div className="hiw-line absolute inset-0 origin-left bg-[#8aaef9]" style={{ transform: "scaleX(0)" }} />
+              <div className="hiw-spark absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#2563eb] shadow-[0_0_8px_2px_rgba(37,99,235,.5)]" style={{ left: "0%", opacity: 0 }} />
             </div>
           </div>
 
           <div className="grid gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
             {([[Ic.card, "Connect", "Bring your rewards together in one place."], [Ic.doc, "Read", "The agent reads the fine print and checks eligibility."], [Ic.stack, "Stack", "Finds the best valid combination for the lowest price."], [PayPalMark, "Pay", "Pays securely with PayPal, within your spending mandate.", true]] as [(p: IP) => React.ReactNode, string, string, boolean?][]).map(([I, t, d, isPaypal], i) => (
               <div key={t} className="hiw-step relative z-10 flex flex-col items-center text-center">
-                <div className="grid h-32 w-32 place-items-center rounded-full border border-white/70 bg-gradient-to-b from-white/85 to-white/40 shadow-[0_26px_55px_-26px_rgba(90,50,230,.5)] ring-1 ring-inset ring-white/60 backdrop-blur-md dark:border-white/10 dark:from-white/[0.08] dark:to-white/[0.02] dark:ring-white/10">
-                  {isPaypal ? <PayPalMark className="h-[52px] w-[52px]" /> : <span className="text-[#5b4be6] dark:text-[#a78bfa]">{I({ className: "h-[46px] w-[46px]" })}</span>}
+                <div className="grid h-32 w-32 place-items-center rounded-full border border-white/70 bg-gradient-to-b from-white/85 to-white/40 shadow-[0_26px_55px_-26px_rgba(37,99,235,.5)] ring-1 ring-inset ring-white/60 backdrop-blur-md dark:border-white/10 dark:from-white/[0.08] dark:to-white/[0.02] dark:ring-white/10">
+                  {isPaypal ? <PayPalMark className="h-[52px] w-[52px]" /> : <span className="text-[#3b82f6] dark:text-[#93b4fb]">{I({ className: "h-[46px] w-[46px]" })}</span>}
                 </div>
                 <div className="mt-6 flex items-center gap-2.5">
-                  <span className="grid h-[26px] w-[26px] place-items-center rounded-full bg-[#a78bfa] text-[13px] font-bold text-white shadow-sm">{i + 1}</span>
+                  <span className="grid h-[26px] w-[26px] place-items-center rounded-full bg-[#93b4fb] text-[13px] font-bold text-white shadow-sm">{i + 1}</span>
                   <span className="text-[19px] font-bold tracking-tight">{t}</span>
                 </div>
                 <p className="mt-2.5 max-w-[210px] text-[14.5px] leading-relaxed text-[var(--color-muted)]">{d}</p>
@@ -234,7 +234,7 @@ export function Landing() {
           <div><Pill>Real example</Pill><h3 className="font-display mt-4 text-[26px] font-bold leading-tight tracking-tight sm:text-[30px]">The “more expensive” store can be cheaper.</h3><p className="mt-3 text-[14.5px] text-[var(--color-muted)]">Same headphones, two stores. RePal checks your rewards and finds the true lowest price.</p></div>
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3.5"><span className="flex items-center gap-2.5 text-[14px] font-medium"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[var(--color-brand)]/10 text-[var(--color-brand)]"><Ic.store className="h-4 w-4" /></span>Store B</span><span className="flex items-center gap-3"><b className="text-[16px]">$229</b><span className="rounded-full bg-[var(--color-border)]/40 px-2.5 py-1 text-[11px] text-[var(--color-muted)]">No rewards apply</span></span></div>
-            <div className="flex items-center justify-between rounded-2xl border border-[#7c3aed]/30 bg-[#7c3aed]/5 px-4 py-3.5"><span className="flex items-center gap-2.5 text-[14px] font-medium"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#7c3aed]/12 text-[#7c3aed]"><Ic.store className="h-4 w-4" /></span>Store A</span><span className="flex flex-wrap items-center justify-end gap-2"><b className="text-[16px]">$248</b><span className="rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-medium text-emerald-600">− $30 coupon</span><span className="rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-medium text-emerald-600">− $20 cashback</span></span></div>
+            <div className="flex items-center justify-between rounded-2xl border border-[#2563eb]/30 bg-[#2563eb]/5 px-4 py-3.5"><span className="flex items-center gap-2.5 text-[14px] font-medium"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#2563eb]/12 text-[#2563eb]"><Ic.store className="h-4 w-4" /></span>Store A</span><span className="flex flex-wrap items-center justify-end gap-2"><b className="text-[16px]">$248</b><span className="rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-medium text-emerald-600">− $30 coupon</span><span className="rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-medium text-emerald-600">− $20 cashback</span></span></div>
             <div className="flex items-center justify-between rounded-2xl border border-emerald-300/50 bg-emerald-50/80 px-4 py-4 dark:bg-emerald-500/10"><div><div className="text-[12px] font-semibold text-slate-600 dark:text-emerald-200">Your Price</div><div className="text-[28px] font-bold text-emerald-600 dark:text-emerald-400">$198</div></div><span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1.5 text-[12.5px] font-semibold text-emerald-700 dark:text-emerald-300"><Ic.check className="h-4 w-4" />$31 less than Store B</span></div>
           </div>
         </div>
@@ -258,7 +258,7 @@ export function Landing() {
           <div className="flex flex-col items-start gap-2"><Pill>Built for trust</Pill><h2 className="font-display mt-2 text-[28px] font-bold tracking-tight sm:text-[34px]">You’re always in control.</h2></div>
           <div className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[[Ic.bolt, "Powered by PayPal", "Vault, Orders, Payouts"], [Ic.receipt, "Signed Receipts", "Ed25519, publicly verifiable"], [Ic.shield, "Policy Guard", "Allow / Ask / Deny"], [Ic.stack, "Deterministic & Transparent", "Every amount is code-verified"]].map(([I, t, d]) => (
-              <div key={t as string} className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7c3aed]/10 text-[#7c3aed]">{(I as (p: IP) => React.ReactNode)({ className: "h-5 w-5" })}</span><div><div className="text-[14.5px] font-bold">{t as string}</div><div className="text-[12.5px] text-[var(--color-muted)]">{d as string}</div></div></div>
+              <div key={t as string} className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#2563eb]/10 text-[#2563eb]">{(I as (p: IP) => React.ReactNode)({ className: "h-5 w-5" })}</span><div><div className="text-[14.5px] font-bold">{t as string}</div><div className="text-[12.5px] text-[var(--color-muted)]">{d as string}</div></div></div>
             ))}
           </div>
         </div>
@@ -269,7 +269,7 @@ export function Landing() {
         <h2 className="reveal font-display text-[30px] font-bold tracking-tight sm:text-[38px]">Designed for people who already have rewards.</h2>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[[Ic.bag, "Shoppers", "", "Get more value from your existing rewards."], [Ic.bolt, "Smart Spenders", "", "Automatically use the right rewards, no guesswork."], [Ic.stack, "Organization", "Coming Soon", "Manage team spend and reward usage."], [Ic.store, "Businesses", "Coming Soon", "Increase redemptions and drive more sales."]].map(([I, t, tag, d]) => (
-            <div key={t as string} className="reveal rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)]/70 p-5 text-left shadow-sm backdrop-blur"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#7c3aed]/10 text-[#7c3aed]">{(I as (p: IP) => React.ReactNode)({ className: "h-5 w-5" })}</span><div className="mt-4 flex items-center gap-2"><span className="text-[16px] font-bold">{t as string}</span>{tag ? <span className="rounded-full bg-[var(--color-border)]/40 px-2 py-0.5 text-[10px] font-medium text-[var(--color-muted)]">{tag as string}</span> : null}</div><p className="mt-1.5 text-[13px] text-[var(--color-muted)]">{d as string}</p></div>
+            <div key={t as string} className="reveal rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)]/70 p-5 text-left shadow-sm backdrop-blur"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#2563eb]/10 text-[#2563eb]">{(I as (p: IP) => React.ReactNode)({ className: "h-5 w-5" })}</span><div className="mt-4 flex items-center gap-2"><span className="text-[16px] font-bold">{t as string}</span>{tag ? <span className="rounded-full bg-[var(--color-border)]/40 px-2 py-0.5 text-[10px] font-medium text-[var(--color-muted)]">{tag as string}</span> : null}</div><p className="mt-1.5 text-[13px] text-[var(--color-muted)]">{d as string}</p></div>
           ))}
         </div>
       </section>

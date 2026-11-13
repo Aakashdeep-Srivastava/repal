@@ -20,7 +20,7 @@ type SourceStyle = { label: string; accent: string; soft: string };
 const SOURCE: Record<string, SourceStyle> = {
   gmail: { label: "Gmail", accent: "#ea4335", soft: "rgba(234,67,53,0.12)" },
   paypal: { label: "PayPal", accent: "#0070ba", soft: "rgba(0,112,186,0.12)" },
-  card: { label: "Card", accent: "#7c3aed", soft: "rgba(124,58,237,0.12)" },
+  card: { label: "Card", accent: "#2563eb", soft: "rgba(37,99,235,0.12)" },
   loyalty: { label: "Loyalty", accent: "#d97706", soft: "rgba(217,119,6,0.12)" },
   channel3: { label: "Channel3", accent: "#0f766e", soft: "rgba(15,118,110,0.12)" },
   seed: { label: "Seed", accent: "#64748b", soft: "rgba(100,116,139,0.12)" },
