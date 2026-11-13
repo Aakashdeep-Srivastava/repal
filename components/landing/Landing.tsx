@@ -46,15 +46,15 @@ const Pill = ({ children }: { children: React.ReactNode }) => <span className="i
 
 /* a small text chip standing in for a brand (name as text, not logo artwork) */
 const NameChip = ({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) => (
-  <span className={`inline-flex items-center rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-[11.5px] font-bold tracking-tight shadow-sm ${strong ? "text-[#1a1f71]" : "text-slate-600"}`}>{children}</span>
+  <span className={`inline-flex items-center rounded-md border border-[var(--color-border)] bg-white px-1.5 py-[2px] text-[10px] font-bold tracking-tight shadow-sm ${strong ? "text-[#1a1f71]" : "text-slate-600"}`}>{children}</span>
 );
 
 /* one reward category row inside the "Your Rewards in One Place" panel */
 function RewardRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white/70 p-2.5">
-      <span className="flex w-[74px] shrink-0 items-center gap-2 text-[12px] font-semibold leading-tight text-slate-700"><span className="shrink-0 text-[#2563eb]">{icon}</span>{label}</span>
-      <div className="flex flex-1 flex-wrap items-center gap-1.5">{children}</div>
+    <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-white/70 px-2 py-1.5">
+      <span className="flex w-[58px] shrink-0 items-center gap-1 text-[10.5px] font-semibold leading-[1.15] text-slate-700"><span className="shrink-0 text-[#2563eb]">{icon}</span>{label}</span>
+      <div className="flex flex-1 flex-wrap items-center gap-1">{children}</div>
     </div>
   );
 }
@@ -145,16 +145,16 @@ export function Landing() {
         {/* infographic: panel → agent → best price (5-col grid keeps connectors aligned) */}
         <div className="reveal mt-14 grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_56px_auto_56px_minmax(0,0.78fr)]">
           {/* LEFT — Your Rewards in One Place */}
-          <div className="rounded-[26px] border border-[var(--color-border)] bg-white/70 p-4 text-left shadow-[0_24px_60px_-30px_rgba(37,99,235,.4)] backdrop-blur sm:p-5">
-            <div className="flex items-center gap-2 px-1 pb-3">
-              <span className="text-[#2563eb]"><Ic.stack className="h-5 w-5" /></span>
-              <span className="text-[15px] font-bold tracking-tight">Your Rewards in One Place</span>
+          <div className="rounded-[22px] border border-[var(--color-border)] bg-white/70 p-3 text-left shadow-[0_24px_60px_-30px_rgba(37,99,235,.4)] backdrop-blur">
+            <div className="flex items-center gap-1.5 px-0.5 pb-2.5">
+              <span className="text-[#2563eb]"><Ic.stack className="h-[18px] w-[18px]" /></span>
+              <span className="text-[13px] font-bold tracking-tight">Your Rewards in One Place</span>
             </div>
-            <div className="flex flex-col gap-2.5">
-              <RewardRow icon={<Ic.card className="h-4 w-4" />} label="Payment Cards"><NameChip strong>VISA</NameChip><NameChip>Mastercard</NameChip><NameChip strong>AMEX</NameChip><NameChip>Discover</NameChip></RewardRow>
-              <RewardRow icon={<Ic.mail className="h-4 w-4" />} label="Email Rewards"><NameChip>Gmail</NameChip><NameChip>Coupons</NameChip><NameChip>Offers</NameChip></RewardRow>
-              <RewardRow icon={<Ic.gift className="h-4 w-4" />} label="Gift Cards"><NameChip>Amazon</NameChip><NameChip>Starbucks</NameChip><NameChip>Apple</NameChip><NameChip>+ More</NameChip></RewardRow>
-              <RewardRow icon={<Ic.coin className="h-4 w-4" />} label="Reward Points"><NameChip>Chase</NameChip><NameChip>Citi</NameChip><NameChip>Capital One</NameChip></RewardRow>
+            <div className="flex flex-col gap-1.5">
+              <RewardRow icon={<Ic.card className="h-3.5 w-3.5" />} label="Payment Cards"><NameChip strong>VISA</NameChip><NameChip>Mastercard</NameChip><NameChip strong>AMEX</NameChip><NameChip>Discover</NameChip></RewardRow>
+              <RewardRow icon={<Ic.mail className="h-3.5 w-3.5" />} label="Email Rewards"><NameChip>Gmail</NameChip><NameChip>Coupons</NameChip><NameChip>Offers</NameChip></RewardRow>
+              <RewardRow icon={<Ic.gift className="h-3.5 w-3.5" />} label="Gift Cards"><NameChip>Amazon</NameChip><NameChip>Starbucks</NameChip><NameChip>Apple</NameChip><NameChip>+ More</NameChip></RewardRow>
+              <RewardRow icon={<Ic.coin className="h-3.5 w-3.5" />} label="Reward Points"><NameChip>Chase</NameChip><NameChip>Citi</NameChip><NameChip>Capital One</NameChip></RewardRow>
             </div>
           </div>
 
