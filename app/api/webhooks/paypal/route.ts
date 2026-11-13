@@ -60,11 +60,13 @@ export async function POST(req: Request) {
     },
   });
 
-  // Act on the event — keep downstream state (payout / refund status) in sync.
-  // Idempotent (status overwrite) and never fatal to the 200 response.
-  await applyEffects(event).catch(() => {});
+  // Only act on cryptographically VERIFIED events — never mutate payout/refund
+  // state from an unsigned (or unverifiable, e.g. PAYPAL_WEBHOOK_ID unset) body.
+  if (verified) {
+    await applyEffects(event).catch(() => {});
+  }
 
-  // Always 200 so PayPal doesn't retry a stored-but-unverified event.
+  // Always 200 so PayPal doesn't retry a stored event.
   return NextResponse.json({ received: true, verified });
 }
 

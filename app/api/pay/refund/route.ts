@@ -3,7 +3,7 @@ import { z } from "zod";
 import { refundCapture } from "@/lib/paypal/refunds";
 import { issueReceipt } from "@/lib/receipts/issue";
 import { prisma } from "@/lib/db";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireUserId, UnauthorizedError } from "@/lib/auth/session";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
@@ -29,7 +29,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400, headers: rateLimitHeaders(rl) });
   }
   const { captureId, amountUsd } = parsed.data;
-  const { userId } = await getSessionUser();
+  let userId: string;
+  try {
+    userId = await requireUserId();
+  } catch (e) {
+    if (e instanceof UnauthorizedError) {
+      return NextResponse.json({ error: "Sign in to issue a refund." }, { status: 401, headers: rateLimitHeaders(rl) });
+    }
+    throw e;
+  }
 
   try {
     const result = await refundCapture(captureId, amountUsd);

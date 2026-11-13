@@ -5,14 +5,13 @@ import { getSessionUser } from "@/lib/auth/session";
 /**
  * GET /api/wallet — the auto-imported reward wallet for the current user.
  *
- * Functional DB read (proves DB→API). User precedence: an explicit `?userId=`
- * query param (used by tests) wins, then the signed session user, then the
- * `demo-user` fallback so the unauthenticated wallet still renders.
+ * Functional DB read (proves DB→API). The wallet is always scoped to the
+ * signed-in user (or the public judge-demo persona when logged out) — the
+ * `?userId=` override was removed to prevent reading another user's wallet.
  * OWNER: Rachandeep Kaur.
  */
-export async function GET(req: Request) {
-  const explicit = new URL(req.url).searchParams.get("userId");
-  const userId = explicit ?? (await getSessionUser()).userId ?? "demo-user";
+export async function GET() {
+  const { userId } = await getSessionUser();
   const rewards = await prisma.reward.findMany({
     where: { userId },
     orderBy: { expiresAt: "asc" },

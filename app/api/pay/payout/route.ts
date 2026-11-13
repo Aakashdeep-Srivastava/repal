@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { liberateReward, LiberateError } from "@/lib/payout/liberate";
-import { getSessionUser } from "@/lib/auth/session";
+import { requireUserId, UnauthorizedError } from "@/lib/auth/session";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
@@ -15,7 +15,9 @@ import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 const Body = z.object({
   receiverEmail: z.string().email(),
   amountUsd: z.number().positive().max(100_000),
-  rewardId: z.string().optional(),
+  // rewardId is REQUIRED: a payout must always be backed by a reward the user
+  // owns, and the amount is bounded server-side to that reward's value.
+  rewardId: z.string().min(1),
   note: z.string().max(500).optional(),
 });
 
@@ -31,7 +33,15 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400, headers: rateLimitHeaders(rl) });
   }
-  const { userId } = await getSessionUser();
+  let userId: string;
+  try {
+    userId = await requireUserId();
+  } catch (e) {
+    if (e instanceof UnauthorizedError) {
+      return NextResponse.json({ error: "Sign in to cash out a reward." }, { status: 401, headers: rateLimitHeaders(rl) });
+    }
+    throw e;
+  }
 
   try {
     const result = await liberateReward({ userId, ...parsed.data });

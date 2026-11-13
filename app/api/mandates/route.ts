@@ -133,6 +133,9 @@ export async function GET() {
 export async function DELETE(req: Request) {
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
-  await prisma.mandate.update({ where: { id }, data: { status: "revoked" } });
+  const { userId } = await getSessionUser();
+  // Scope by owner: only revoke a mandate the acting user owns (no IDOR).
+  const result = await prisma.mandate.updateMany({ where: { id, userId }, data: { status: "revoked" } });
+  if (result.count === 0) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json({ id, status: "revoked" });
 }
