@@ -220,6 +220,20 @@ export async function createMandate(
   };
 }
 
+export interface PaymentMethods {
+  connected: boolean;
+  hasMandate?: boolean;
+  degraded?: boolean;
+  source?: { type: string; label: string; detail: string; status: string };
+}
+
+/** GET /api/payment-methods — the real funding the user vaulted to RePal. */
+export async function fetchPaymentMethods(): Promise<PaymentMethods> {
+  const res = await fetch("/api/payment-methods");
+  if (!res.ok) return { connected: false };
+  return (await res.json()) as PaymentMethods;
+}
+
 /** DELETE /api/mandates?id= — revoke a mandate. */
 export async function revokeMandate(id: string): Promise<void> {
   const res = await fetch(`/api/mandates?id=${encodeURIComponent(id)}`, { method: "DELETE" });

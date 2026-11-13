@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchWallet, ingestWallet, fetchInsights } from "@/lib/client";
 import { RewardCardV2 } from "@/components/wallet/RewardCardV2";
 import { ConnectGmail } from "@/components/wallet/ConnectGmail";
+import { PaymentMethods } from "@/components/wallet/PaymentMethods";
 import { DashboardShell, useShellUser, intentRoute, usd, timeAgo, I, Mark } from "@/components/dashboard/shell";
 
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
@@ -125,6 +126,8 @@ export function WalletDashboard() {
       </div>
 
       <div className="mt-5"><ConnectGmail /></div>
+
+      <div className="mt-5"><PaymentMethods /></div>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
         {FILTERS.map((f) => { const active = filter === f.key; const n = counts[f.key] ?? 0; if (f.key !== "all" && n === 0) return null;
