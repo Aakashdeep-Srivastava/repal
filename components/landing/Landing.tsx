@@ -40,6 +40,13 @@ const Ic = {
 
 const GRAD = "linear-gradient(100deg,#7c3aed 0%,#5b4be6 45%,#2457e6 100%)";
 const Mark = ({ className = "" }: { className?: string }) => <Image src="/brand/repal-monogram.png" alt="RePal" width={32} height={32} className={className} />;
+/* Two-tone PayPal "PP" monogram (brand navy + cyan) — used in the How-It-Works "Pay" step. */
+const PayPalMark = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden className={className}>
+    <path fill="#27346A" d="M8.2 4h5.2c2.7 0 4.6 1.5 4.1 4.4-.5 3-2.8 4.6-5.8 4.6H9.4c-.5 0-.9.4-1 .9l-.82 5.4c-.05.4-.3.6-.68.6H4.5c-.42 0-.64-.3-.58-.72L6 5c.2-.63.78-1 2.2-1z" />
+    <path fill="#2790C3" d="M11.5 7h5.2c2.7 0 4.6 1.5 4.1 4.4-.5 3-2.8 4.6-5.8 4.6h-2.3c-.5 0-.9.4-1 .9l-.82 5.4c-.05.4-.3.6-.68.6H7.8c-.42 0-.64-.3-.58-.72L9.3 8c.2-.63.78-1 2.2-1z" />
+  </svg>
+);
 const Pill = ({ children }: { children: React.ReactNode }) => <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)]/80 px-3.5 py-1.5 text-[12.5px] font-semibold tracking-wide text-[#6d28d9] shadow-sm backdrop-blur"><Ic.spark className="h-3.5 w-3.5" />{children}</span>;
 
 function Chip({ icon, label, value, cls = "" }: { icon: React.ReactNode; label: string; value: string; cls?: string }) {
@@ -67,14 +74,18 @@ export function Landing() {
       gsap.from(el, { opacity: 0, y: 48, duration: 0.9, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 85%" } });
     });
 
-    // PINNED FLOW — only on desktop (pin can be janky on small screens)
+    // PINNED FLOW — only on desktop (pin can be janky on small screens).
+    // Created BEFORE the #how triggers below so its 1600px pin-spacer is in
+    // place when those triggers compute their start/end (page-order refresh).
     mm.add("(min-width: 1024px)", () => {
       gsap.set(".flow-chip", { opacity: 0, x: -36 });
       gsap.set(".flow-best", { opacity: 0, scale: 0.9 });
       gsap.set(".flow-line", { strokeDashoffset: 1 });
 
       const tl = gsap.timeline({
-        scrollTrigger: { trigger: ".flow", start: "top top", end: "+=1600", pin: true, scrub: 1 },
+        // refreshPriority high: this pin injects 1600px of spacer, so it must
+        // refresh BEFORE the #how triggers below it compute their start/end.
+        scrollTrigger: { trigger: ".flow", start: "top top", end: "+=1600", pin: true, scrub: 1, refreshPriority: 1 },
       });
       // 1) reward cards scroll in (stagger)
       tl.to(".flow-chip", { opacity: 1, x: 0, stagger: 0.18, ease: "power2.out" }, 0);
@@ -89,6 +100,20 @@ export function Landing() {
         .to(".flow-best", { opacity: 1, scale: 1, ease: "back.out(1.6)" }, "<0.1")
         .to(".flow-orb", { scale: 1, duration: 0.3 }, ">");
     });
+
+    // HOW IT WORKS — steps pop in, then the connector line draws with a
+    // traveling spark that lights each dot as it passes (scrubbed to scroll).
+    // Triggered off the connector row (.hiw) so timing matches when it's seen.
+    gsap.from(".hiw-step", { opacity: 0, y: 30, scale: 0.94, stagger: 0.14, duration: 0.7, ease: "power3.out", scrollTrigger: { trigger: ".hiw", start: "top 82%" } });
+    const litDot = { backgroundColor: "#7c3aed", scale: 1.35, boxShadow: "0 0 14px 4px rgba(124,58,237,.6)", duration: 0.3, ease: "power2.out" };
+    gsap.timeline({ scrollTrigger: { trigger: ".hiw", start: "top 72%", toggleActions: "play none none reverse" } })
+      .set(".hiw-spark", { opacity: 1 }, 0)
+      .to(".hiw-line", { scaleX: 1, duration: 1.3, ease: "power1.inOut" }, 0)
+      .to(".hiw-spark", { left: "100%", duration: 1.3, ease: "power1.inOut" }, 0)
+      .to(".hiw-dot-0", litDot, 0.22)
+      .to(".hiw-dot-1", litDot, 0.65)
+      .to(".hiw-dot-2", litDot, 1.08)
+      .to(".hiw-spark", { opacity: 0, duration: 0.25 }, 1.2);
   }, { scope: root });
 
   const NAV = [["How it Works", "#how"], ["Rewards", "#money"], ["Security", "#trust"], ["For Merchants", "#personas"], ["Resources", "#how"]];
@@ -168,15 +193,43 @@ export function Landing() {
 
       {/* HOW IT WORKS */}
       <section id="how" className="mx-auto max-w-6xl px-5 pt-24 text-center">
-        <div className="reveal"><Pill>How it works</Pill><h2 className="font-display mt-4 text-[32px] font-bold tracking-tight sm:text-[42px]">From scattered rewards to a real purchase.</h2><p className="mx-auto mt-3 max-w-2xl text-[15.5px] text-[var(--color-muted)]">A simple, transparent flow — powered by an AI agent with guardrails.</p></div>
-        <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          {[[Ic.wallet, "Connect", "Bring your rewards together in one place."], [Ic.doc, "Read", "The agent reads the fine print and checks eligibility."], [Ic.stack, "Stack", "Finds the best valid combination for the lowest price."], [Ic.bolt, "Pay", "Pays securely with PayPal, within your spending mandate."]].map(([I, t, d], i) => (
-            <div key={t as string} className="reveal relative flex flex-col items-center text-center">
-              <div className="grid h-20 w-20 place-items-center rounded-[26px] text-white shadow-[0_18px_40px_-16px_rgba(90,50,230,.6)]" style={{ background: GRAD }}>{(I as (p: IP) => React.ReactNode)({ className: "h-9 w-9" })}</div>
-              <div className="mt-4 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-[#7c3aed] text-[12px] font-bold text-white">{i + 1}</span><span className="text-[17px] font-bold">{t as string}</span></div>
-              <p className="mt-2 max-w-[220px] text-[13.5px] text-[var(--color-muted)]">{d as string}</p>
+        <div className="reveal flex flex-col items-center"><Pill>How It Works</Pill>
+          <h2 className="font-display mt-5 text-[34px] font-bold leading-[1.08] tracking-tight sm:text-[48px]">From scattered rewards to a{" "}
+            <em className="italic" style={{ background: "linear-gradient(100deg,#2457e6 0%,#5b4be6 42%,#8b3cf0 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>real purchase.</em>
+          </h2>
+          <p className="mt-4 max-w-2xl text-[16px] text-[var(--color-muted)] sm:text-[17px]">A simple, transparent flow — powered by an AI agent with guardrails.</p>
+        </div>
+
+        {/* 4-step flow with animated connector */}
+        <div className="hiw relative mx-auto mt-16 max-w-5xl">
+          {/* connector line + glowing dots (desktop) — drawn on scroll */}
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[64px] z-0 hidden lg:block">
+            <div className="relative mx-[13.5%] h-[3px]">
+              <div className="absolute inset-0 rounded-full bg-[#ece7fb] dark:bg-white/10" />
+              <div className="hiw-line absolute inset-0 origin-left rounded-full bg-gradient-to-r from-[#7c3aed] via-[#5b4be6] to-[#2457e6] shadow-[0_0_12px_1px_rgba(91,75,230,.45)]" style={{ transform: "scaleX(0)" }} />
+              <div className="hiw-spark absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white shadow-[0_0_14px_5px_rgba(124,58,237,.8)]" style={{ left: "0%", opacity: 0 }} />
+              {[16.67, 50, 83.33].map((x, i) => (
+                <span key={x} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${x}%` }}>
+                  <span className={`hiw-dot hiw-dot-${i} block h-3 w-3 rounded-full bg-[#c9bef3] ring-4 ring-[#7c3aed]/0`} />
+                </span>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div className="grid gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+            {([[Ic.card, "Connect", "Bring your rewards together in one place."], [Ic.doc, "Read", "The agent reads the fine print and checks eligibility."], [Ic.stack, "Stack", "Finds the best valid combination for the lowest price."], [PayPalMark, "Pay", "Pays securely with PayPal, within your spending mandate.", true]] as [(p: IP) => React.ReactNode, string, string, boolean?][]).map(([I, t, d, isPaypal], i) => (
+              <div key={t} className="hiw-step relative z-10 flex flex-col items-center text-center">
+                <div className="grid h-32 w-32 place-items-center rounded-full border border-white/70 bg-gradient-to-b from-white/85 to-white/40 shadow-[0_26px_55px_-26px_rgba(90,50,230,.5)] ring-1 ring-inset ring-white/60 backdrop-blur-md dark:border-white/10 dark:from-white/[0.08] dark:to-white/[0.02] dark:ring-white/10">
+                  {isPaypal ? <PayPalMark className="h-[52px] w-[52px]" /> : <span className="text-[#5b4be6] dark:text-[#a78bfa]">{I({ className: "h-[46px] w-[46px]" })}</span>}
+                </div>
+                <div className="mt-6 flex items-center gap-2.5">
+                  <span className="grid h-[26px] w-[26px] place-items-center rounded-full bg-[#a78bfa] text-[13px] font-bold text-white shadow-sm">{i + 1}</span>
+                  <span className="text-[19px] font-bold tracking-tight">{t}</span>
+                </div>
+                <p className="mt-2.5 max-w-[210px] text-[14.5px] leading-relaxed text-[var(--color-muted)]">{d}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
