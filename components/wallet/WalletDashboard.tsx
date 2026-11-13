@@ -32,7 +32,14 @@ function AgentPanel() {
   ];
   return (
     <div className="flex flex-col rounded-[24px] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm">
-      <div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--color-brand)]/12 text-[var(--color-brand)]"><I.sparkle className="h-5 w-5" /></span><span className="text-[17px] font-semibold text-[var(--color-fg)]">RePal Agent</span><span className="ml-auto rounded-full bg-[var(--color-brand)]/10 px-2.5 py-1 text-[11px] font-medium text-[var(--color-brand)]">Powered by AI</span></div>
+      <div className="flex items-center gap-2.5">
+        <span className="relative grid h-9 w-9 place-items-center rounded-xl shadow-sm" style={{ background: "linear-gradient(135deg,#2563eb,#3b82f6)" }}>
+          <span aria-hidden className="absolute -inset-1.5 -z-10 rounded-full opacity-50 blur-md animate-pulse" style={{ background: "linear-gradient(135deg,#2563eb,#3b82f6)" }} />
+          <Mark className="relative h-5 w-5 brightness-0 invert" />
+        </span>
+        <span className="text-[17px] font-semibold text-[var(--color-fg)]">RePal Agent</span>
+        <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-[var(--color-brand)]/10 px-2.5 py-1 text-[11px] font-medium text-[var(--color-brand)]"><span className="h-1.5 w-1.5 rounded-full bg-[var(--color-brand)] animate-pulse" />Powered by AI</span>
+      </div>
       <p className="mt-4 text-[15px] text-[var(--color-fg)]">Tell me what you want to buy <span className="font-semibold">or save on.</span></p>
       <div className="mt-4 flex flex-col gap-2.5">
         {chips.map((c) => <button key={c.label} onClick={c.go} className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3.5 py-2.5 text-left text-[13.5px] text-[var(--color-fg)] transition-colors hover:border-[var(--color-brand)]/40 hover:bg-[var(--color-brand)]/5"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[var(--color-brand)]/10 text-[var(--color-brand)]"><I.sparkle className="h-4 w-4" /></span>{c.label}</button>)}
