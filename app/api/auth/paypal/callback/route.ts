@@ -73,12 +73,15 @@ export async function GET(req: Request) {
     // Never let a grant failure block login.
     await grantWelcomeReward(userId).catch(() => {});
 
-    // Redirect to the PUBLIC origin, not url.origin: behind a proxy (CloudFront
-    // → ALB) the request host is the internal ALB over http, so url.origin would
-    // bounce the user to the wrong, non-HTTPS host. PAYPAL_OIDC_REDIRECT is the
-    // registered public callback, so its origin is the app's true public base.
+    // Land the signed-in user on the dashboard (/wallet), not the marketing
+    // landing — the authed surface lives there now (same destination as the
+    // judge-login flow). Use the PUBLIC origin, not url.origin: behind the proxy
+    // (CloudFront → ALB) the request host is the internal ALB over http, so
+    // url.origin would bounce the user to the wrong, non-HTTPS host.
+    // PAYPAL_OIDC_REDIRECT is the registered public callback, so its origin is
+    // the app's true public base.
     const publicBase = new URL(redirect).origin;
-    return NextResponse.redirect(new URL("/", publicBase));
+    return NextResponse.redirect(new URL("/wallet", publicBase));
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "oidc failed" },
