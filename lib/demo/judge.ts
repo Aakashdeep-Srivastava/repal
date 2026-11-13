@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { signMandate } from "@/lib/policy/mandate";
 
@@ -39,59 +40,62 @@ export async function seedJudge(): Promise<void> {
   });
 
   // Fresh signed mandate (cap $500, budget $2000, ask above $150 so the demo
-  // shows both the 'allow' and 'ask' paths).
-  await prisma.mandate.deleteMany({ where: { userId: JUDGE_USER_ID } });
-  const m = await prisma.mandate.create({
-    data: {
-      userId: JUDGE_USER_ID,
+  // shows both the 'allow' and 'ask' paths). Pre-generate the id and sign it so
+  // the mandate is created ALREADY-SIGNED in one write — no follow-up update
+  // that a concurrent re-seed's deleteMany could race into a P2025.
+  const mandateId = randomUUID();
+  const expiresAt = inDays(90);
+  const signatureHash = signMandate(
+    {
+      id: mandateId,
       capUsd: 500,
       budgetUsd: 2000,
       approvalThresholdUsd: 150,
       allowCategories: [],
       allowMerchants: [],
-      expiresAt: inDays(90),
-      signatureHash: "",
-      status: "active",
+      expiresAt: expiresAt.toISOString(),
     },
-  });
-  await prisma.mandate.update({
-    where: { id: m.id },
-    data: {
-      signatureHash: signMandate(
-        {
-          id: m.id,
-          capUsd: m.capUsd,
-          budgetUsd: m.budgetUsd,
-          approvalThresholdUsd: m.approvalThresholdUsd,
-          allowCategories: m.allowCategories,
-          allowMerchants: m.allowMerchants,
-          expiresAt: m.expiresAt.toISOString(),
-        },
-        JUDGE_USER_ID,
-      ),
-    },
-  });
+    JUDGE_USER_ID,
+  );
 
-  // Fresh sample wallet.
-  await prisma.reward.deleteMany({ where: { userId: JUDGE_USER_ID } });
-  await prisma.reward.createMany({
-    data: SAMPLE_REWARDS.map((r) => ({
-      userId: JUDGE_USER_ID,
-      source: "sample",
-      type: r.type,
-      valueUsd: r.valueUsd,
-      termsRaw: r.termsRaw,
-      rules: [],
-      status: "active",
-      parseConfidence: 0,
-      expiresAt: inDays(r.expiresInDays),
-    })),
-  });
-
-  // Clean any prior money artifacts so each judge starts at zero.
-  await prisma.receipt.deleteMany({ where: { userId: JUDGE_USER_ID } });
-  await prisma.payout.deleteMany({ where: { userId: JUDGE_USER_ID } });
-  await prisma.refund.deleteMany({ where: { userId: JUDGE_USER_ID } });
+  // Atomic re-seed: wipe + recreate the persona's mandate, wallet and money
+  // artifacts in a single transaction, so concurrent judge-logins (many judges
+  // clicking "Try Live Demo" at once) can't interleave and corrupt each other.
+  await prisma.$transaction([
+    prisma.mandate.deleteMany({ where: { userId: JUDGE_USER_ID } }),
+    prisma.mandate.create({
+      data: {
+        id: mandateId,
+        userId: JUDGE_USER_ID,
+        capUsd: 500,
+        budgetUsd: 2000,
+        approvalThresholdUsd: 150,
+        allowCategories: [],
+        allowMerchants: [],
+        expiresAt,
+        signatureHash,
+        status: "active",
+      },
+    }),
+    prisma.reward.deleteMany({ where: { userId: JUDGE_USER_ID } }),
+    prisma.reward.createMany({
+      data: SAMPLE_REWARDS.map((r) => ({
+        userId: JUDGE_USER_ID,
+        source: "sample",
+        type: r.type,
+        valueUsd: r.valueUsd,
+        termsRaw: r.termsRaw,
+        rules: [],
+        status: "active",
+        parseConfidence: 0,
+        expiresAt: inDays(r.expiresInDays),
+      })),
+    }),
+    // Clean any prior money artifacts so each judge starts at zero.
+    prisma.receipt.deleteMany({ where: { userId: JUDGE_USER_ID } }),
+    prisma.payout.deleteMany({ where: { userId: JUDGE_USER_ID } }),
+    prisma.refund.deleteMany({ where: { userId: JUDGE_USER_ID } }),
+  ]);
 }
 
 /** Reset = re-seed fresh. */

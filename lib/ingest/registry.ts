@@ -77,11 +77,16 @@ export async function runIngestion(
 
     const raws = await adapter.fetch(userId);
 
-    // Collect each reward concurrently — independent rows, so there's no reason
-    // to serialize the DB round-trips.
-    const outcomes = await Promise.all(
-      raws.map((raw) => collectReward(userId, raw, canParse)),
-    );
+    // Collect each reward with BOUNDED concurrency. Parsing hits the LLM chain,
+    // so an unbounded Promise.all over ~20-30 rewards trips provider rate limits
+    // (every call → backoff/cooldown → rewards persist unparsed) and can hang
+    // the request. Process in small batches instead.
+    const CONCURRENCY = 4;
+    const outcomes: Awaited<ReturnType<typeof collectReward>>[] = [];
+    for (let i = 0; i < raws.length; i += CONCURRENCY) {
+      const batch = raws.slice(i, i + CONCURRENCY);
+      outcomes.push(...(await Promise.all(batch.map((raw) => collectReward(userId, raw, canParse)))));
+    }
 
     for (const o of outcomes) {
       if (o.created) {

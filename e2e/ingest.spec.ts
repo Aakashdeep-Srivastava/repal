@@ -11,6 +11,11 @@ import { test, expect } from "@playwright/test";
 
 const TEST_USER = "ingest-e2e-user";
 
+// Two full multi-source ingestions hit live Neon + several source adapters. Under
+// the fully-parallel runner these live writes contend with other workers'
+// judge-login seeding, so allow very generous headroom.
+test.setTimeout(300_000);
+
 async function walletCount(request: import("@playwright/test").APIRequestContext) {
   const res = await request.get(`/api/wallet?userId=${TEST_USER}`);
   expect(res.ok()).toBeTruthy();

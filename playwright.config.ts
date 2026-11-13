@@ -10,6 +10,10 @@ export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
+  // Cap workers: the suite drives live Neon + the dev server, and too many
+  // concurrent heavy specs (e.g. multi-source ingestion) throttle the remote
+  // DB into connection resets. 2 workers keeps it reliable.
+  workers: 2,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],

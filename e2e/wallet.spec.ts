@@ -1,16 +1,30 @@
 import { test, expect } from "@playwright/test";
 
+/**
+ * Wallet (live Neon data). Logs in as the judge persona "Maya" first, then loads
+ * /wallet and asserts the auto-imported reward wallet renders: the "Reward
+ * Wallet" card (a <span>, not an aria heading), the "Auto-imported & AI-parsed"
+ * badge, reward cards with $ values, and a recognizable merchant / T&C snippet.
+ */
 test.describe("Wallet (live Neon data)", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.request.post("/api/auth/judge-login");
+  });
+
   test("loads the auto-imported reward wallet", async ({ page }) => {
     await page.goto("/wallet");
-    await expect(page.getByRole("heading", { name: /Reward wallet/i })).toBeVisible();
-    // The real seeded wallet (17 rewards from Neon) renders a count + cards.
-    await expect(page.getByText(/rewards, auto-imported/i)).toBeVisible();
-    // At least one reward card with a $ value.
+
+    // The wallet card header ("Reward Wallet" is a span in the dashboard shell).
+    await expect(page.getByText("Reward Wallet")).toBeVisible();
+    // Provenance badge.
+    await expect(page.getByText(/Auto-imported & AI-parsed/i)).toBeVisible();
+    // At least one $ value (the hero total and/or a reward card headline).
     await expect(page.getByText(/^\$\d/).first()).toBeVisible();
-    // A recognizable seeded T&C snippet.
+    // A recognizable seeded merchant / reward-type snippet.
     await expect(
-      page.getByText(/cashback|gift card|gift certificate|Best Buy|Amazon|coupon/i).first(),
+      page
+        .getByText(/cashback|gift card|store credit|Best Buy|Target|Nike|Starbucks|coupon/i)
+        .first(),
     ).toBeVisible();
   });
 });
