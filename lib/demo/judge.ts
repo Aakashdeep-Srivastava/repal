@@ -1,6 +1,4 @@
-import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db";
-import { signMandate } from "@/lib/policy/mandate";
 
 /**
  * Judge demo persona — a one-click, self-contained US account so hackathon
@@ -39,44 +37,13 @@ export async function seedJudge(): Promise<void> {
     create: { id: JUDGE_USER_ID, email: "maya@judge.example.com" },
   });
 
-  // Fresh signed mandate (cap $500, budget $2000, ask above $150 so the demo
-  // shows both the 'allow' and 'ask' paths). Pre-generate the id and sign it so
-  // the mandate is created ALREADY-SIGNED in one write — no follow-up update
-  // that a concurrent re-seed's deleteMany could race into a P2025.
-  const mandateId = randomUUID();
-  const expiresAt = inDays(90);
-  const signatureHash = signMandate(
-    {
-      id: mandateId,
-      capUsd: 500,
-      budgetUsd: 2000,
-      approvalThresholdUsd: 150,
-      allowCategories: [],
-      allowMerchants: [],
-      expiresAt: expiresAt.toISOString(),
-    },
-    JUDGE_USER_ID,
-  );
-
-  // Atomic re-seed: wipe + recreate the persona's mandate, wallet and money
-  // artifacts in a single transaction, so concurrent judge-logins (many judges
-  // clicking "Try Live Demo" at once) can't interleave and corrupt each other.
+  // Atomic fresh start: wipe the persona's mandate, wallet and money artifacts
+  // in one transaction (safe under concurrent judge-logins). We intentionally
+  // seed NO mandate — every user, judge included, goes through the same pivotal
+  // "authorize your agent" step before the agent can transact. The sample wallet
+  // IS seeded so there's reward value to act on once the mandate is set.
   await prisma.$transaction([
     prisma.mandate.deleteMany({ where: { userId: JUDGE_USER_ID } }),
-    prisma.mandate.create({
-      data: {
-        id: mandateId,
-        userId: JUDGE_USER_ID,
-        capUsd: 500,
-        budgetUsd: 2000,
-        approvalThresholdUsd: 150,
-        allowCategories: [],
-        allowMerchants: [],
-        expiresAt,
-        signatureHash,
-        status: "active",
-      },
-    }),
     prisma.reward.deleteMany({ where: { userId: JUDGE_USER_ID } }),
     prisma.reward.createMany({
       data: SAMPLE_REWARDS.map((r) => ({
