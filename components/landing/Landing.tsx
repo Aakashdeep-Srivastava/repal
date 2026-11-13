@@ -66,6 +66,15 @@ export function Landing() {
     gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) => {
       gsap.from(el, { opacity: 0, y: 48, duration: 0.9, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 85%" } });
     });
+
+    // FLOW motion — rewards stream into the agent, a payment pulse travels out,
+    // the payment tick keeps a gentle beat.
+    gsap.to(".flow-stream", { strokeDashoffset: -36, duration: 1.3, repeat: -1, ease: "none" });
+    gsap.timeline({ repeat: -1, repeatDelay: 0.35 })
+      .fromTo(".flow-pulse", { left: "0%", opacity: 0 }, { opacity: 1, duration: 0.2, ease: "none" })
+      .to(".flow-pulse", { left: "100%", duration: 1.3, ease: "none" }, 0)
+      .to(".flow-pulse", { opacity: 0, duration: 0.25, ease: "none" }, 1.1);
+    gsap.to(".flow-check", { scale: 1.1, duration: 0.9, repeat: -1, yoyo: true, ease: "sine.inOut", transformOrigin: "center" });
   }, { scope: root });
 
   const NAV = [["How it Works", "#how"], ["Rewards", "#money"], ["Security", "#trust"], ["For Merchants", "#personas"], ["Resources", "#how"]];
@@ -131,13 +140,16 @@ export function Landing() {
               <StepPill icon={<Ic.shield className="h-3.5 w-3.5" />} label="Applies rules" />
             </div>
             <div className="relative">
-              {/* input streams — touch the orb's left edge, flow in from the rewards side */}
+              {/* input streams — touch the orb's left edge; dashes flow toward the agent */}
               <svg aria-hidden viewBox="0 0 150 112" preserveAspectRatio="none" className="absolute right-full top-1/2 hidden h-28 w-[150px] -translate-y-1/2 lg:block">
-                {[12, 44, 70, 100].map((y, i) => <path key={i} d={`M0 ${y} C 78 ${y}, 94 56, 150 56`} fill="none" stroke="#93b4fb" strokeWidth="2.5" strokeLinecap="round" opacity={0.6} />)}
+                {[12, 44, 70, 100].map((y, i) => <path key={i} className="flow-stream" d={`M0 ${y} C 78 ${y}, 94 56, 150 56`} fill="none" stroke="#93b4fb" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="7 11" opacity={0.65} />)}
               </svg>
-              {/* output payment arrow — touches the orb's right edge, points to best price */}
+              {/* output payment arrow — touches the orb's right edge; a pulse travels to best price */}
               <div aria-hidden className="absolute left-full top-1/2 hidden w-[150px] -translate-y-1/2 items-center lg:flex">
-                <div className="h-[3px] flex-1 rounded-full bg-gradient-to-r from-[#047857] to-[#065f46] shadow-[0_0_8px_1px_rgba(5,95,70,.45)]" />
+                <div className="relative flex-1">
+                  <div className="h-[3px] w-full rounded-full bg-gradient-to-r from-[#047857] to-[#065f46] shadow-[0_0_8px_1px_rgba(5,95,70,.45)]" />
+                  <span className="flow-pulse absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#065f46] shadow-[0_0_8px_2px_rgba(5,95,70,.6)]" style={{ left: "0%" }} />
+                </div>
                 <div className="h-0 w-0 border-y-[7px] border-l-[11px] border-y-transparent border-l-[#065f46]" />
               </div>
               {/* the orb */}
@@ -150,12 +162,13 @@ export function Landing() {
             <span className="mt-4 inline-block rounded-full bg-white/90 px-4 py-1.5 text-[13.5px] font-bold text-[#141033] shadow-sm backdrop-blur">RePal Agent</span>
           </div>
 
-          {/* RIGHT — best price */}
-          <div className="relative mx-auto flex w-full max-w-[280px] flex-col items-center gap-1 rounded-[26px] border border-emerald-700/25 bg-emerald-50/90 px-6 py-7 shadow-[0_24px_55px_-24px_rgba(5,95,70,.5)] backdrop-blur dark:bg-emerald-800/15 lg:mx-0">
-            <span className="absolute -right-3 -top-3 grid h-9 w-9 place-items-center rounded-full bg-[#047857] text-white shadow-md"><Ic.check className="h-5 w-5" /></span>
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-[#047857] text-white"><Ic.cart className="h-5 w-5" /></span>
-            <span className="mt-1 text-[14px] font-semibold text-slate-600 dark:text-emerald-200">Best Price</span>
+          {/* RIGHT — best price (clean white card with a payment tick) */}
+          <div className="flow-best relative mx-auto flex w-full max-w-[260px] flex-col items-center gap-1 rounded-[26px] border border-[var(--color-border)] bg-white px-6 py-7 shadow-[0_26px_55px_-24px_rgba(5,95,70,.4)] dark:bg-[var(--color-card)] lg:mx-0">
+            <span className="flow-check absolute -right-3 -top-3 grid h-9 w-9 place-items-center rounded-full bg-[#047857] text-white shadow-md ring-4 ring-white dark:ring-[var(--color-bg)]"><Ic.check className="h-5 w-5" /></span>
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-[#047857]/10 text-[#047857]"><Ic.cart className="h-5 w-5" /></span>
+            <span className="mt-1 text-[13px] font-semibold text-slate-500">Best Price</span>
             <span className="text-[38px] font-bold leading-none text-[#065f46] dark:text-emerald-300">$198</span>
+            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#047857]/10 px-2.5 py-1 text-[11px] font-semibold text-[#047857]"><Ic.check className="h-3 w-3" />Paid with PayPal</span>
           </div>
         </div>
       </section>
