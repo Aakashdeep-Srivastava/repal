@@ -74,7 +74,6 @@ export function Landing() {
       .fromTo(".flow-pulse", { left: "0%", opacity: 0 }, { opacity: 1, duration: 0.2, ease: "none" })
       .to(".flow-pulse", { left: "100%", duration: 1.3, ease: "none" }, 0)
       .to(".flow-pulse", { opacity: 0, duration: 0.25, ease: "none" }, 1.1);
-    gsap.to(".flow-check", { scale: 1.1, duration: 0.9, repeat: -1, yoyo: true, ease: "sine.inOut", transformOrigin: "center" });
   }, { scope: root });
 
   const NAV = [["How it Works", "#how"], ["Rewards", "#money"], ["Security", "#trust"], ["For Merchants", "#personas"], ["Resources", "#how"]];
@@ -125,7 +124,7 @@ export function Landing() {
         </div>
 
         {/* infographic: panel → agent → best price (connectors anchored to the orb) */}
-        <div className="reveal mt-14 grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,0.78fr)]">
+        <div className="reveal mt-14 grid items-center gap-6 lg:grid-cols-[minmax(0,1.08fr)_auto_minmax(0,1fr)]">
           {/* LEFT — Your Rewards in One Place (supplied card image, cropped to the card) */}
           <div className="overflow-hidden rounded-[22px] shadow-[0_24px_60px_-30px_rgba(37,99,235,.45)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -152,23 +151,20 @@ export function Landing() {
                 </div>
                 <div className="h-0 w-0 border-y-[7px] border-l-[11px] border-y-transparent border-l-[#065f46]" />
               </div>
-              {/* the orb */}
-              <div className="relative grid h-32 w-32 place-items-center overflow-hidden rounded-[34px] shadow-[0_34px_70px_-22px_rgba(37,99,235,.75)]" style={{ background: GRAD }}>
-                <span aria-hidden className="absolute -inset-6 -z-10 rounded-full opacity-45 blur-2xl" style={{ background: GRAD }} />
+              {/* the orb (compact) */}
+              <div className="relative grid h-24 w-24 place-items-center overflow-hidden rounded-[26px] shadow-[0_28px_60px_-22px_rgba(37,99,235,.75)]" style={{ background: GRAD }}>
+                <span aria-hidden className="absolute -inset-5 -z-10 rounded-full opacity-45 blur-2xl" style={{ background: GRAD }} />
                 <span aria-hidden className="absolute inset-0 bg-[radial-gradient(120%_90%_at_25%_15%,rgba(255,255,255,.55),transparent_55%)]" />
-                <Mark className="relative h-16 w-16 brightness-0 invert" />
+                <Mark className="relative h-12 w-12 brightness-0 invert" />
               </div>
             </div>
             <span className="mt-4 inline-block rounded-full bg-white/90 px-4 py-1.5 text-[13.5px] font-bold text-[#141033] shadow-sm backdrop-blur">RePal Agent</span>
           </div>
 
-          {/* RIGHT — best price (clean white card with a payment tick) */}
-          <div className="flow-best relative mx-auto flex w-full max-w-[260px] flex-col items-center gap-1 rounded-[26px] border border-[var(--color-border)] bg-white px-6 py-7 shadow-[0_26px_55px_-24px_rgba(5,95,70,.4)] dark:bg-[var(--color-card)] lg:mx-0">
-            <span className="flow-check absolute -right-3 -top-3 grid h-9 w-9 place-items-center rounded-full bg-[#047857] text-white shadow-md ring-4 ring-white dark:ring-[var(--color-bg)]"><Ic.check className="h-5 w-5" /></span>
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-[#047857]/10 text-[#047857]"><Ic.cart className="h-5 w-5" /></span>
-            <span className="mt-1 text-[13px] font-semibold text-slate-500">Best Price</span>
-            <span className="text-[38px] font-bold leading-none text-[#065f46] dark:text-emerald-300">$198</span>
-            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#047857]/10 px-2.5 py-1 text-[11px] font-semibold text-[#047857]"><Ic.check className="h-3 w-3" />Paid with PayPal</span>
+          {/* RIGHT — stacked rewards transaction summary (supplied card image) */}
+          <div className="overflow-hidden rounded-[22px] shadow-[0_26px_55px_-24px_rgba(5,95,70,.4)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/transaction-summary.png" alt="Rewards applied in this transaction: Amazon coupon minus $30, Visa card offer minus 10%, Gmail offer minus $15, Starbucks cashback minus $20 — total minus $65, you save 26%" className="block w-full" />
           </div>
         </div>
       </section>
