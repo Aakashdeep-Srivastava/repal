@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -44,37 +44,6 @@ const GRAD = "linear-gradient(100deg,#2563eb 0%,#3b82f6 45%,#2457e6 100%)";
 const Mark = ({ className = "" }: { className?: string }) => <Image src="/brand/repal-monogram.png" alt="RePal" width={32} height={32} className={className} />;
 const Pill = ({ children }: { children: React.ReactNode }) => <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)]/80 px-3.5 py-1.5 text-[12.5px] font-semibold tracking-wide text-[#1d4ed8] shadow-sm backdrop-blur"><Ic.spark className="h-3.5 w-3.5" />{children}</span>;
 
-/* a small text chip standing in for a brand (name as text, not logo artwork) */
-const NameChip = ({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) => (
-  <span className={`inline-flex items-center rounded-md border border-[var(--color-border)] bg-white px-1.5 py-[2px] text-[10px] font-bold tracking-tight shadow-sm ${strong ? "text-[#1a1f71]" : "text-slate-600"}`}>{children}</span>
-);
-
-/**
- * Renders a real brand logo from /public/brands/<file> when that file exists;
- * until an official asset is dropped in, it gracefully falls back to the name
- * chip. (We intentionally ship no logo artwork of our own — add official files.)
- */
-function BrandLogo({ name, file, strong = false }: { name: string; file: string; strong?: boolean }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <NameChip strong={strong}>{name}</NameChip>;
-  return (
-    <span className="inline-flex items-center rounded-md border border-[var(--color-border)] bg-white px-2 py-1 shadow-sm">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/brands/${file}`} alt={name} className="h-3.5 w-auto max-w-[56px] object-contain" loading="lazy" onError={() => setFailed(true)} />
-    </span>
-  );
-}
-
-/* one reward category row inside the "Your Rewards in One Place" panel */
-function RewardRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-white/70 px-2 py-1.5">
-      <span className="flex w-[58px] shrink-0 items-center gap-1 text-[10.5px] font-semibold leading-[1.15] text-slate-700"><span className="shrink-0 text-[#2563eb]">{icon}</span>{label}</span>
-      <div className="flex flex-1 flex-wrap items-center gap-1">{children}</div>
-    </div>
-  );
-}
-
 /* a floating "what the agent does" pill above the orb */
 const StepPill = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
   <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-white/90 px-3 py-1.5 text-[12.5px] font-semibold text-slate-700 shadow-[0_8px_24px_-12px_rgba(37,99,235,.5)] backdrop-blur">
@@ -83,18 +52,6 @@ const StepPill = ({ icon, label }: { icon: React.ReactNode; label: string }) => 
   </span>
 );
 
-/* one numbered step in the bottom row */
-function FlowStep({ n, title, desc }: { n: number; title: string; desc: string }) {
-  return (
-    <div className="reveal flex flex-col gap-1.5">
-      <div className="flex items-center gap-2.5">
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-[#dbe6fe] text-[13px] font-bold text-[#2563eb]">{n}</span>
-        <span className="text-[18px] font-bold tracking-tight">{title}</span>
-      </div>
-      <p className="text-[13.5px] leading-relaxed text-[var(--color-muted)]">{desc}</p>
-    </div>
-  );
-}
 
 export function Landing() {
   const router = useRouter();
@@ -146,11 +103,11 @@ export function Landing() {
         <p className="hero-in mx-auto mt-5 max-w-xl text-[16px] text-[var(--color-muted)] sm:text-[18px]">RePal reads your rewards, stacks the best offers, and pays for you with PayPal — within the limits you set.</p>
         <div className="hero-in mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"><PrimaryCTA /><DemoCTA /></div>
         <div className="hero-in mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] font-medium text-[var(--color-muted)]">{trust.map(([l, I]) => <span key={l} className="inline-flex items-center gap-1.5"><I className="h-4 w-4 text-[#2563eb]" />{l}</span>)}</div>
-        <a href="#flow" className="hero-in mx-auto mt-10 grid h-9 w-9 animate-bounce place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm"><Ic.arrowD className="h-4 w-4" /></a>
+        <a href="#how" className="hero-in mx-auto mt-10 grid h-9 w-9 animate-bounce place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm"><Ic.arrowD className="h-4 w-4" /></a>
       </section>
 
       {/* FLOW — rewards in one place → agent → best price, then the 4 steps */}
-      <section id="flow" className="relative mx-auto max-w-6xl px-5 pt-24 text-center">
+      <section id="how" className="relative mx-auto max-w-6xl px-5 pt-24 text-center">
         <div className="reveal flex flex-col items-center">
           <Pill>How it flows</Pill>
           <h2 className="font-display mt-5 text-[32px] font-bold leading-[1.08] tracking-tight text-[#141033] sm:text-[48px]">Rewards flow in. One payment{" "}
@@ -158,48 +115,39 @@ export function Landing() {
           </h2>
         </div>
 
-        {/* infographic: panel → agent → best price (5-col grid keeps connectors aligned) */}
-        <div className="reveal mt-14 grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_56px_auto_56px_minmax(0,0.78fr)]">
-          {/* LEFT — Your Rewards in One Place */}
-          <div className="rounded-[22px] border border-[var(--color-border)] bg-white/70 p-3 text-left shadow-[0_24px_60px_-30px_rgba(37,99,235,.4)] backdrop-blur">
-            <div className="flex items-center gap-1.5 px-0.5 pb-2.5">
-              <span className="text-[#2563eb]"><Ic.stack className="h-[18px] w-[18px]" /></span>
-              <span className="text-[13px] font-bold tracking-tight">Your Rewards in One Place</span>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <RewardRow icon={<Ic.card className="h-3.5 w-3.5" />} label="Payment Cards"><BrandLogo name="VISA" file="visa.svg" strong /><BrandLogo name="Mastercard" file="mastercard.svg" /><BrandLogo name="AMEX" file="amex.svg" strong /><BrandLogo name="Discover" file="discover.svg" /></RewardRow>
-              <RewardRow icon={<Ic.mail className="h-3.5 w-3.5" />} label="Email Rewards"><BrandLogo name="Gmail" file="gmail.svg" /><NameChip>Coupons</NameChip><NameChip>Offers</NameChip></RewardRow>
-              <RewardRow icon={<Ic.gift className="h-3.5 w-3.5" />} label="Gift Cards"><BrandLogo name="Amazon" file="amazon.svg" /><BrandLogo name="Starbucks" file="starbucks.svg" /><BrandLogo name="Apple" file="apple.svg" /><NameChip>+ More</NameChip></RewardRow>
-              <RewardRow icon={<Ic.coin className="h-3.5 w-3.5" />} label="Reward Points"><BrandLogo name="Chase" file="chase.svg" /><BrandLogo name="Citi" file="citi.svg" /><BrandLogo name="Capital One" file="capitalone.svg" /></RewardRow>
-            </div>
+        {/* infographic: panel → agent → best price (connectors anchored to the orb) */}
+        <div className="reveal mt-14 grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,0.78fr)]">
+          {/* LEFT — Your Rewards in One Place (supplied card image, cropped to the card) */}
+          <div className="overflow-hidden rounded-[22px] shadow-[0_24px_60px_-30px_rgba(37,99,235,.45)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/rewards-panel.png" alt="Your rewards in one place: payment cards, email rewards, gift cards, and reward points brought together" className="block w-full" />
           </div>
 
-          {/* input connector (desktop) — reward streams converging into the agent */}
-          <div aria-hidden className="hidden h-24 w-full items-center lg:flex">
-            <svg viewBox="0 0 56 96" preserveAspectRatio="none" className="h-full w-full">
-              {[14, 36, 60, 82].map((y, i) => <path key={i} d={`M0 ${y} C 26 ${y}, 30 48, 56 48`} fill="none" stroke="#93b4fb" strokeWidth="2.5" strokeLinecap="round" opacity={0.55} />)}
-            </svg>
-          </div>
-
-          {/* CENTER — the agent, with floating "what it does" pills */}
-          <div className="relative flex flex-col items-center">
+          {/* CENTER — the agent, with floating "what it does" pills + connectors on the orb */}
+          <div className="flex flex-col items-center">
             <div className="mb-5 flex flex-wrap justify-center gap-2 lg:mb-6">
               <StepPill icon={<Ic.search className="h-3.5 w-3.5" />} label="Reads terms" />
               <StepPill icon={<Ic.stack className="h-3.5 w-3.5" />} label="Checks eligibility" />
               <StepPill icon={<Ic.shield className="h-3.5 w-3.5" />} label="Applies rules" />
             </div>
-            <div className="relative grid h-32 w-32 place-items-center overflow-hidden rounded-[34px] shadow-[0_34px_70px_-22px_rgba(37,99,235,.75)]" style={{ background: GRAD }}>
-              <span aria-hidden className="absolute -inset-6 -z-10 rounded-full opacity-45 blur-2xl" style={{ background: GRAD }} />
-              <span aria-hidden className="absolute inset-0 bg-[radial-gradient(120%_90%_at_25%_15%,rgba(255,255,255,.55),transparent_55%)]" />
-              <Mark className="relative h-16 w-16 brightness-0 invert" />
+            <div className="relative">
+              {/* input streams — touch the orb's left edge, flow in from the rewards side */}
+              <svg aria-hidden viewBox="0 0 150 112" preserveAspectRatio="none" className="absolute right-full top-1/2 hidden h-28 w-[150px] -translate-y-1/2 lg:block">
+                {[12, 44, 70, 100].map((y, i) => <path key={i} d={`M0 ${y} C 78 ${y}, 94 56, 150 56`} fill="none" stroke="#93b4fb" strokeWidth="2.5" strokeLinecap="round" opacity={0.6} />)}
+              </svg>
+              {/* output payment arrow — touches the orb's right edge, points to best price */}
+              <div aria-hidden className="absolute left-full top-1/2 hidden w-[150px] -translate-y-1/2 items-center lg:flex">
+                <div className="h-[3px] flex-1 rounded-full bg-gradient-to-r from-[#34d399] to-[#10b981] shadow-[0_0_8px_1px_rgba(16,185,129,.45)]" />
+                <div className="h-0 w-0 border-y-[7px] border-l-[11px] border-y-transparent border-l-[#10b981]" />
+              </div>
+              {/* the orb */}
+              <div className="relative grid h-32 w-32 place-items-center overflow-hidden rounded-[34px] shadow-[0_34px_70px_-22px_rgba(37,99,235,.75)]" style={{ background: GRAD }}>
+                <span aria-hidden className="absolute -inset-6 -z-10 rounded-full opacity-45 blur-2xl" style={{ background: GRAD }} />
+                <span aria-hidden className="absolute inset-0 bg-[radial-gradient(120%_90%_at_25%_15%,rgba(255,255,255,.55),transparent_55%)]" />
+                <Mark className="relative h-16 w-16 brightness-0 invert" />
+              </div>
             </div>
             <span className="mt-4 inline-block rounded-full bg-white/90 px-4 py-1.5 text-[13.5px] font-bold text-[#141033] shadow-sm backdrop-blur">RePal Agent</span>
-          </div>
-
-          {/* output connector (desktop) — the single payment arrow to best price */}
-          <div aria-hidden className="hidden items-center lg:flex">
-            <div className="h-[3px] flex-1 rounded-full bg-gradient-to-r from-[#34d399] to-[#10b981] shadow-[0_0_8px_1px_rgba(16,185,129,.45)]" />
-            <div className="h-0 w-0 border-y-[7px] border-l-[11px] border-y-transparent border-l-[#10b981]" />
           </div>
 
           {/* RIGHT — best price */}
@@ -209,14 +157,6 @@ export function Landing() {
             <span className="mt-1 text-[14px] font-semibold text-slate-600 dark:text-emerald-200">Best Price</span>
             <span className="text-[38px] font-bold leading-none text-emerald-600 dark:text-emerald-400">$198</span>
           </div>
-        </div>
-
-        {/* 4-step row */}
-        <div id="how" className="mt-16 grid gap-x-6 gap-y-9 text-left sm:grid-cols-2 lg:grid-cols-4">
-          <FlowStep n={1} title="Connect" desc="Bring your rewards together." />
-          <FlowStep n={2} title="Read" desc="Understand the fine print." />
-          <FlowStep n={3} title="Stack" desc="Find the best valid combination." />
-          <FlowStep n={4} title="Pay" desc="Pay securely with PayPal." />
         </div>
       </section>
 
