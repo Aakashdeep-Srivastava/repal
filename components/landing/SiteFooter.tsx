@@ -25,15 +25,15 @@ const Ic = {
 const Mark = ({ className = "" }: { className?: string }) => <Image src="/brand/repal-monogram.png" alt="RePal" width={32} height={32} className={className} />;
 const GRAD = "linear-gradient(100deg,#7c3aed 0%,#5b4be6 45%,#2457e6 100%)";
 
-/* one node in the reward-flow diagram */
+/* reward-flow node — on the light CTA background */
 function Node({ icon, label, tone = "purple", orb = false }: { icon: React.ReactNode; label: string; tone?: "purple" | "green"; orb?: boolean }) {
   return (
     <div className="f-node flex shrink-0 flex-col items-center gap-2 text-center">
-      <div className={`${orb ? "f-orb h-14 w-14 sm:h-16 sm:w-16" : "h-12 w-12 sm:h-14 sm:w-14"} relative grid place-items-center rounded-2xl ring-1 ring-white/20`} style={orb ? { background: GRAD } : { background: "rgba(255,255,255,.08)" }}>
-        {orb && <span aria-hidden className="absolute -inset-3 -z-10 rounded-full opacity-50 blur-xl" style={{ background: GRAD }} />}
-        <span className={orb ? "text-white" : tone === "green" ? "text-emerald-300" : "text-violet-200"}>{icon}</span>
+      <div className={`${orb ? "f-orb h-14 w-14 sm:h-16 sm:w-16 ring-1 ring-white/30" : "h-12 w-12 border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm sm:h-14 sm:w-14"} relative grid place-items-center rounded-2xl`} style={orb ? { background: GRAD } : undefined}>
+        {orb && <span aria-hidden className="absolute -inset-3 -z-10 rounded-full opacity-45 blur-xl" style={{ background: GRAD }} />}
+        <span className={orb ? "text-white" : tone === "green" ? "text-emerald-500" : "text-[#7c3aed]"}>{icon}</span>
       </div>
-      <span className="text-[11px] font-medium text-white/70 sm:text-[12px]">{label}</span>
+      <span className="text-[11px] font-medium text-[var(--color-muted)] sm:text-[12px]">{label}</span>
     </div>
   );
 }
@@ -47,7 +47,7 @@ export function SiteFooter() {
     const mm = gsap.matchMedia();
     mm.add("(prefers-reduced-motion: no-preference)", () => {
       gsap.set(".f-path", { strokeDashoffset: 1 });
-      const tl = gsap.timeline({ scrollTrigger: { trigger: root.current, start: "top 78%" } });
+      const tl = gsap.timeline({ scrollTrigger: { trigger: root.current, start: "top 80%" } });
       tl.from(".f-node", { opacity: 0, scale: 0.8, stagger: 0.12, duration: 0.5, ease: "back.out(1.6)" })
         .to(".f-path-in", { strokeDashoffset: 0, opacity: 1, stagger: 0.18, duration: 0.5, ease: "none" }, 0.2)
         .to(".f-path-out", { strokeDashoffset: 0, opacity: 1, duration: 0.5, ease: "none" }, ">-0.1")
@@ -56,10 +56,8 @@ export function SiteFooter() {
         .from(".f-btn", { opacity: 0, y: 16, stagger: 0.1, duration: 0.5 }, "<0.1")
         .from(".f-note", { opacity: 0, duration: 0.5 }, "<0.1")
         .from(".f-trust", { opacity: 0, y: 14, stagger: 0.1, duration: 0.5 }, "<0.05")
-        .from(".f-nav", { opacity: 0, y: 18, stagger: 0.06, duration: 0.5 }, "<0.1");
-      // continuous, gentle ambient + orb float
-      gsap.to(".f-orb", { y: -8, duration: 2.6, repeat: -1, yoyo: true, ease: "sine.inOut" });
-      gsap.to(".f-amb", { xPercent: 10, yPercent: -8, duration: 14, repeat: -1, yoyo: true, ease: "sine.inOut" });
+        .from(".f-box", { opacity: 0, y: 28, duration: 0.7, ease: "power3.out" }, "<0.1");
+      gsap.to(".f-orb", { y: -7, duration: 2.6, repeat: -1, yoyo: true, ease: "sine.inOut" });
     });
   }, { scope: root });
 
@@ -72,82 +70,70 @@ export function SiteFooter() {
   const trust = [["User-controlled limits", Ic.shield], ["Eligible rewards only", Ic.stack], ["Verifiable receipts", Ic.receipt]] as const;
 
   return (
-    <footer ref={root} className="relative isolate -mt-6 overflow-hidden rounded-t-[32px] text-white sm:rounded-t-[48px]">
-      <Image src="/bg/neon-horizon.png" alt="" fill priority sizes="100vw" className="pointer-events-none absolute inset-0 object-cover" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#120a34]/80 via-[#140c38]/55 to-[#140c38]/75" />
-      {/* haze: blend the rounded top into the light section above */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-32 bg-gradient-to-b from-[var(--color-bg)] via-[var(--color-bg)]/45 to-transparent" />
-      <div aria-hidden className="f-amb pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full opacity-30 blur-3xl" style={{ background: "radial-gradient(circle,#8b5cf6,transparent 62%)" }} />
+    <footer ref={root} className="relative mx-auto max-w-6xl px-5 pb-12 pt-20 sm:pt-24">
+      {/* reward-flow diagram — light */}
+      <div className="mx-auto max-w-2xl">
+        <div className="relative">
+          <svg aria-hidden viewBox="0 0 800 70" className="absolute inset-x-0 top-1/2 -z-0 h-16 w-full -translate-y-[60%]" preserveAspectRatio="none">
+            <defs><filter id="fglow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
+            <path className="f-path f-path-in" d="M135 35 L265 35" pathLength={1} strokeDasharray={1} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" filter="url(#fglow)" opacity={0.3} />
+            <path className="f-path f-path-in" d="M335 35 L465 35" pathLength={1} strokeDasharray={1} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" filter="url(#fglow)" opacity={0.3} />
+            <path className="f-path f-path-out" d="M535 35 L665 35" pathLength={1} strokeDasharray={1} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" filter="url(#fglow)" opacity={0.3} />
+          </svg>
+          <div className="relative flex items-start justify-between gap-2">
+            <Node icon={<Ic.wallet className="h-5 w-5 sm:h-6 sm:w-6" />} label="Wallet" />
+            <Node icon={<Mark className="h-7 w-7 brightness-0 invert sm:h-8 sm:w-8" />} label="Agent" orb />
+            <Node icon={<Ic.check className="h-5 w-5 sm:h-6 sm:w-6" />} label="Valid Rewards" />
+            <Node icon={<Mark className="h-5 w-5 sm:h-6 sm:w-6" />} label="PayPal" tone="green" />
+          </div>
+        </div>
+      </div>
 
-      <div className="relative z-[3] mx-auto max-w-6xl px-5 pb-10 pt-28 sm:pt-32">
-        {/* reward-flow diagram */}
-        <div className="mx-auto max-w-2xl">
-          <div className="relative">
-            <svg aria-hidden viewBox="0 0 800 70" className="absolute inset-x-0 top-1/2 -z-0 h-16 w-full -translate-y-[60%]" preserveAspectRatio="none">
-              <defs><filter id="fglow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
-              <path className="f-path f-path-in" d="M135 35 L265 35" pathLength={1} strokeDasharray={1} fill="none" stroke="#a78bfa" strokeWidth="3" strokeLinecap="round" filter="url(#fglow)" opacity={0.3} />
-              <path className="f-path f-path-in" d="M335 35 L465 35" pathLength={1} strokeDasharray={1} fill="none" stroke="#a78bfa" strokeWidth="3" strokeLinecap="round" filter="url(#fglow)" opacity={0.3} />
-              <path className="f-path f-path-out" d="M535 35 L665 35" pathLength={1} strokeDasharray={1} fill="none" stroke="#34d399" strokeWidth="3.5" strokeLinecap="round" filter="url(#fglow)" opacity={0.3} />
-            </svg>
-            <div className="relative flex items-start justify-between gap-2">
-              <Node icon={<Ic.wallet className="h-5 w-5 sm:h-6 sm:w-6" />} label="Wallet" />
-              <Node icon={<Mark className="h-7 w-7 brightness-0 invert sm:h-8 sm:w-8" />} label="Agent" orb />
-              <Node icon={<Ic.check className="h-5 w-5 sm:h-6 sm:w-6" />} label="Valid Rewards" />
-              <Node icon={<Mark className="h-5 w-5 brightness-0 invert sm:h-6 sm:w-6" />} label="PayPal" tone="green" />
+      {/* CTA — light */}
+      <div className="mx-auto mt-12 max-w-2xl text-center">
+        <h2 className="f-head font-display text-[32px] font-bold leading-tight tracking-tight text-[var(--color-fg)] sm:text-[46px]">Your next purchase could cost less.</h2>
+        <p className="f-desc mx-auto mt-4 max-w-xl text-[15px] text-[var(--color-muted)] sm:text-[16px]">RePal reads the fine print on every reward you hold, stacks only the ones that are eligible, and settles the single lowest price with PayPal — all within the spending limits you set.</p>
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <button onClick={() => demo.mutate()} disabled={demo.isPending} className="f-btn inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_40px_-14px_rgba(130,90,250,.7)] transition-transform hover:-translate-y-0.5 disabled:opacity-60" style={{ background: GRAD }}><Ic.play className="h-5 w-5" />{demo.isPending ? "Starting…" : "Try Live Demo"}</button>
+          <a href="/api/auth/paypal/login" className="f-btn inline-flex items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-7 py-3.5 text-[15px] font-semibold text-[var(--color-fg)] transition-colors hover:border-[#7c3aed]/40"><Mark className="h-5 w-5" />Login with PayPal</a>
+        </div>
+        <p className="f-note mt-5 text-[12.5px] text-[var(--color-muted)]">No setup · Sample data · No real payment</p>
+        <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-[13px] font-medium text-[var(--color-fg)]">
+          {trust.map(([l, I]) => <li key={l} className="f-trust inline-flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] ring-1 ring-[var(--color-border)]"><I className="h-4 w-4" /></span>{l}</li>)}
+        </ul>
+      </div>
+
+      {/* FOOTER BOX — the neon background lives ONLY inside this contained box */}
+      <div className="f-box relative isolate mt-16 overflow-hidden rounded-[28px] text-white shadow-[0_30px_80px_-34px_rgba(50,30,130,.55)]">
+        <Image src="/bg/neon-horizon.png" alt="" width={2172} height={724} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#140c38]/75 via-[#140c38]/55 to-[#140c38]/80" />
+        <div className="relative p-7 sm:p-10">
+          <div className="grid gap-10 md:grid-cols-[1.2fr_2.6fr]">
+            <div className="max-w-sm">
+              <Link href="/" className="inline-flex items-center gap-2"><Mark className="h-7 w-7 brightness-0 invert" /><span className="text-lg font-bold tracking-tight">RePal</span></Link>
+              <p className="mt-3 text-[13px] leading-relaxed text-white/60">The rewards you already have, turned into real money — read, stacked, and paid with PayPal. You stay in control; every move is a signed, verifiable receipt.</p>
+              <div className="mt-4 flex gap-2">
+                <a href="https://github.com/Aakashdeep-Srivastava/repal" target="_blank" rel="noopener noreferrer" aria-label="RePal on GitHub" className="grid h-9 w-9 place-items-center rounded-lg border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/15"><Ic.github className="h-5 w-5" /></a>
+                <button onClick={() => demo.mutate()} aria-label="Try live demo" className="grid h-9 w-9 place-items-center rounded-lg border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/15"><Ic.play className="h-5 w-5" /></button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-4">
+              {NAV.map((col) => (
+                <nav key={col.title} aria-label={col.title}>
+                  <h3 className="text-[12px] font-semibold uppercase tracking-wider text-white/50">{col.title}</h3>
+                  <ul className="mt-4 flex flex-col gap-2.5 text-[13.5px]">
+                    {col.links.map((l) => (
+                      <li key={l.label}>{l.demo ? <button onClick={() => demo.mutate()} className="text-left text-white/70 transition-colors hover:text-white">{l.label}</button> : <Link href={l.href!} className="text-white/70 transition-colors hover:text-white">{l.label}</Link>}</li>
+                    ))}
+                  </ul>
+                </nav>
+              ))}
             </div>
           </div>
-        </div>
-
-        {/* CTA */}
-        <div className="mx-auto mt-12 max-w-2xl text-center">
-          <h2 className="f-head font-display text-[32px] font-bold leading-tight tracking-tight sm:text-[46px]">Your next purchase could cost less.</h2>
-          <p className="f-desc mx-auto mt-4 max-w-xl text-[15px] text-white/75 sm:text-[16px]">RePal reads the fine print on every reward you hold, stacks only the ones that are eligible, and settles the single lowest price with PayPal — all within the spending limits you set.</p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <button onClick={() => demo.mutate()} disabled={demo.isPending} className="f-btn inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_40px_-14px_rgba(130,90,250,.8)] transition-transform hover:-translate-y-0.5 disabled:opacity-60" style={{ background: GRAD }}><Ic.play className="h-5 w-5" />{demo.isPending ? "Starting…" : "Try Live Demo"}</button>
-            <a href="/api/auth/paypal/login" className="f-btn inline-flex items-center justify-center gap-2 rounded-full border border-white/25 bg-white/10 px-7 py-3.5 text-[15px] font-semibold text-white backdrop-blur transition-colors hover:bg-white/20"><Mark className="h-5 w-5 brightness-0 invert" />Login with PayPal</a>
+          <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-[12.5px] text-white/50 sm:flex-row">
+            <span>© {2026} RePal · rewards to real money, on PayPal</span>
+            <div className="flex gap-5"><Link href="/privacy" className="hover:text-white">Privacy</Link><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/wallet" className="hover:text-white">Dashboard</Link></div>
           </div>
-          <p className="f-note mt-5 text-[12.5px] text-white/50">No setup · Sample data · No real payment</p>
-          <ul className="f-trust-wrap mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-[13px] font-medium text-white/80">
-            {trust.map(([l, I]) => <li key={l} className="f-trust inline-flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-white/10 text-violet-200 ring-1 ring-white/15"><I className="h-4 w-4" /></span>{l}</li>)}
-          </ul>
-        </div>
-
-        {/* footer block — a single contained glass panel */}
-        <div className="mt-14 rounded-[28px] border border-white/12 bg-white/[0.045] p-6 shadow-[0_24px_70px_-34px_rgba(0,0,0,.85)] backdrop-blur-md sm:p-9">
-        <div className="grid gap-10 md:grid-cols-[1.2fr_2.6fr]">
-          <div className="f-nav max-w-sm">
-            <Link href="/" className="inline-flex items-center gap-2"><Mark className="h-7 w-7 brightness-0 invert" /><span className="text-lg font-bold tracking-tight">RePal</span></Link>
-            <p className="mt-3 text-[13px] leading-relaxed text-white/60">The rewards you already have, turned into real money — read, stacked, and paid with PayPal. You stay in control; every move is a signed, verifiable receipt.</p>
-            <div className="mt-4 flex gap-2">
-              <a href="https://github.com/Aakashdeep-Srivastava/repal" target="_blank" rel="noopener noreferrer" aria-label="RePal on GitHub" className="grid h-9 w-9 place-items-center rounded-lg border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/15"><Ic.github className="h-5 w-5" /></a>
-              <button onClick={() => demo.mutate()} aria-label="Try live demo" className="grid h-9 w-9 place-items-center rounded-lg border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/15"><Ic.play className="h-5 w-5" /></button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-4">
-            {NAV.map((col) => (
-              <nav key={col.title} className="f-nav" aria-label={col.title}>
-                <h3 className="text-[12px] font-semibold uppercase tracking-wider text-white/50">{col.title}</h3>
-                <ul className="mt-4 flex flex-col gap-2.5 text-[13.5px]">
-                  {col.links.map((l) => (
-                    <li key={l.label}>
-                      {l.demo ? (
-                        <button onClick={() => demo.mutate()} className="text-left text-white/70 transition-colors hover:text-white">{l.label}</button>
-                      ) : (
-                        <Link href={l.href!} className="text-white/70 transition-colors hover:text-white">{l.label}</Link>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            ))}
-          </div>
-        </div>
-
-        {/* bottom bar */}
-        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-[12.5px] text-white/50 sm:flex-row">
-          <span>© {2026} RePal · rewards to real money, on PayPal</span>
-          <div className="flex gap-5"><Link href="/privacy" className="hover:text-white">Privacy</Link><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/wallet" className="hover:text-white">Dashboard</Link></div>
-        </div>
         </div>
       </div>
     </footer>
