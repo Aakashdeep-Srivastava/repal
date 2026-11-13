@@ -79,8 +79,7 @@ export function Landing() {
     // place when those triggers compute their start/end (page-order refresh).
     mm.add("(min-width: 1024px)", () => {
       gsap.set(".flow-chip", { opacity: 0, x: -36 });
-      gsap.set(".flow-best", { opacity: 0, scale: 0.9 });
-      gsap.set(".flow-line", { strokeDashoffset: 1 });
+      gsap.set(".flow-line-in", { strokeDashoffset: 1 });
 
       const tl = gsap.timeline({
         // refreshPriority high: this pin injects 1600px of spacer, so it must
@@ -95,9 +94,9 @@ export function Landing() {
       // 3) the agent orb brightens
       tl.to(".flow-orb", { scale: 1.07, duration: 0.3 }, ">-0.1")
         .to(".flow-glow", { opacity: 0.9, duration: 0.3 }, "<");
-      // 4) payment line flows GREEN out to best price
-      tl.to(".flow-line-out", { strokeDashoffset: 0, opacity: 1, ease: "none" }, ">-0.05")
-        .to(".flow-best", { opacity: 1, scale: 1, ease: "back.out(1.6)" }, "<0.1")
+      // 4) the payment arrow (always visible) brightens + the best price pulses
+      tl.to(".flow-line-out", { opacity: 1, duration: 0.3, ease: "none" }, ">-0.05")
+        .to(".flow-best", { scale: 1.05, duration: 0.3, yoyo: true, repeat: 1, ease: "power2.inOut" }, "<0.1")
         .to(".flow-orb", { scale: 1, duration: 0.3 }, ">");
     });
 
@@ -157,11 +156,14 @@ export function Landing() {
           <div className="reveal mx-auto max-w-2xl"><Pill>How it flows</Pill><h2 className="font-display mt-4 text-[30px] font-bold tracking-tight text-[#1b1b4d] sm:text-[40px]">Rewards flow in. One payment flows out.</h2></div>
           <div className="relative mx-auto mt-10 h-[380px] max-w-4xl">
             <svg aria-hidden viewBox="0 0 900 380" className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid meet">
-              <defs><filter id="pglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
+              <defs>
+                <filter id="pglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+                <marker id="arrowGreen" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M0 1 L9 5 L0 9 z" fill="#10b981" /></marker>
+              </defs>
               {/* inputs: start at the reward chips (left) and converge on the agent's left edge */}
               {[94, 158, 222, 286].map((y, i) => <path key={i} className="flow-line flow-line-in" d={`M175 ${y} C 300 ${y}, 330 190, 378 190`} pathLength={1} strokeDasharray={1} fill="none" stroke="#93b4fb" strokeWidth="3" strokeLinecap="round" filter="url(#pglow)" opacity={0.25} />)}
-              {/* output: from the agent's right edge to the payment card */}
-              <path className="flow-line flow-line-out" d="M524 190 C 610 190, 670 190, 748 190" pathLength={1} strokeDasharray={1} fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" filter="url(#pglow)" opacity={0.25} />
+              {/* output: a clear arrow from the agent's right edge to the Best Price card (always visible) */}
+              <path className="flow-line-out" d="M524 190 L726 190" fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" markerEnd="url(#arrowGreen)" filter="url(#pglow)" opacity={0.85} />
             </svg>
             {/* left reward cards */}
             <div className="absolute left-0 top-1/2 hidden -translate-y-1/2 flex-col gap-3 lg:flex">
