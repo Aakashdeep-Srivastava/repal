@@ -40,10 +40,10 @@ function hashId(id: string): number {
  */
 function gradientFor(id: string): { from: string; to: string; ink: string } {
   const h = hashId(id);
-  // Base hue in a brand-friendly 190..300 range (teal → indigo → violet).
-  const base = 190 + (h % 110);
-  const from = `hsl(${base} 72% 56%)`;
-  const to = `hsl(${(base + 48) % 360} 68% 42%)`;
+  // Base hue kept in a blue band (cyan → blue → indigo), no violet.
+  const base = 205 + (h % 40);
+  const from = `hsl(${base} 74% 56%)`;
+  const to = `hsl(${base + 22} 70% 42%)`;
   // Readable ink over a mid-saturation gradient.
   const ink = "hsl(0 0% 100% / 0.92)";
   return { from, to, ink };

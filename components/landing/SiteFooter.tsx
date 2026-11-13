@@ -23,7 +23,7 @@ const Ic = {
   github: (p: IP) => <svg viewBox="0 0 24 24" fill="currentColor" className={p.className}><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48l-.01-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.95 0-1.1.39-1.99 1.03-2.69-.1-.26-.45-1.28.1-2.65 0 0 .84-.27 2.75 1.03a9.6 9.6 0 0 1 5 0c1.9-1.3 2.74-1.03 2.74-1.03.55 1.37.2 2.39.1 2.65.64.7 1.03 1.59 1.03 2.69 0 3.85-2.34 4.7-4.57 4.95.36.31.68.92.68 1.85l-.01 2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2z" /></svg>,
 };
 const Mark = ({ className = "" }: { className?: string }) => <Image src="/brand/repal-monogram.png" alt="RePal" width={32} height={32} className={className} />;
-const GRAD = "linear-gradient(100deg,#7c3aed 0%,#5b4be6 45%,#2457e6 100%)";
+const GRAD = "linear-gradient(100deg,#2563eb 0%,#3b82f6 45%,#2457e6 100%)";
 /* Two-tone PayPal "PP" monogram (brand navy + cyan). */
 const PayPalMark = ({ className = "" }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="none" aria-hidden className={className}>
@@ -36,7 +36,7 @@ const PayPalMark = ({ className = "" }: { className?: string }) => (
 function Node({ label, orb = false, children }: { label: string; orb?: boolean; children: React.ReactNode }) {
   return (
     <div className="f-node relative z-10 flex flex-col items-center gap-2.5 text-center">
-      <div className={`relative grid h-16 w-16 place-items-center rounded-2xl ${orb ? "ring-1 ring-white/30 shadow-[0_16px_36px_-12px_rgba(90,50,230,.7)]" : "border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm"}`} style={orb ? { background: GRAD } : undefined}>
+      <div className={`relative grid h-16 w-16 place-items-center rounded-2xl ${orb ? "ring-1 ring-white/30 shadow-[0_16px_36px_-12px_rgba(37,99,235,.7)]" : "border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm"}`} style={orb ? { background: GRAD } : undefined}>
         {orb && <span aria-hidden className="absolute -inset-2.5 -z-10 rounded-full opacity-45 blur-xl" style={{ background: GRAD }} />}
         {children}
       </div>
@@ -78,9 +78,9 @@ export function SiteFooter() {
       <div className="relative mx-auto max-w-xl">
         <div aria-hidden className="pointer-events-none absolute left-[14%] right-[14%] top-8 z-0 h-px bg-[var(--color-border)]" />
         <div className="relative flex items-start justify-between">
-          <Node label="Wallet"><span className="text-[#7c3aed]"><Ic.wallet className="h-6 w-6" /></span></Node>
+          <Node label="Wallet"><span className="text-[#2563eb]"><Ic.wallet className="h-6 w-6" /></span></Node>
           <Node label="Agent" orb><Mark className="h-8 w-8 brightness-0 invert" /></Node>
-          <Node label="Valid Rewards"><span className="text-[#7c3aed]"><Ic.check className="h-6 w-6" /></span></Node>
+          <Node label="Valid Rewards"><span className="text-[#2563eb]"><Ic.check className="h-6 w-6" /></span></Node>
           <Node label="PayPal"><PayPalMark className="h-8 w-8" /></Node>
         </div>
       </div>
@@ -90,17 +90,17 @@ export function SiteFooter() {
         <h2 className="f-head font-display text-[32px] font-bold leading-tight tracking-tight text-[var(--color-fg)] sm:text-[46px]">Your next purchase could cost less.</h2>
         <p className="f-desc mx-auto mt-4 max-w-xl text-[15px] text-[var(--color-muted)] sm:text-[16px]">RePal reads the fine print on every reward you hold, stacks only the ones that are eligible, and settles the single lowest price with PayPal — all within the spending limits you set.</p>
         <div className="mt-8 flex flex-row flex-wrap items-center justify-center gap-3">
-          <button onClick={() => demo.mutate()} disabled={demo.isPending} className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_40px_-14px_rgba(130,90,250,.7)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:px-7" style={{ background: GRAD }}><Ic.play className="h-5 w-5" />{demo.isPending ? "Starting…" : "Try Live Demo"}</button>
-          <a href="/api/auth/paypal/login" className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-6 py-3.5 text-[15px] font-semibold text-[var(--color-fg)] transition-colors hover:border-[#7c3aed]/40 sm:px-7"><Mark className="h-5 w-5" />Login with PayPal</a>
+          <button onClick={() => demo.mutate()} disabled={demo.isPending} className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_40px_-14px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:px-7" style={{ background: GRAD }}><Ic.play className="h-5 w-5" />{demo.isPending ? "Starting…" : "Try Live Demo"}</button>
+          <a href="/api/auth/paypal/login" className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-6 py-3.5 text-[15px] font-semibold text-[var(--color-fg)] transition-colors hover:border-[#2563eb]/40 sm:px-7"><Mark className="h-5 w-5" />Login with PayPal</a>
         </div>
         <p className="f-note mt-5 text-[12.5px] text-[var(--color-muted)]">No setup · Sample data · No real payment</p>
         <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-[13px] font-medium text-[var(--color-fg)]">
-          {trust.map(([l, I]) => <li key={l} className="f-trust inline-flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] ring-1 ring-[var(--color-border)]"><I className="h-4 w-4" /></span>{l}</li>)}
+          {trust.map(([l, I]) => <li key={l} className="f-trust inline-flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#2563eb]/10 text-[#2563eb] ring-1 ring-[var(--color-border)]"><I className="h-4 w-4" /></span>{l}</li>)}
         </ul>
       </div>
 
       {/* FOOTER BOX — the neon background lives ONLY inside this contained box */}
-      <div className="f-box relative isolate mt-16 overflow-hidden rounded-[28px] text-white shadow-[0_30px_80px_-34px_rgba(50,30,130,.55)]">
+      <div className="f-box relative isolate mt-16 overflow-hidden rounded-[28px] text-white shadow-[0_30px_80px_-34px_rgba(23,47,120,.55)]">
         <Image src="/bg/neon-horizon.png" alt="" width={2172} height={724} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#140c38]/75 via-[#140c38]/55 to-[#140c38]/80" />
         <div className="relative p-7 sm:p-10">
