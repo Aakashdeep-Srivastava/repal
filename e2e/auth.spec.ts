@@ -1,8 +1,13 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Auth end-to-end: the demo-login session cycle (API) and the Nav auth
- * controls (UI). Both exercise the signed-cookie session in lib/auth/session.
+ * Auth end-to-end: the demo-login session cycle (API) and the authed UI auth
+ * controls. Both exercise the signed-cookie session in lib/auth/session.
+ *
+ * The marketing Landing (/) no longer carries a "Demo login" nav button — the
+ * one-click sign-in is now the hero "Try Live Demo" CTA (judge persona "Maya"),
+ * and Log out lives in the dashboard shell's account menu. The UI test drives
+ * that real flow; the API test below is unchanged and still passes.
  */
 test.describe("Authentication", () => {
   test("demo-login session cycle (API)", async ({ request }) => {
@@ -28,23 +33,26 @@ test.describe("Authentication", () => {
     expect((await res.json()).user).toBeNull();
   });
 
-  test("demo login / log out from the nav (UI)", async ({ page }) => {
-    await page.goto("/");
+  test("log out from the account menu (UI)", async ({ page }) => {
+    // Judge-login seeds the persona in Neon; under the fully-parallel runner that
+    // write can queue behind other workers, so allow headroom.
+    test.setTimeout(120_000);
 
-    // Logged-out state: a "Demo login" control is shown.
-    const demoLogin = page.getByRole("button", { name: "Demo login" });
-    await expect(demoLogin).toBeVisible();
+    // Authenticate deterministically via the API — the "Try Live Demo" UI login
+    // is covered by home.spec; here we exercise the LOGOUT control specifically
+    // (a UI click can otherwise race page hydration before onClick is wired).
+    await page.request.post("/api/auth/judge-login");
+    await page.goto("/wallet");
+    await expect(page).toHaveURL(/\/wallet/);
+    // The signed-in persona "Maya" is shown in the dashboard.
+    await expect(page.getByText(/Maya/).first()).toBeVisible();
 
-    await demoLogin.click();
+    // Log out from the dashboard shell's account menu (in the visible sidebar).
+    const sidebar = page.locator("aside:visible");
+    await sidebar.getByText("PayPal Connected").click();
+    await page.getByRole("button", { name: "Log out" }).click();
 
-    // Logged-in state: the user's name + a "Log out" control appear.
-    await expect(page.getByText("Demo User")).toBeVisible();
-    const logOut = page.getByRole("button", { name: "Log out" });
-    await expect(logOut).toBeVisible();
-
-    await logOut.click();
-
-    // Back to logged-out state.
-    await expect(page.getByRole("button", { name: "Demo login" })).toBeVisible();
+    // Back to the logged-out Landing.
+    await expect(page.getByRole("button", { name: "Try Live Demo" }).first()).toBeVisible();
   });
 });

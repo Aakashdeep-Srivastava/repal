@@ -1,39 +1,62 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Home / agent shell", () => {
-  test("renders the hero and nav", async ({ page }) => {
+/**
+ * Home (/) is now the marketing Landing (components/landing/Landing.tsx). These
+ * tests validate the Landing itself (hero + CTAs), the one-click sign-in, and
+ * the surfaces the old "agent shell" moved to:
+ *   - the agent goal input now lives in the authed dashboard (/wallet) and routes
+ *     a goal into the shop;
+ *   - the deterministic optimizer ("cheapest after rewards") is still exercised
+ *     directly via POST /api/plan.
+ */
+test.describe("Home / Landing", () => {
+  test("renders the hero and the primary CTAs", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText(/cheapest price/i);
-    await expect(page.getByRole("link", { name: "Wallet" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Agent" })).toBeVisible();
+    // The hero CTAs (the SiteFooter repeats them, so scope to the first).
+    await expect(page.getByRole("button", { name: "Try Live Demo" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /Login with PayPal/i }).first()).toBeVisible();
+    // Marketing nav is present (the old "Wallet"/"Agent" links are gone).
+    await expect(page.getByRole("link", { name: "How it Works" }).first()).toBeVisible();
   });
 
-  test("agent flow handles the goal input (answer, or graceful 'blocked' until Bedrock is live)", async ({
+  test("the Try Live Demo CTA logs in and reaches the wallet", async ({ page }) => {
+    // Judge-login seeds the persona in Neon; allow headroom under parallel load.
+    test.setTimeout(120_000);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Try Live Demo" }).first().click();
+    await expect(page).toHaveURL(/\/wallet/, { timeout: 60_000 });
+    await expect(page.getByText(/Maya/).first()).toBeVisible();
+  });
+
+  test("the relocated agent goal input routes a goal into the shop", async ({ page }) => {
+    // The agent shell moved into the authed dashboard.
+    await page.request.post("/api/auth/judge-login");
+    await page.goto("/wallet");
+
+    const goal = page.getByPlaceholder(/Type a goal/i);
+    await expect(goal).toBeVisible();
+    await goal.fill("headphones");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    // Intent routing sends a product goal to the shop search.
+    await expect(page).toHaveURL(/\/shop\?q=headphones/);
+  });
+
+  test("the deterministic optimizer returns cheapest-after-rewards plans (or asks to connect Channel3)", async ({
     page,
   }) => {
-    await page.goto("/");
-    await page.getByLabel("Your shopping goal").fill("noise cancelling headphones under $250");
-    await page.getByRole("button", { name: "Run" }).click();
-    // Either a real answer (Bedrock configured) or the calm blocked note.
-    await expect(
-      page.getByText(/Bedrock model access|RePal.?s AI connects|rate limit|headphones/i),
-    ).toBeVisible();
-  });
+    const res = await page.request.post("/api/plan", {
+      data: { category: "headphones", userId: "judge-maya" },
+    });
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
 
-  test("optimizer flow returns plans, or asks to connect Channel3", async ({ page }) => {
-    await page.goto("/");
-    await page.getByLabel("Product category").fill("headphones");
-    await page.getByRole("button", { name: "Find plans" }).click();
-    // Plans rendered (cache/Channel3 available) OR the connect-Channel3 note.
-    await expect(
-      page.getByText(/Connect Channel3|offers considered|Cheapest after rewards|didn.?t apply/i),
-    ).toBeVisible();
-  });
-
-  test("optimizer input is validated (empty category does nothing)", async ({ page }) => {
-    await page.goto("/");
-    await page.getByRole("button", { name: "Find plans" }).click();
-    // No results block appears for empty input (client-side guard + Zod).
-    await expect(page.getByText(/offers considered/i)).toHaveCount(0);
+    // Either real plans are returned, or the graceful "needs offers" note when
+    // Channel3 (and the offer cache) isn't available.
+    expect(Array.isArray(body.plans) || body.needsOffers === true).toBeTruthy();
+    if (Array.isArray(body.plans) && body.plans.length > 0) {
+      expect(body.plans[0].name).toMatch(/Cheapest after rewards/i);
+    }
   });
 });

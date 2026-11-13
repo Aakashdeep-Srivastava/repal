@@ -2,26 +2,46 @@ import { test, expect, type Page } from "@playwright/test";
 
 /**
  * The signature RePal shopping journey, end to end in a real browser:
- *   home → search → results → product detail → reward eligibility →
+ *   log in → shop search → results → product detail → reward eligibility →
  *   optimization → checkout review → sandbox payment → verified receipt → verify.
  *
- * Everything is driven by real backend results (live Neon products/eligibility,
- * a server-signed sandbox receipt) — no fabricated success. PayPal creds are not
- * configured here, so the demo/sandbox path is exercised and must be labelled as
- * such throughout.
+ * Driven by real backend results: live Channel3 product discovery, the real
+ * eligibility/optimizer, and a server-signed sandbox receipt (same Ed25519
+ * signing as the live path). We force the sandbox/demo payment path — which
+ * issues a genuine, verifiable receipt WITHOUT any live PayPal capture — by
+ * stubbing the capability probe GET /api/pay/mode. This never uses a PayPal
+ * login and never moves money; it selects the demo code path deterministically
+ * regardless of whether live PayPal creds happen to be present in the env.
+ *
+ * The journey is logged in as the judge persona "Maya". A low-priced product is
+ * chosen ("earbuds") so the spend sits under Maya's approval threshold and the
+ * mandate policy resolves to "allow" — the demo receipt is issued directly.
  */
 
-/** Drive home → results → product detail, and return the review CTA locator. */
+/** Log in (judge) and force the demo payment path before any navigation. */
+async function authAndForceDemoPay(page: Page) {
+  await page.request.post("/api/auth/judge-login");
+  await page.route("**/api/pay/mode", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ paypalConfigured: false }),
+    }),
+  );
+}
+
+/** Drive shop search → results → product detail, and return the review CTA. */
 async function openProductFromSearch(page: Page) {
-  await page.goto("/");
-  await page.getByLabel("Shop for a product").fill("headphones");
-  await page.getByRole("button", { name: "Start shopping" }).click();
+  await page.goto("/shop");
 
-  await expect(page).toHaveURL(/\/shop\?q=headphones/);
-  // Provenance is shown — demo data is never passed off as live.
-  await expect(page.getByText(/Demo products/i)).toBeVisible();
+  // The search box lives in the persistent shop header (aria-label).
+  const search = page.getByLabel("Search products");
+  await search.fill("earbuds");
+  await search.press("Enter");
 
-  // Tap the first product (its title lives inside the clickable card).
+  await expect(page).toHaveURL(/\/shop\?q=earbuds/);
+
+  // Tap the first product (its title is an <h3> inside the clickable card).
   const firstTitle = page.getByRole("heading", { level: 3 }).first();
   await expect(firstTitle).toBeVisible();
   await firstTitle.click();
@@ -37,9 +57,17 @@ async function openProductFromSearch(page: Page) {
 }
 
 test.describe("Shopping journey", () => {
+  // The journey spans several authed pages backed by live Channel3 + Neon +
+  // judge-login seeding; under the fully-parallel runner these can queue behind
+  // other workers, so give each test generous headroom.
+  test.beforeEach(() => {
+    test.setTimeout(180_000);
+  });
+
   test("search → product → rewards → checkout → sandbox payment → verified receipt", async ({
     page,
   }) => {
+    await authAndForceDemoPay(page);
     const reviewCta = await openProductFromSearch(page);
 
     // Optimization / savings breakdown is shown on the detail page.
@@ -48,7 +76,7 @@ test.describe("Shopping journey", () => {
     await reviewCta.click();
     await expect(page).toHaveURL(/\/checkout/);
     await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();
-    // Environment is labelled prominently (no PayPal creds → Sandbox / Demo).
+    // Environment is labelled prominently (demo path → Sandbox / Demo).
     await expect(page.getByText("Sandbox / Demo")).toBeVisible();
 
     // Confirm the order, then pay (sandbox path).
@@ -81,6 +109,7 @@ test.describe("Shopping journey", () => {
   });
 
   test("refreshing mid-checkout preserves the order (no lost progress)", async ({ page }) => {
+    await authAndForceDemoPay(page);
     const reviewCta = await openProductFromSearch(page);
     await reviewCta.click();
     await expect(page.getByRole("heading", { name: "Checkout" })).toBeVisible();

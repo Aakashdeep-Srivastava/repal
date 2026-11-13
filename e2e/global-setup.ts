@@ -104,4 +104,86 @@ export default async function globalSetup() {
   });
 
   await prisma.$disconnect();
+
+  // Pre-warm the dev server so the fully-parallel suite doesn't thrash on Next's
+  // first-hit, on-demand route/page compilation (which, under concurrent load,
+  // can turn a 17s ingest into a multi-minute stall). Best-effort: every call is
+  // guarded, so a warm-up miss never fails the run.
+  await warmup();
+}
+
+/**
+ * Hit the pages + API routes the suite exercises once, serially, to force Next
+ * dev to compile them before tests fan out. All failures are swallowed.
+ */
+async function warmup() {
+  const base = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+  const get = async (path: string, init?: RequestInit) => {
+    try {
+      await fetch(base + path, init).then((r) => r.text().catch(() => ""));
+    } catch {
+      /* server not up / route errored — ignore, tests will still run */
+    }
+  };
+
+  // Wait for the dev server to accept connections (it is normally already up via
+  // Playwright's webServer, but global setup can race it on a cold boot).
+  for (let i = 0; i < 60; i++) {
+    try {
+      const res = await fetch(base + "/api/pay/mode");
+      if (res.ok) break;
+    } catch {
+      /* not ready yet */
+    }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+
+  const json = (body: unknown): RequestInit => ({
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  // Light API routes.
+  await get("/api/me");
+  await get("/api/pay/mode");
+  await get("/api/products?q=earbuds");
+  await get("/api/wallet?userId=judge-maya");
+  await get("/api/auth/judge-login", json({}));
+
+  // Warm the product detail + eligibility + optimizer paths with a real product.
+  try {
+    const res = await fetch(base + "/api/products?q=earbuds");
+    const first = (await res.json())?.products?.[0];
+    if (first?.id) {
+      await get(`/api/products/${encodeURIComponent(first.id)}`);
+      await get(
+        "/api/eligibility",
+        json({
+          product: {
+            id: first.id,
+            title: first.title,
+            priceUsd: first.priceUsd,
+            retailer: first.retailer,
+            buyUrl: first.buyUrl,
+            category: first.category,
+          },
+        }),
+      );
+      await get(`/product/${encodeURIComponent(first.id)}`);
+    }
+  } catch {
+    /* ignore */
+  }
+  await get("/api/plan", json({ category: "earbuds", userId: "judge-maya" }));
+
+  // Warm the (slow, cold-compiling) multi-source ingest route on a throwaway user.
+  await get("/api/wallet/ingest", json({ userId: "warmup-e2e-user" }));
+
+  // Warm the pages the browser specs load.
+  await get("/");
+  await get("/wallet");
+  await get("/shop?q=earbuds");
+  await get("/checkout");
+  await get(`/verify/${E2E_RECEIPT_ID}`);
 }
