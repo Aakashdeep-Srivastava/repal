@@ -112,8 +112,9 @@ export function SiteFooter() {
           </ul>
         </div>
 
-        {/* nav — mobile: 2-col groups; tablet: balanced; desktop: multi-col */}
-        <div className="mt-16 grid gap-10 border-t border-white/10 pt-12 md:grid-cols-[1.2fr_2.6fr]">
+        {/* footer block — a single contained glass panel */}
+        <div className="mt-14 rounded-[28px] border border-white/12 bg-white/[0.045] p-6 shadow-[0_24px_70px_-34px_rgba(0,0,0,.85)] backdrop-blur-md sm:p-9">
+        <div className="grid gap-10 md:grid-cols-[1.2fr_2.6fr]">
           <div className="f-nav max-w-sm">
             <Link href="/" className="inline-flex items-center gap-2"><Mark className="h-7 w-7 brightness-0 invert" /><span className="text-lg font-bold tracking-tight">RePal</span></Link>
             <p className="mt-3 text-[13px] leading-relaxed text-white/60">The rewards you already have, turned into real money — read, stacked, and paid with PayPal. You stay in control; every move is a signed, verifiable receipt.</p>
@@ -143,9 +144,10 @@ export function SiteFooter() {
         </div>
 
         {/* bottom bar */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-[12.5px] text-white/50 sm:flex-row">
+        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-[12.5px] text-white/50 sm:flex-row">
           <span>© {2026} RePal · rewards to real money, on PayPal</span>
           <div className="flex gap-5"><Link href="/privacy" className="hover:text-white">Privacy</Link><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/wallet" className="hover:text-white">Dashboard</Link></div>
+        </div>
         </div>
       </div>
     </footer>
