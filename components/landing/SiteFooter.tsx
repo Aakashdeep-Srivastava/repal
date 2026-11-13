@@ -25,19 +25,6 @@ const Ic = {
 const Mark = ({ className = "" }: { className?: string }) => <Image src="/brand/repal-monogram.png" alt="RePal" width={32} height={32} className={className} />;
 const GRAD = "linear-gradient(100deg,#7c3aed 0%,#5b4be6 45%,#2457e6 100%)";
 
-/* reward-flow node — on the light CTA background */
-function Node({ icon, label, tone = "purple", orb = false }: { icon: React.ReactNode; label: string; tone?: "purple" | "green"; orb?: boolean }) {
-  return (
-    <div className="f-node flex shrink-0 flex-col items-center gap-2 text-center">
-      <div className={`${orb ? "f-orb h-14 w-14 sm:h-16 sm:w-16 ring-1 ring-white/30" : "h-12 w-12 border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm sm:h-14 sm:w-14"} relative grid place-items-center rounded-2xl`} style={orb ? { background: GRAD } : undefined}>
-        {orb && <span aria-hidden className="absolute -inset-3 -z-10 rounded-full opacity-45 blur-xl" style={{ background: GRAD }} />}
-        <span className={orb ? "text-white" : tone === "green" ? "text-emerald-500" : "text-[#7c3aed]"}>{icon}</span>
-      </div>
-      <span className="text-[11px] font-medium text-[var(--color-muted)] sm:text-[12px]">{label}</span>
-    </div>
-  );
-}
-
 export function SiteFooter() {
   const router = useRouter();
   const root = useRef<HTMLElement>(null);
@@ -46,18 +33,13 @@ export function SiteFooter() {
   useGSAP(() => {
     const mm = gsap.matchMedia();
     mm.add("(prefers-reduced-motion: no-preference)", () => {
-      gsap.set(".f-path", { strokeDashoffset: 1 });
       const tl = gsap.timeline({ scrollTrigger: { trigger: root.current, start: "top 80%" } });
-      tl.from(".f-node", { opacity: 0, scale: 0.8, stagger: 0.12, duration: 0.5, ease: "back.out(1.6)" })
-        .to(".f-path-in", { strokeDashoffset: 0, opacity: 1, stagger: 0.18, duration: 0.5, ease: "none" }, 0.2)
-        .to(".f-path-out", { strokeDashoffset: 0, opacity: 1, duration: 0.5, ease: "none" }, ">-0.1")
-        .from(".f-head", { opacity: 0, y: 24, duration: 0.6, ease: "power3.out" }, "<0.1")
+      tl.from(".f-head", { opacity: 0, y: 24, duration: 0.6, ease: "power3.out" })
         .from(".f-desc", { opacity: 0, y: 20, duration: 0.6, ease: "power3.out" }, "<0.15")
         .from(".f-btn", { opacity: 0, y: 16, stagger: 0.1, duration: 0.5 }, "<0.1")
         .from(".f-note", { opacity: 0, duration: 0.5 }, "<0.1")
         .from(".f-trust", { opacity: 0, y: 14, stagger: 0.1, duration: 0.5 }, "<0.05")
         .from(".f-box", { opacity: 0, y: 28, duration: 0.7, ease: "power3.out" }, "<0.1");
-      gsap.to(".f-orb", { y: -7, duration: 2.6, repeat: -1, yoyo: true, ease: "sine.inOut" });
     });
   }, { scope: root });
 
@@ -71,26 +53,8 @@ export function SiteFooter() {
 
   return (
     <footer ref={root} className="relative mx-auto max-w-6xl px-5 pb-12 pt-20 sm:pt-24">
-      {/* reward-flow diagram — light */}
-      <div className="mx-auto max-w-2xl">
-        <div className="relative">
-          <svg aria-hidden viewBox="0 0 800 70" className="absolute inset-x-0 top-1/2 -z-0 h-16 w-full -translate-y-[60%]" preserveAspectRatio="none">
-            <defs><filter id="fglow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
-            <path className="f-path f-path-in" d="M135 35 L265 35" pathLength={1} strokeDasharray={1} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" filter="url(#fglow)" opacity={0.3} />
-            <path className="f-path f-path-in" d="M335 35 L465 35" pathLength={1} strokeDasharray={1} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" filter="url(#fglow)" opacity={0.3} />
-            <path className="f-path f-path-out" d="M535 35 L665 35" pathLength={1} strokeDasharray={1} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" filter="url(#fglow)" opacity={0.3} />
-          </svg>
-          <div className="relative flex items-start justify-between gap-2">
-            <Node icon={<Ic.wallet className="h-5 w-5 sm:h-6 sm:w-6" />} label="Wallet" />
-            <Node icon={<Mark className="h-7 w-7 brightness-0 invert sm:h-8 sm:w-8" />} label="Agent" orb />
-            <Node icon={<Ic.check className="h-5 w-5 sm:h-6 sm:w-6" />} label="Valid Rewards" />
-            <Node icon={<Mark className="h-5 w-5 sm:h-6 sm:w-6" />} label="PayPal" tone="green" />
-          </div>
-        </div>
-      </div>
-
       {/* CTA — light */}
-      <div className="mx-auto mt-12 max-w-2xl text-center">
+      <div className="mx-auto max-w-2xl text-center">
         <h2 className="f-head font-display text-[32px] font-bold leading-tight tracking-tight text-[var(--color-fg)] sm:text-[46px]">Your next purchase could cost less.</h2>
         <p className="f-desc mx-auto mt-4 max-w-xl text-[15px] text-[var(--color-muted)] sm:text-[16px]">RePal reads the fine print on every reward you hold, stacks only the ones that are eligible, and settles the single lowest price with PayPal — all within the spending limits you set.</p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
