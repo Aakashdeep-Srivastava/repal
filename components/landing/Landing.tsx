@@ -158,8 +158,10 @@ export function Landing() {
           <div className="relative mx-auto mt-10 h-[380px] max-w-4xl">
             <svg aria-hidden viewBox="0 0 900 380" className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid meet">
               <defs><filter id="pglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
-              {[100, 160, 220, 280].map((y, i) => <path key={i} className="flow-line flow-line-in" d={`M250 ${y} C 360 ${y}, 380 190, 450 190`} pathLength={1} strokeDasharray={1} fill="none" stroke="#a78bfa" strokeWidth="3" strokeLinecap="round" filter="url(#pglow)" opacity={0.25} />)}
-              <path className="flow-line flow-line-out" d="M560 190 C 660 190, 700 190, 760 190" pathLength={1} strokeDasharray={1} fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" filter="url(#pglow)" opacity={0.25} />
+              {/* inputs: start at the reward chips (left) and converge on the agent's left edge */}
+              {[94, 158, 222, 286].map((y, i) => <path key={i} className="flow-line flow-line-in" d={`M175 ${y} C 300 ${y}, 330 190, 378 190`} pathLength={1} strokeDasharray={1} fill="none" stroke="#a78bfa" strokeWidth="3" strokeLinecap="round" filter="url(#pglow)" opacity={0.25} />)}
+              {/* output: from the agent's right edge to the payment card */}
+              <path className="flow-line flow-line-out" d="M524 190 C 610 190, 670 190, 748 190" pathLength={1} strokeDasharray={1} fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" filter="url(#pglow)" opacity={0.25} />
             </svg>
             {/* left reward cards */}
             <div className="absolute left-0 top-1/2 hidden -translate-y-1/2 flex-col gap-3 lg:flex">
@@ -172,7 +174,9 @@ export function Landing() {
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
               <div className="flow-orb relative grid h-36 w-36 place-items-center rounded-[32px] shadow-[0_30px_70px_-20px_rgba(90,50,230,.7)]" style={{ background: GRAD }}>
                 <div aria-hidden className="flow-glow absolute -inset-6 -z-10 rounded-full opacity-40 blur-2xl" style={{ background: GRAD }} />
-                <Mark className="h-14 w-14 brightness-0 invert" />
+                <div className="grid h-[76px] w-[76px] place-items-center rounded-[22px] bg-white shadow-[0_10px_26px_-10px_rgba(20,10,60,.5)]">
+                  <Mark className="h-12 w-12" />
+                </div>
               </div>
               <span className="mt-3 inline-block rounded-full bg-white/85 px-4 py-1.5 text-[13px] font-semibold text-[#1b1b4d] shadow-sm backdrop-blur">RePal Agent</span>
             </div>
