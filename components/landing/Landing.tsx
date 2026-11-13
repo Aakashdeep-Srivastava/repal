@@ -137,8 +137,8 @@ export function Landing() {
               </svg>
               {/* output payment arrow — touches the orb's right edge, points to best price */}
               <div aria-hidden className="absolute left-full top-1/2 hidden w-[150px] -translate-y-1/2 items-center lg:flex">
-                <div className="h-[3px] flex-1 rounded-full bg-gradient-to-r from-[#34d399] to-[#10b981] shadow-[0_0_8px_1px_rgba(16,185,129,.45)]" />
-                <div className="h-0 w-0 border-y-[7px] border-l-[11px] border-y-transparent border-l-[#10b981]" />
+                <div className="h-[3px] flex-1 rounded-full bg-gradient-to-r from-[#047857] to-[#065f46] shadow-[0_0_8px_1px_rgba(5,95,70,.45)]" />
+                <div className="h-0 w-0 border-y-[7px] border-l-[11px] border-y-transparent border-l-[#065f46]" />
               </div>
               {/* the orb */}
               <div className="relative grid h-32 w-32 place-items-center overflow-hidden rounded-[34px] shadow-[0_34px_70px_-22px_rgba(37,99,235,.75)]" style={{ background: GRAD }}>
@@ -151,11 +151,11 @@ export function Landing() {
           </div>
 
           {/* RIGHT — best price */}
-          <div className="relative mx-auto flex w-full max-w-[280px] flex-col items-center gap-1 rounded-[26px] border border-emerald-300/70 bg-emerald-50/90 px-6 py-7 shadow-[0_24px_55px_-24px_rgba(16,185,129,.55)] backdrop-blur dark:bg-emerald-500/10 lg:mx-0">
-            <span className="absolute -right-3 -top-3 grid h-9 w-9 place-items-center rounded-full bg-emerald-500 text-white shadow-md"><Ic.check className="h-5 w-5" /></span>
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white"><Ic.cart className="h-5 w-5" /></span>
+          <div className="relative mx-auto flex w-full max-w-[280px] flex-col items-center gap-1 rounded-[26px] border border-emerald-700/25 bg-emerald-50/90 px-6 py-7 shadow-[0_24px_55px_-24px_rgba(5,95,70,.5)] backdrop-blur dark:bg-emerald-800/15 lg:mx-0">
+            <span className="absolute -right-3 -top-3 grid h-9 w-9 place-items-center rounded-full bg-[#047857] text-white shadow-md"><Ic.check className="h-5 w-5" /></span>
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-[#047857] text-white"><Ic.cart className="h-5 w-5" /></span>
             <span className="mt-1 text-[14px] font-semibold text-slate-600 dark:text-emerald-200">Best Price</span>
-            <span className="text-[38px] font-bold leading-none text-emerald-600 dark:text-emerald-400">$198</span>
+            <span className="text-[38px] font-bold leading-none text-[#065f46] dark:text-emerald-300">$198</span>
           </div>
         </div>
       </section>
