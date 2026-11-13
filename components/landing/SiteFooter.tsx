@@ -24,6 +24,26 @@ const Ic = {
 };
 const Mark = ({ className = "" }: { className?: string }) => <Image src="/brand/repal-monogram.png" alt="RePal" width={32} height={32} className={className} />;
 const GRAD = "linear-gradient(100deg,#7c3aed 0%,#5b4be6 45%,#2457e6 100%)";
+/* Two-tone PayPal "PP" monogram (brand navy + cyan). */
+const PayPalMark = ({ className = "" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden className={className}>
+    <path fill="#27346A" d="M8.2 4h5.2c2.7 0 4.6 1.5 4.1 4.4-.5 3-2.8 4.6-5.8 4.6H9.4c-.5 0-.9.4-1 .9l-.82 5.4c-.05.4-.3.6-.68.6H4.5c-.42 0-.64-.3-.58-.72L6 5c.2-.63.78-1 2.2-1z" />
+    <path fill="#2790C3" d="M11.5 7h5.2c2.7 0 4.6 1.5 4.1 4.4-.5 3-2.8 4.6-5.8 4.6h-2.3c-.5 0-.9.4-1 .9l-.82 5.4c-.05.4-.3.6-.68.6H7.8c-.42 0-.64-.3-.58-.72L9.3 8c.2-.63.78-1 2.2-1z" />
+  </svg>
+);
+
+/* reward-flow node — all nodes share one size + baseline (aligned on one line) */
+function Node({ label, orb = false, children }: { label: string; orb?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="f-node relative z-10 flex flex-col items-center gap-2.5 text-center">
+      <div className={`relative grid h-16 w-16 place-items-center rounded-2xl ${orb ? "ring-1 ring-white/30 shadow-[0_16px_36px_-12px_rgba(90,50,230,.7)]" : "border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm"}`} style={orb ? { background: GRAD } : undefined}>
+        {orb && <span aria-hidden className="absolute -inset-2.5 -z-10 rounded-full opacity-45 blur-xl" style={{ background: GRAD }} />}
+        {children}
+      </div>
+      <span className="text-[11.5px] font-medium text-[var(--color-muted)]">{label}</span>
+    </div>
+  );
+}
 
 export function SiteFooter() {
   const router = useRouter();
@@ -34,7 +54,8 @@ export function SiteFooter() {
     const mm = gsap.matchMedia();
     mm.add("(prefers-reduced-motion: no-preference)", () => {
       const tl = gsap.timeline({ scrollTrigger: { trigger: root.current, start: "top 80%" } });
-      tl.from(".f-head", { opacity: 0, y: 24, duration: 0.6, ease: "power3.out" })
+      tl.from(".f-node", { opacity: 0, y: 14, scale: 0.9, stagger: 0.1, duration: 0.5, ease: "back.out(1.5)" })
+        .from(".f-head", { opacity: 0, y: 24, duration: 0.6, ease: "power3.out" }, "<0.15")
         .from(".f-desc", { opacity: 0, y: 20, duration: 0.6, ease: "power3.out" }, "<0.15")
         .from(".f-btn", { opacity: 0, y: 16, stagger: 0.1, duration: 0.5 }, "<0.1")
         .from(".f-note", { opacity: 0, duration: 0.5 }, "<0.1")
@@ -53,13 +74,24 @@ export function SiteFooter() {
 
   return (
     <footer ref={root} className="relative mx-auto max-w-6xl px-5 pb-12 pt-20 sm:pt-24">
+      {/* reward-flow diagram — all nodes uniform + aligned on one line */}
+      <div className="relative mx-auto max-w-xl">
+        <div aria-hidden className="pointer-events-none absolute left-[14%] right-[14%] top-8 z-0 h-px bg-[var(--color-border)]" />
+        <div className="relative flex items-start justify-between">
+          <Node label="Wallet"><span className="text-[#7c3aed]"><Ic.wallet className="h-6 w-6" /></span></Node>
+          <Node label="Agent" orb><Mark className="h-8 w-8 brightness-0 invert" /></Node>
+          <Node label="Valid Rewards"><span className="text-[#7c3aed]"><Ic.check className="h-6 w-6" /></span></Node>
+          <Node label="PayPal"><PayPalMark className="h-8 w-8" /></Node>
+        </div>
+      </div>
+
       {/* CTA — light */}
-      <div className="mx-auto max-w-2xl text-center">
+      <div className="mx-auto mt-12 max-w-2xl text-center">
         <h2 className="f-head font-display text-[32px] font-bold leading-tight tracking-tight text-[var(--color-fg)] sm:text-[46px]">Your next purchase could cost less.</h2>
         <p className="f-desc mx-auto mt-4 max-w-xl text-[15px] text-[var(--color-muted)] sm:text-[16px]">RePal reads the fine print on every reward you hold, stacks only the ones that are eligible, and settles the single lowest price with PayPal — all within the spending limits you set.</p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <button onClick={() => demo.mutate()} disabled={demo.isPending} className="f-btn inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_40px_-14px_rgba(130,90,250,.7)] transition-transform hover:-translate-y-0.5 disabled:opacity-60" style={{ background: GRAD }}><Ic.play className="h-5 w-5" />{demo.isPending ? "Starting…" : "Try Live Demo"}</button>
-          <a href="/api/auth/paypal/login" className="f-btn inline-flex items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-7 py-3.5 text-[15px] font-semibold text-[var(--color-fg)] transition-colors hover:border-[#7c3aed]/40"><Mark className="h-5 w-5" />Login with PayPal</a>
+        <div className="mt-8 flex flex-row flex-wrap items-center justify-center gap-3">
+          <button onClick={() => demo.mutate()} disabled={demo.isPending} className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_40px_-14px_rgba(130,90,250,.7)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:px-7" style={{ background: GRAD }}><Ic.play className="h-5 w-5" />{demo.isPending ? "Starting…" : "Try Live Demo"}</button>
+          <a href="/api/auth/paypal/login" className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-6 py-3.5 text-[15px] font-semibold text-[var(--color-fg)] transition-colors hover:border-[#7c3aed]/40 sm:px-7"><Mark className="h-5 w-5" />Login with PayPal</a>
         </div>
         <p className="f-note mt-5 text-[12.5px] text-[var(--color-muted)]">No setup · Sample data · No real payment</p>
         <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-[13px] font-medium text-[var(--color-fg)]">
