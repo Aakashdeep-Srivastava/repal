@@ -36,24 +36,46 @@ const Ic = {
   bag: (p: IP) => <svg viewBox="0 0 24 24" fill="none" className={p.className}><path d="M6 8h12l-1 12H7L6 8zM9 8a3 3 0 0 1 6 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
   store: (p: IP) => <svg viewBox="0 0 24 24" fill="none" className={p.className}><path d="M4 9l1-5h14l1 5M4 9h16M4 9v10h16V9M4 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></svg>,
   receipt: (p: IP) => <svg viewBox="0 0 24 24" fill="none" className={p.className}><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9 8h6M9 12h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>,
+  search: (p: IP) => <svg viewBox="0 0 24 24" fill="none" className={p.className}><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" /><path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>,
+  mail: (p: IP) => <svg viewBox="0 0 24 24" fill="none" className={p.className}><rect x="3" y="5" width="18" height="14" rx="2.5" stroke="currentColor" strokeWidth="2" /><path d="M4 7l8 6 8-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>,
 };
 
 const GRAD = "linear-gradient(100deg,#2563eb 0%,#3b82f6 45%,#2457e6 100%)";
 const Mark = ({ className = "" }: { className?: string }) => <Image src="/brand/repal-monogram.png" alt="RePal" width={32} height={32} className={className} />;
-/* Two-tone PayPal "PP" monogram (brand navy + cyan) — used in the How-It-Works "Pay" step. */
-const PayPalMark = ({ className = "" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" aria-hidden className={className}>
-    <path fill="#27346A" d="M8.2 4h5.2c2.7 0 4.6 1.5 4.1 4.4-.5 3-2.8 4.6-5.8 4.6H9.4c-.5 0-.9.4-1 .9l-.82 5.4c-.05.4-.3.6-.68.6H4.5c-.42 0-.64-.3-.58-.72L6 5c.2-.63.78-1 2.2-1z" />
-    <path fill="#2790C3" d="M11.5 7h5.2c2.7 0 4.6 1.5 4.1 4.4-.5 3-2.8 4.6-5.8 4.6h-2.3c-.5 0-.9.4-1 .9l-.82 5.4c-.05.4-.3.6-.68.6H7.8c-.42 0-.64-.3-.58-.72L9.3 8c.2-.63.78-1 2.2-1z" />
-  </svg>
-);
 const Pill = ({ children }: { children: React.ReactNode }) => <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)]/80 px-3.5 py-1.5 text-[12.5px] font-semibold tracking-wide text-[#1d4ed8] shadow-sm backdrop-blur"><Ic.spark className="h-3.5 w-3.5" />{children}</span>;
 
-function Chip({ icon, label, value, cls = "" }: { icon: React.ReactNode; label: string; value: string; cls?: string }) {
+/* a small text chip standing in for a brand (name as text, not logo artwork) */
+const NameChip = ({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) => (
+  <span className={`inline-flex items-center rounded-lg border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-[11.5px] font-bold tracking-tight shadow-sm ${strong ? "text-[#1a1f71]" : "text-slate-600"}`}>{children}</span>
+);
+
+/* one reward category row inside the "Your Rewards in One Place" panel */
+function RewardRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className={`flow-chip flex items-center gap-2.5 rounded-2xl border border-white/60 bg-white/80 px-3.5 py-2.5 shadow-[0_10px_30px_-14px_rgba(37,99,235,.4)] backdrop-blur ${cls}`}>
-      <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#2563eb]/10 text-[#2563eb]">{icon}</span>
-      <div className="leading-tight"><div className="text-[11px] font-medium text-slate-500">{label}</div><div className="text-[14px] font-bold text-slate-800">{value}</div></div>
+    <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white/70 p-2.5">
+      <span className="flex w-[74px] shrink-0 items-center gap-2 text-[12px] font-semibold leading-tight text-slate-700"><span className="shrink-0 text-[#2563eb]">{icon}</span>{label}</span>
+      <div className="flex flex-1 flex-wrap items-center gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+/* a floating "what the agent does" pill above the orb */
+const StepPill = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
+  <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-white/90 px-3 py-1.5 text-[12.5px] font-semibold text-slate-700 shadow-[0_8px_24px_-12px_rgba(37,99,235,.5)] backdrop-blur">
+    <span className="text-[#2563eb]">{icon}</span>{label}
+    <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-500 text-white"><Ic.check className="h-2.5 w-2.5" /></span>
+  </span>
+);
+
+/* one numbered step in the bottom row */
+function FlowStep({ n, title, desc }: { n: number; title: string; desc: string }) {
+  return (
+    <div className="reveal flex flex-col gap-1.5">
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-[#dbe6fe] text-[13px] font-bold text-[#2563eb]">{n}</span>
+        <span className="text-[18px] font-bold tracking-tight">{title}</span>
+      </div>
+      <p className="text-[13.5px] leading-relaxed text-[var(--color-muted)]">{desc}</p>
     </div>
   );
 }
@@ -64,8 +86,6 @@ export function Landing() {
   const demo = useMutation({ mutationFn: judgeLogin, onSuccess: () => router.push("/wallet") });
 
   useGSAP(() => {
-    const mm = gsap.matchMedia();
-
     // hero intro (on load)
     gsap.from(".hero-in", { opacity: 0, y: 24, duration: 0.8, stagger: 0.12, ease: "power3.out" });
 
@@ -73,42 +93,6 @@ export function Landing() {
     gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) => {
       gsap.from(el, { opacity: 0, y: 48, duration: 0.9, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 85%" } });
     });
-
-    // PINNED FLOW — only on desktop (pin can be janky on small screens).
-    // Created BEFORE the #how triggers below so its 1600px pin-spacer is in
-    // place when those triggers compute their start/end (page-order refresh).
-    mm.add("(min-width: 1024px)", () => {
-      gsap.set(".flow-chip", { opacity: 0, x: -36 });
-      gsap.set(".flow-line-in", { strokeDashoffset: 1 });
-
-      const tl = gsap.timeline({
-        // refreshPriority high: this pin injects 1600px of spacer, so it must
-        // refresh BEFORE the #how triggers below it compute their start/end.
-        scrollTrigger: { trigger: ".flow", start: "top top", end: "+=1600", pin: true, scrub: 1, refreshPriority: 1 },
-      });
-      // 1) reward cards scroll in (stagger)
-      tl.to(".flow-chip", { opacity: 1, x: 0, stagger: 0.18, ease: "power2.out" }, 0);
-      // 2) input lines illuminate light-purple toward the agent
-      tl.to(".flow-line-in", { strokeDashoffset: 0, stagger: 0.12, ease: "none" }, 0.25)
-        .to(".flow-line-in", { opacity: 1, duration: 0.2 }, "<");
-      // 3) the agent orb brightens
-      tl.to(".flow-orb", { scale: 1.07, duration: 0.3 }, ">-0.1")
-        .to(".flow-glow", { opacity: 0.9, duration: 0.3 }, "<");
-      // 4) the payment arrow (always visible) gets a subtle emphasis + best price pulses
-      tl.from(".flow-arrow-out", { opacity: 0.35, duration: 0.3, ease: "none" }, ">-0.05")
-        .to(".flow-best", { scale: 1.05, duration: 0.3, yoyo: true, repeat: 1, ease: "power2.inOut" }, "<0.1")
-        .to(".flow-orb", { scale: 1, duration: 0.3 }, ">");
-    });
-
-    // HOW IT WORKS — steps pop in, then the connector line draws with a
-    // traveling spark that lights each dot as it passes (scrubbed to scroll).
-    // Triggered off the connector row (.hiw) so timing matches when it's seen.
-    gsap.from(".hiw-step", { opacity: 0, y: 30, scale: 0.94, stagger: 0.14, duration: 0.7, ease: "power3.out", scrollTrigger: { trigger: ".hiw", start: "top 82%" } });
-    gsap.timeline({ scrollTrigger: { trigger: ".hiw", start: "top 72%", toggleActions: "play none none reverse" } })
-      .set(".hiw-spark", { opacity: 1 }, 0)
-      .to(".hiw-line", { scaleX: 1, duration: 1.3, ease: "power1.inOut" }, 0)
-      .to(".hiw-spark", { left: "100%", duration: 1.3, ease: "power1.inOut" }, 0)
-      .to(".hiw-spark", { opacity: 0, duration: 0.25 }, 1.15);
   }, { scope: root });
 
   const NAV = [["How it Works", "#how"], ["Rewards", "#money"], ["Security", "#trust"], ["For Merchants", "#personas"], ["Resources", "#how"]];
@@ -149,85 +133,74 @@ export function Landing() {
         <a href="#flow" className="hero-in mx-auto mt-10 grid h-9 w-9 animate-bounce place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm"><Ic.arrowD className="h-4 w-4" /></a>
       </section>
 
-      {/* FLOW — pinned, illuminating lines (clean background) */}
-      <section id="flow" className="flow relative grid min-h-dvh place-items-center overflow-hidden">
-        <div className="mx-auto w-full max-w-5xl px-5 py-16 text-center">
-          <div className="reveal mx-auto max-w-2xl"><Pill>How it flows</Pill><h2 className="font-display mt-4 text-[30px] font-bold tracking-tight text-[#1b1b4d] sm:text-[40px]">Rewards flow in. One payment flows out.</h2></div>
-          <div className="relative mx-auto mt-10 h-[380px] max-w-4xl">
-            <svg aria-hidden viewBox="0 0 900 380" className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid meet">
-              <defs>
-                <filter id="pglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.5" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-              </defs>
-              {/* inputs: start at the reward chips (left) and converge on the agent's left edge */}
-              {[94, 158, 222, 286].map((y, i) => <path key={i} className="flow-line flow-line-in" d={`M175 ${y} C 300 ${y}, 330 190, 378 190`} pathLength={1} strokeDasharray={1} fill="none" stroke="#93b4fb" strokeWidth="3" strokeLinecap="round" filter="url(#pglow)" opacity={0.25} />)}
-            </svg>
-            {/* output: an HTML arrow anchored to the real layout (orb → best price), robust to width */}
-            <div className="flow-arrow-out absolute top-1/2 z-0 hidden -translate-y-1/2 items-center lg:flex" style={{ left: "calc(50% + 86px)", right: "152px" }}>
-              <div className="h-[3px] flex-1 rounded-full bg-[#10b981] shadow-[0_0_8px_1px_rgba(16,185,129,.45)]" />
-              <div className="h-0 w-0 border-y-[7px] border-l-[11px] border-y-transparent border-l-[#10b981]" />
-            </div>
-            {/* left reward cards */}
-            <div className="absolute left-0 top-1/2 hidden -translate-y-1/2 flex-col gap-3 lg:flex">
-              <Chip icon={<Ic.gift className="h-4 w-4" />} label="Gift Cards" value="$50" />
-              <Chip icon={<Ic.pct className="h-4 w-4" />} label="Coupons" value="$30 off" cls="ml-6" />
-              <Chip icon={<Ic.coin className="h-4 w-4" />} label="Card Points" value="1,000 pts" cls="ml-6" />
-              <Chip icon={<Ic.cashback className="h-4 w-4" />} label="Cashback" value="$20" />
-            </div>
-            {/* orb */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-              <div className="flow-orb relative grid h-36 w-36 place-items-center rounded-[32px] shadow-[0_30px_70px_-20px_rgba(37,99,235,.7)]" style={{ background: GRAD }}>
-                <div aria-hidden className="flow-glow absolute -inset-6 -z-10 rounded-full opacity-40 blur-2xl" style={{ background: GRAD }} />
-                <div className="grid h-[76px] w-[76px] place-items-center rounded-[22px] bg-white shadow-[0_10px_26px_-10px_rgba(20,10,60,.5)]">
-                  <Mark className="h-12 w-12" />
-                </div>
-              </div>
-              <span className="mt-3 inline-block rounded-full bg-white/85 px-4 py-1.5 text-[13px] font-semibold text-[#1b1b4d] shadow-sm backdrop-blur">RePal Agent</span>
-            </div>
-            {/* best price */}
-            <div className="flow-best absolute right-0 top-1/2 hidden -translate-y-1/2 flex-col items-center gap-2 rounded-3xl border border-emerald-300/60 bg-emerald-50/90 px-7 py-5 shadow-[0_18px_40px_-18px_rgba(16,185,129,.5)] backdrop-blur lg:flex">
-              <span className="grid h-10 w-10 place-items-center rounded-full bg-emerald-500 text-white"><Ic.cart className="h-5 w-5" /></span>
-              <span className="text-[12px] font-semibold text-slate-600">Best Price</span>
-              <span className="text-[30px] font-bold text-emerald-600">$198</span>
-            </div>
-          </div>
-          <p className="reveal mx-auto mt-8 max-w-md text-[14px] text-[#4b4b7a]">Scroll — RePal checks each reward, lights up the valid ones, and settles the single lowest price with PayPal.</p>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section id="how" className="mx-auto max-w-6xl px-5 pt-24 text-center">
-        <div className="reveal flex flex-col items-center"><Pill>How It Works</Pill>
-          <h2 className="font-display mt-5 text-[34px] font-bold leading-[1.08] tracking-tight sm:text-[48px]">From scattered rewards to a{" "}
-            <em className="italic" style={{ background: "linear-gradient(100deg,#2457e6 0%,#3b82f6 42%,#1d4ed8 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>real purchase.</em>
+      {/* FLOW — rewards in one place → agent → best price, then the 4 steps */}
+      <section id="flow" className="relative mx-auto max-w-6xl px-5 pt-24 text-center">
+        <div className="reveal flex flex-col items-center">
+          <Pill>How it flows</Pill>
+          <h2 className="font-display mt-5 text-[32px] font-bold leading-[1.08] tracking-tight text-[#141033] sm:text-[48px]">Rewards flow in. One payment{" "}
+            <em className="italic" style={{ background: "linear-gradient(100deg,#1d4ed8 0%,#3b82f6 55%,#2563eb 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>flows out.</em>
           </h2>
-          <p className="mt-4 max-w-2xl text-[16px] text-[var(--color-muted)] sm:text-[17px]">A simple, transparent flow — powered by an AI agent with guardrails.</p>
         </div>
 
-        {/* 4-step flow with animated connector */}
-        <div className="hiw relative mx-auto mt-16 max-w-5xl">
-          {/* connector — a single hairline that draws on scroll (no dots) */}
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-16 z-0 hidden lg:block">
-            <div className="relative mx-[13.5%] h-px">
-              <div className="absolute inset-0 bg-[#dbe6fe] dark:bg-white/10" />
-              <div className="hiw-line absolute inset-0 origin-left bg-[#8aaef9]" style={{ transform: "scaleX(0)" }} />
-              <div className="hiw-spark absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#2563eb] shadow-[0_0_8px_2px_rgba(37,99,235,.5)]" style={{ left: "0%", opacity: 0 }} />
+        {/* infographic: panel → agent → best price (5-col grid keeps connectors aligned) */}
+        <div className="reveal mt-14 grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_56px_auto_56px_minmax(0,0.78fr)]">
+          {/* LEFT — Your Rewards in One Place */}
+          <div className="rounded-[26px] border border-[var(--color-border)] bg-white/70 p-4 text-left shadow-[0_24px_60px_-30px_rgba(37,99,235,.4)] backdrop-blur sm:p-5">
+            <div className="flex items-center gap-2 px-1 pb-3">
+              <span className="text-[#2563eb]"><Ic.stack className="h-5 w-5" /></span>
+              <span className="text-[15px] font-bold tracking-tight">Your Rewards in One Place</span>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <RewardRow icon={<Ic.card className="h-4 w-4" />} label="Payment Cards"><NameChip strong>VISA</NameChip><NameChip>Mastercard</NameChip><NameChip strong>AMEX</NameChip><NameChip>Discover</NameChip></RewardRow>
+              <RewardRow icon={<Ic.mail className="h-4 w-4" />} label="Email Rewards"><NameChip>Gmail</NameChip><NameChip>Coupons</NameChip><NameChip>Offers</NameChip></RewardRow>
+              <RewardRow icon={<Ic.gift className="h-4 w-4" />} label="Gift Cards"><NameChip>Amazon</NameChip><NameChip>Starbucks</NameChip><NameChip>Apple</NameChip><NameChip>+ More</NameChip></RewardRow>
+              <RewardRow icon={<Ic.coin className="h-4 w-4" />} label="Reward Points"><NameChip>Chase</NameChip><NameChip>Citi</NameChip><NameChip>Capital One</NameChip></RewardRow>
             </div>
           </div>
 
-          <div className="grid gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-            {([[Ic.card, "Connect", "Bring your rewards together in one place."], [Ic.doc, "Read", "The agent reads the fine print and checks eligibility."], [Ic.stack, "Stack", "Finds the best valid combination for the lowest price."], [PayPalMark, "Pay", "Pays securely with PayPal, within your spending mandate.", true]] as [(p: IP) => React.ReactNode, string, string, boolean?][]).map(([I, t, d, isPaypal], i) => (
-              <div key={t} className="hiw-step relative z-10 flex flex-col items-center text-center">
-                <div className="grid h-32 w-32 place-items-center rounded-full border border-white/70 bg-gradient-to-b from-white/85 to-white/40 shadow-[0_26px_55px_-26px_rgba(37,99,235,.5)] ring-1 ring-inset ring-white/60 backdrop-blur-md dark:border-white/10 dark:from-white/[0.08] dark:to-white/[0.02] dark:ring-white/10">
-                  {isPaypal ? <PayPalMark className="h-[52px] w-[52px]" /> : <span className="text-[#3b82f6] dark:text-[#93b4fb]">{I({ className: "h-[46px] w-[46px]" })}</span>}
-                </div>
-                <div className="mt-6 flex items-center gap-2.5">
-                  <span className="grid h-[26px] w-[26px] place-items-center rounded-full bg-[#93b4fb] text-[13px] font-bold text-white shadow-sm">{i + 1}</span>
-                  <span className="text-[19px] font-bold tracking-tight">{t}</span>
-                </div>
-                <p className="mt-2.5 max-w-[210px] text-[14.5px] leading-relaxed text-[var(--color-muted)]">{d}</p>
-              </div>
-            ))}
+          {/* input connector (desktop) — reward streams converging into the agent */}
+          <div aria-hidden className="hidden h-24 w-full items-center lg:flex">
+            <svg viewBox="0 0 56 96" preserveAspectRatio="none" className="h-full w-full">
+              {[14, 36, 60, 82].map((y, i) => <path key={i} d={`M0 ${y} C 26 ${y}, 30 48, 56 48`} fill="none" stroke="#93b4fb" strokeWidth="2.5" strokeLinecap="round" opacity={0.55} />)}
+            </svg>
           </div>
+
+          {/* CENTER — the agent, with floating "what it does" pills */}
+          <div className="relative flex flex-col items-center">
+            <div className="mb-5 flex flex-wrap justify-center gap-2 lg:mb-6">
+              <StepPill icon={<Ic.search className="h-3.5 w-3.5" />} label="Reads terms" />
+              <StepPill icon={<Ic.stack className="h-3.5 w-3.5" />} label="Checks eligibility" />
+              <StepPill icon={<Ic.shield className="h-3.5 w-3.5" />} label="Applies rules" />
+            </div>
+            <div className="relative grid h-32 w-32 place-items-center overflow-hidden rounded-[34px] shadow-[0_34px_70px_-22px_rgba(37,99,235,.75)]" style={{ background: GRAD }}>
+              <span aria-hidden className="absolute -inset-6 -z-10 rounded-full opacity-45 blur-2xl" style={{ background: GRAD }} />
+              <span aria-hidden className="absolute inset-0 bg-[radial-gradient(120%_90%_at_25%_15%,rgba(255,255,255,.55),transparent_55%)]" />
+              <Mark className="relative h-16 w-16 brightness-0 invert" />
+            </div>
+            <span className="mt-4 inline-block rounded-full bg-white/90 px-4 py-1.5 text-[13.5px] font-bold text-[#141033] shadow-sm backdrop-blur">RePal Agent</span>
+          </div>
+
+          {/* output connector (desktop) — the single payment arrow to best price */}
+          <div aria-hidden className="hidden items-center lg:flex">
+            <div className="h-[3px] flex-1 rounded-full bg-gradient-to-r from-[#34d399] to-[#10b981] shadow-[0_0_8px_1px_rgba(16,185,129,.45)]" />
+            <div className="h-0 w-0 border-y-[7px] border-l-[11px] border-y-transparent border-l-[#10b981]" />
+          </div>
+
+          {/* RIGHT — best price */}
+          <div className="relative mx-auto flex w-full max-w-[280px] flex-col items-center gap-1 rounded-[26px] border border-emerald-300/70 bg-emerald-50/90 px-6 py-7 shadow-[0_24px_55px_-24px_rgba(16,185,129,.55)] backdrop-blur dark:bg-emerald-500/10 lg:mx-0">
+            <span className="absolute -right-3 -top-3 grid h-9 w-9 place-items-center rounded-full bg-emerald-500 text-white shadow-md"><Ic.check className="h-5 w-5" /></span>
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 text-white"><Ic.cart className="h-5 w-5" /></span>
+            <span className="mt-1 text-[14px] font-semibold text-slate-600 dark:text-emerald-200">Best Price</span>
+            <span className="text-[38px] font-bold leading-none text-emerald-600 dark:text-emerald-400">$198</span>
+          </div>
+        </div>
+
+        {/* 4-step row */}
+        <div id="how" className="mt-16 grid gap-x-6 gap-y-9 text-left sm:grid-cols-2 lg:grid-cols-4">
+          <FlowStep n={1} title="Connect" desc="Bring your rewards together." />
+          <FlowStep n={2} title="Read" desc="Understand the fine print." />
+          <FlowStep n={3} title="Stack" desc="Find the best valid combination." />
+          <FlowStep n={4} title="Pay" desc="Pay securely with PayPal." />
         </div>
       </section>
 
