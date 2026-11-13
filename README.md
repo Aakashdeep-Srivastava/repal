@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="docs/assets/architecture.png" alt="" width="0" height="0" />
-
 # 💸 RePal — *Rewards to Real Money, on PayPal*
 
 ### **The cheapest price *after* your rewards.**
