@@ -105,15 +105,11 @@ export function Landing() {
     // traveling spark that lights each dot as it passes (scrubbed to scroll).
     // Triggered off the connector row (.hiw) so timing matches when it's seen.
     gsap.from(".hiw-step", { opacity: 0, y: 30, scale: 0.94, stagger: 0.14, duration: 0.7, ease: "power3.out", scrollTrigger: { trigger: ".hiw", start: "top 82%" } });
-    const litDot = { backgroundColor: "#7c3aed", scale: 1.35, boxShadow: "0 0 14px 4px rgba(124,58,237,.6)", duration: 0.3, ease: "power2.out" };
     gsap.timeline({ scrollTrigger: { trigger: ".hiw", start: "top 72%", toggleActions: "play none none reverse" } })
       .set(".hiw-spark", { opacity: 1 }, 0)
       .to(".hiw-line", { scaleX: 1, duration: 1.3, ease: "power1.inOut" }, 0)
       .to(".hiw-spark", { left: "100%", duration: 1.3, ease: "power1.inOut" }, 0)
-      .to(".hiw-dot-0", litDot, 0.22)
-      .to(".hiw-dot-1", litDot, 0.65)
-      .to(".hiw-dot-2", litDot, 1.08)
-      .to(".hiw-spark", { opacity: 0, duration: 0.25 }, 1.2);
+      .to(".hiw-spark", { opacity: 0, duration: 0.25 }, 1.15);
   }, { scope: root });
 
   const NAV = [["How it Works", "#how"], ["Rewards", "#money"], ["Security", "#trust"], ["For Merchants", "#personas"], ["Resources", "#how"]];
@@ -207,12 +203,7 @@ export function Landing() {
             <div className="relative mx-[13.5%] h-[3px]">
               <div className="absolute inset-0 rounded-full bg-[#ece7fb] dark:bg-white/10" />
               <div className="hiw-line absolute inset-0 origin-left rounded-full bg-gradient-to-r from-[#7c3aed] via-[#5b4be6] to-[#2457e6] shadow-[0_0_12px_1px_rgba(91,75,230,.45)]" style={{ transform: "scaleX(0)" }} />
-              <div className="hiw-spark absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white shadow-[0_0_14px_5px_rgba(124,58,237,.8)]" style={{ left: "0%", opacity: 0 }} />
-              {[16.67, 50, 83.33].map((x, i) => (
-                <span key={x} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${x}%` }}>
-                  <span className={`hiw-dot hiw-dot-${i} block h-3 w-3 rounded-full bg-[#c9bef3] ring-4 ring-[#7c3aed]/0`} />
-                </span>
-              ))}
+              <div className="hiw-spark absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-white shadow-[0_0_14px_5px_rgba(124,58,237,.8)]" style={{ left: "0%", opacity: 0 }} />
             </div>
           </div>
 
