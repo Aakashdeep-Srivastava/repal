@@ -38,7 +38,7 @@
   --shadow-lg: 0 12px 40px rgba(11, 18, 32, 0.14);
   --shadow-sheet: 0 -8px 40px rgba(11, 18, 32, 0.18);
 
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
