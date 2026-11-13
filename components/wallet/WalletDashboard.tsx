@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchWallet, ingestWallet, fetchInsights } from "@/lib/client";
+import { fetchWallet, ingestWallet, fetchInsights, fetchMandate } from "@/lib/client";
 import { RewardCardV2 } from "@/components/wallet/RewardCardV2";
 import { ConnectGmail } from "@/components/wallet/ConnectGmail";
 import { PaymentMethods } from "@/components/wallet/PaymentMethods";
@@ -78,12 +78,48 @@ const FILTERS = [
   { key: "points", label: "Points", test: (t: string) => t === "points" },
 ];
 
+/** The pivotal journey step: authorize the agent (set a signed spending mandate)
+ *  before it can transact. Shown to every user — PayPal or judge — until set. */
+function MandateGate({ mandate, loading }: { mandate: { capUsd: number; approvalThresholdUsd: number } | null | undefined; loading: boolean }) {
+  if (loading) return null;
+  if (mandate) {
+    return (
+      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-500 text-white"><I.shield className="h-5 w-5" /></span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[14.5px] font-semibold text-[var(--color-fg)]">Agent authorized — it can verify &amp; pay on your behalf</div>
+          <div className="text-[12.5px] text-[var(--color-muted)]">Per-purchase cap {usd(mandate.capUsd)} · asks you above {usd(mandate.approvalThresholdUsd)} · signed policy, revocable anytime.</div>
+        </div>
+        <Link href="/mandate" className="shrink-0 rounded-xl border border-[var(--color-border)] px-3.5 py-2 text-[13px] font-medium text-[var(--color-brand)] hover:bg-[var(--color-brand)]/5">Manage →</Link>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-6 overflow-hidden rounded-[24px] border border-[var(--color-brand)]/30 bg-gradient-to-br from-[var(--color-brand)]/[0.08] to-transparent p-6 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-5">
+        <div className="max-w-xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-brand)]/12 px-3 py-1 text-[12px] font-semibold text-[var(--color-brand)]"><I.shield className="h-3.5 w-3.5" />Step 1 · Authorize your agent</span>
+          <h2 className="mt-3 text-[20px] font-bold leading-tight tracking-tight text-[var(--color-fg)]">Set a spending mandate so your agent can pay for you.</h2>
+          <p className="mt-2 text-[14px] leading-relaxed text-[var(--color-muted)]">RePal&apos;s AI reads your rewards and finds the lowest price — but it only moves money once you grant a signed, PayPal-backed mandate. You set the limits; nothing transacts outside your policy, and you can revoke anytime.</p>
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[12.5px] text-[var(--color-muted)]">
+            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[var(--color-brand)]/12 text-[11px] font-bold text-[var(--color-brand)]">1</span>Set per-purchase + budget limits</span>
+            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[var(--color-brand)]/12 text-[11px] font-bold text-[var(--color-brand)]">2</span>Authorize with PayPal</span>
+            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[var(--color-brand)]/12 text-[11px] font-bold text-[var(--color-brand)]">3</span>Agent transacts within policy</span>
+          </div>
+        </div>
+        <Link href="/mandate" className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[var(--color-brand)] px-6 py-3 text-[15px] font-semibold text-white shadow-sm transition-transform hover:-translate-y-0.5">Set up my agent <I.arrow className="h-4 w-4" /></Link>
+      </div>
+    </div>
+  );
+}
+
 export function WalletDashboard() {
   const qc = useQueryClient();
   const { me, name } = useShellUser();
   const userId = me?.userId ?? "demo-user";
   const { data: rewards, isLoading } = useQuery({ queryKey: ["wallet", userId], queryFn: () => fetchWallet(userId) });
   const { data: insights } = useQuery({ queryKey: ["insights"], queryFn: fetchInsights, retry: false });
+  const { data: mandate, isLoading: mandateLoading } = useQuery({ queryKey: ["mandate"], queryFn: fetchMandate, retry: false });
   const sync = useMutation({ mutationFn: () => ingestWallet(userId), onSuccess: () => qc.invalidateQueries({ queryKey: ["wallet", userId] }) });
   const [filter, setFilter] = useState("all");
 
@@ -97,6 +133,9 @@ export function WalletDashboard() {
 
   return (
     <DashboardShell title={<>{greeting()}, {name} <span className="align-middle">👋</span></>} subtitle="Your rewards, optimized and unlocked with PayPal.">
+      {/* Step 1 of the journey: authorize the agent (set the mandate) */}
+      <MandateGate mandate={mandate} loading={mandateLoading} />
+
       {/* hero (card-proportioned) + agent — items-start keeps the hero compact */}
       <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
         <div className="relative isolate aspect-[1.75/1] overflow-hidden rounded-[24px] p-6 text-white shadow-[0_20px_55px_-28px_rgba(60,40,200,.6)] sm:aspect-auto" style={{ background: "linear-gradient(135deg,#4b1fb0 0%,#3a2fc6 46%,#1f3a8f 100%)" }}>
