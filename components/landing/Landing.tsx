@@ -105,10 +105,14 @@ export function Landing() {
     // traveling spark that lights each dot as it passes (scrubbed to scroll).
     // Triggered off the connector row (.hiw) so timing matches when it's seen.
     gsap.from(".hiw-step", { opacity: 0, y: 30, scale: 0.94, stagger: 0.14, duration: 0.7, ease: "power3.out", scrollTrigger: { trigger: ".hiw", start: "top 82%" } });
+    const litDot = { backgroundColor: "#7c3aed", duration: 0.3, ease: "power2.out" };
     gsap.timeline({ scrollTrigger: { trigger: ".hiw", start: "top 72%", toggleActions: "play none none reverse" } })
       .set(".hiw-spark", { opacity: 1 }, 0)
       .to(".hiw-line", { scaleX: 1, duration: 1.3, ease: "power1.inOut" }, 0)
       .to(".hiw-spark", { left: "100%", duration: 1.3, ease: "power1.inOut" }, 0)
+      .to(".hiw-dot-0", litDot, 0.22)
+      .to(".hiw-dot-1", litDot, 0.65)
+      .to(".hiw-dot-2", litDot, 1.08)
       .to(".hiw-spark", { opacity: 0, duration: 0.25 }, 1.15);
   }, { scope: root });
 
@@ -198,12 +202,18 @@ export function Landing() {
 
         {/* 4-step flow with animated connector */}
         <div className="hiw relative mx-auto mt-16 max-w-5xl">
-          {/* connector line + glowing dots (desktop) — drawn on scroll */}
+          {/* connector line + soft dots (desktop) — thin + faint, drawn on scroll */}
           <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[64px] z-0 hidden lg:block">
-            <div className="relative mx-[13.5%] h-[3px]">
-              <div className="absolute inset-0 rounded-full bg-[#ece7fb] dark:bg-white/10" />
-              <div className="hiw-line absolute inset-0 origin-left rounded-full bg-gradient-to-r from-[#7c3aed] via-[#5b4be6] to-[#2457e6] shadow-[0_0_12px_1px_rgba(91,75,230,.45)]" style={{ transform: "scaleX(0)" }} />
-              <div className="hiw-spark absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-white shadow-[0_0_14px_5px_rgba(124,58,237,.8)]" style={{ left: "0%", opacity: 0 }} />
+            <div className="relative mx-[13.5%] h-px">
+              <div className="absolute inset-0 rounded-full bg-[#e6e0f6] dark:bg-white/10" />
+              <div className="hiw-line absolute inset-0 origin-left rounded-full bg-[#b7a6ec]" style={{ transform: "scaleX(0)" }} />
+              <div className="hiw-spark absolute top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-[#7c3aed] shadow-[0_0_10px_3px_rgba(124,58,237,.55)]" style={{ left: "0%", opacity: 0 }} />
+              {[16.67, 50, 83.33].map((x, i) => (
+                <span key={x} className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2" style={{ left: `${x}%` }}>
+                  <span aria-hidden className="absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#7c3aed]/12" />
+                  <span className={`hiw-dot hiw-dot-${i} relative block h-2.5 w-2.5 rounded-full bg-[#cdc3f0]`} />
+                </span>
+              ))}
             </div>
           </div>
 
