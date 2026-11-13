@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -48,6 +48,22 @@ const Pill = ({ children }: { children: React.ReactNode }) => <span className="i
 const NameChip = ({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) => (
   <span className={`inline-flex items-center rounded-md border border-[var(--color-border)] bg-white px-1.5 py-[2px] text-[10px] font-bold tracking-tight shadow-sm ${strong ? "text-[#1a1f71]" : "text-slate-600"}`}>{children}</span>
 );
+
+/**
+ * Renders a real brand logo from /public/brands/<file> when that file exists;
+ * until an official asset is dropped in, it gracefully falls back to the name
+ * chip. (We intentionally ship no logo artwork of our own — add official files.)
+ */
+function BrandLogo({ name, file, strong = false }: { name: string; file: string; strong?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <NameChip strong={strong}>{name}</NameChip>;
+  return (
+    <span className="inline-flex items-center rounded-md border border-[var(--color-border)] bg-white px-2 py-1 shadow-sm">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`/brands/${file}`} alt={name} className="h-3.5 w-auto max-w-[56px] object-contain" loading="lazy" onError={() => setFailed(true)} />
+    </span>
+  );
+}
 
 /* one reward category row inside the "Your Rewards in One Place" panel */
 function RewardRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
@@ -151,10 +167,10 @@ export function Landing() {
               <span className="text-[13px] font-bold tracking-tight">Your Rewards in One Place</span>
             </div>
             <div className="flex flex-col gap-1.5">
-              <RewardRow icon={<Ic.card className="h-3.5 w-3.5" />} label="Payment Cards"><NameChip strong>VISA</NameChip><NameChip>Mastercard</NameChip><NameChip strong>AMEX</NameChip><NameChip>Discover</NameChip></RewardRow>
-              <RewardRow icon={<Ic.mail className="h-3.5 w-3.5" />} label="Email Rewards"><NameChip>Gmail</NameChip><NameChip>Coupons</NameChip><NameChip>Offers</NameChip></RewardRow>
-              <RewardRow icon={<Ic.gift className="h-3.5 w-3.5" />} label="Gift Cards"><NameChip>Amazon</NameChip><NameChip>Starbucks</NameChip><NameChip>Apple</NameChip><NameChip>+ More</NameChip></RewardRow>
-              <RewardRow icon={<Ic.coin className="h-3.5 w-3.5" />} label="Reward Points"><NameChip>Chase</NameChip><NameChip>Citi</NameChip><NameChip>Capital One</NameChip></RewardRow>
+              <RewardRow icon={<Ic.card className="h-3.5 w-3.5" />} label="Payment Cards"><BrandLogo name="VISA" file="visa.svg" strong /><BrandLogo name="Mastercard" file="mastercard.svg" /><BrandLogo name="AMEX" file="amex.svg" strong /><BrandLogo name="Discover" file="discover.svg" /></RewardRow>
+              <RewardRow icon={<Ic.mail className="h-3.5 w-3.5" />} label="Email Rewards"><BrandLogo name="Gmail" file="gmail.svg" /><NameChip>Coupons</NameChip><NameChip>Offers</NameChip></RewardRow>
+              <RewardRow icon={<Ic.gift className="h-3.5 w-3.5" />} label="Gift Cards"><BrandLogo name="Amazon" file="amazon.svg" /><BrandLogo name="Starbucks" file="starbucks.svg" /><BrandLogo name="Apple" file="apple.svg" /><NameChip>+ More</NameChip></RewardRow>
+              <RewardRow icon={<Ic.coin className="h-3.5 w-3.5" />} label="Reward Points"><BrandLogo name="Chase" file="chase.svg" /><BrandLogo name="Citi" file="citi.svg" /><BrandLogo name="Capital One" file="capitalone.svg" /></RewardRow>
             </div>
           </div>
 
