@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { searchTransactions, getAccountBalance } from "@/lib/paypal/reporting";
+import { getSession } from "@/lib/auth/session";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
@@ -19,6 +20,16 @@ export async function GET(req: Request) {
     return NextResponse.json(
       { error: "rate limit exceeded — slow down", retryAfterSec: rl.retryAfterSec },
       { status: 429, headers: rateLimitHeaders(rl) },
+    );
+  }
+
+  // Gate behind a session — this exposes the account's financial activity
+  // (incl. sandbox payer emails), so don't serve it to anonymous visitors.
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json(
+      { available: false, reason: "Sign in to view account activity." },
+      { headers: rateLimitHeaders(rl) },
     );
   }
 

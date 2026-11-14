@@ -38,14 +38,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const origin = new URL(req.url).origin;
+  const urls = {
+    returnUrl: `${origin}/checkout?paypal=return`,
+    cancelUrl: `${origin}/checkout?paypal=cancel`,
+  };
   try {
-    const order = await createOrder({
-      ...parsed.data,
-      returnUrl: `${origin}/checkout?paypal=return`,
-      cancelUrl: `${origin}/checkout?paypal=cancel`,
-    });
+    const order = await createOrder({ ...parsed.data, ...urls });
     return NextResponse.json({ ...order, approveUrl: approvalUrlOf(order) });
   } catch (err) {
+    // Resilience: a non-default funding method (e.g. Venmo, which is US-only and
+    // needs an eligible buyer) can be unavailable in sandbox and fail order
+    // creation. Rather than break the checkout, fall back once to standard
+    // PayPal so the purchase can still complete.
+    if (parsed.data.funding && parsed.data.funding !== "paypal") {
+      try {
+        const order = await createOrder({ ...parsed.data, funding: "paypal", ...urls });
+        return NextResponse.json({ ...order, approveUrl: approvalUrlOf(order), fundingFellBack: true });
+      } catch {
+        /* fall through to the error below */
+      }
+    }
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "order failed" },
       { status: 502 },
