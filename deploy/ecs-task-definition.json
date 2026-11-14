@@ -29,7 +29,8 @@
         { "name": "AI_PROVIDER_ORDER", "value": "gemini,groq,openrouter,bedrock" },
         { "name": "GROQ_MODEL", "value": "llama-3.3-70b-versatile" },
         { "name": "OPENROUTER_MODEL", "value": "meta-llama/llama-3.3-70b-instruct:free" },
-        { "name": "GEMINI_MODEL", "value": "gemini-3.8-flash" }
+        { "name": "GEMINI_MODEL", "value": "gemini-3.8-flash" },
+        { "name": "PAYPAL_AGENT_TOOLKIT", "value": "1" }
       ],
       "secrets": [
         { "name": "DATABASE_URL", "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/DATABASE_URL-us6Nfb" },

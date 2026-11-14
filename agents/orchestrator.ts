@@ -57,9 +57,13 @@ const TOOLKIT_SYSTEM =
   " You also have PayPal's official commerce tools (names like get_order," +
   " create_shipment_tracking, get_shipment_tracking, list_disputes, get_dispute," +
   " list_transactions). Use them for POST-PURCHASE and read tasks only — look up" +
-  " an order's status, add or read shipment tracking, review disputes, or list" +
-  " account transactions. NEVER use them to create or capture orders or move" +
-  " money; all spending goes through pay/payout, which enforce the mandate.";
+  " an order's status by id, add or read shipment tracking for an order, or" +
+  " review disputes. NEVER use them to create or capture orders or move money;" +
+  " all spending goes through pay/payout, which enforce the mandate. IMPORTANT" +
+  " honesty rule: list_transactions and the disputes tools report RePal's OWN" +
+  " PayPal (merchant) account activity, NOT the user's personal wallet — if you" +
+  " surface them, say so plainly and never present them as the user's own" +
+  " transactions.";
 
 const SYSTEM_PROMPT = isPayPalToolkitEnabled() ? SYSTEM + TOOLKIT_SYSTEM : SYSTEM;
 

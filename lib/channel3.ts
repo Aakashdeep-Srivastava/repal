@@ -106,6 +106,25 @@ function client(): Channel3 {
   return _client;
 }
 
+/**
+ * Retry a Channel3 SDK call on TRANSIENT failures only (rate-limited / upstream),
+ * with exponential backoff (200ms, 400ms). Config / auth / bad-request errors are
+ * not retried — they won't fix themselves. The ORIGINAL error is re-thrown so the
+ * caller's `toFailure()` classification is unchanged.
+ */
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  for (let i = 0; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const kind = (e instanceof Channel3Failure ? e : toFailure(e)).kind;
+      const transient = kind === "rate_limited" || kind === "upstream";
+      if (i >= attempts - 1 || !transient) throw e;
+      await new Promise((r) => setTimeout(r, 200 * 2 ** i));
+    }
+  }
+}
+
 // ── Mapping (Channel3 → our Product / Offer) ─────────────────────────────────
 
 /** Best (cheapest) offer in the requested currency, or null when none is usable. */
@@ -199,7 +218,7 @@ export async function searchChannel3Products(
     req.filters = { price: { max_price: opts.maxPriceUsd } };
   }
   try {
-    const page = await c.products.search(req);
+    const page = await withRetry(() => c.products.search(req));
     return (page.data ?? [])
       .map((p) => mapProduct(p, query))
       .filter((x): x is Product => x !== null);
@@ -212,11 +231,9 @@ export async function searchChannel3Products(
 export async function getChannel3Product(id: string): Promise<Product | null> {
   const c = client();
   try {
-    const p = await c.products.retrieve({
-      product_id: id,
-      country: COUNTRY,
-      currency: CURRENCY,
-    });
+    const p = await withRetry(() =>
+      c.products.retrieve({ product_id: id, country: COUNTRY, currency: CURRENCY }),
+    );
     return mapProduct(p, "");
   } catch (e) {
     const f = toFailure(e);
