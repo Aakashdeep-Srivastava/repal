@@ -176,7 +176,7 @@ export function MandateStudio() {
           {step === 3 && (
             <>
               <span className="inline-block rounded-full bg-[var(--color-brand)]/10 px-3 py-1 text-[12px] font-medium text-[var(--color-brand)]">Step 3 of 3 · Review & Authorize</span>
-              <h2 className="font-display mt-3 text-[26px] font-semibold tracking-tight text-[var(--color-fg)]">Review & authorize with PayPal.</h2>
+              <h2 className="font-display mt-3 text-[26px] font-semibold tracking-tight text-[var(--color-fg)]">Review & authorize your agent.</h2>
               <p className="mt-1.5 text-[14px] text-[var(--color-muted)]">This creates a revocable PayPal Vault token your agent spends against — never more than your limits.</p>
               <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {[["Max per purchase", usd(cap)], ["Total budget / mo", usd(budget)], ["Ask me above", usd(thr)]].map(([k, v]) => (
@@ -204,7 +204,7 @@ export function MandateStudio() {
               {step < 3 ? (
                 <button onClick={() => setStep(step + 1)} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-brand)] px-5 py-2.5 text-sm font-semibold text-white">Continue to {STEPS[step]} <I.arrow className="h-4 w-4" /></button>
               ) : (
-                <button onClick={() => create.mutate()} disabled={create.isPending} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-brand)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"><Image src="/brand/repal-monogram.png" alt="" width={18} height={18} className="h-4 w-4" />{create.isPending ? "Authorizing…" : "Authorize with PayPal"}</button>
+                <button onClick={() => create.mutate()} disabled={create.isPending} className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-brand)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"><Image src="/brand/repal-monogram.png" alt="" width={18} height={18} className="h-4 w-4" />{create.isPending ? "Authorizing…" : "Authorize agent"}</button>
               )}
             </div>
           )}
