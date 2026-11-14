@@ -1,6 +1,6 @@
 # RePal — Progress vs the PRD
 
-_Last updated: 2026-11-09 · Submission deadline: 2026-11-12 (PayPal AI Hackathon)_
+_Last updated: 2026-11-14 · PayPal AI Hackathon_
 
 ## Headline
 
@@ -25,15 +25,16 @@ optimizer's plan or the DB.
 | Receipts + mandate signing (Ed25519) | ✅ | ✅ **+ verified at spend** | `lib/receipts`, `lib/policy/mandate` |
 | **Delegated authority (Vault mandate)** | ❌ no UI, Vault was a TODO | ✅ **real Vault token + `/mandate` UI** | `app/api/mandates/*`, `app/mandate`, `lib/paypal/vault` |
 | **Policy gate "again before capture"** | ❌ not enforced | ✅ deny / ask / approved | `lib/policy/gate.ts` (capture + demo-capture) |
-| **Reward→cash liberation (Payouts)** | 🟡 fire-and-forget | ✅ persisted + verifiable receipt | `lib/payout/liberate`, `Payout` model, wallet Cash-out |
+| **Reward→cash liberation (Payouts)** | 🟡 fire-and-forget | ✅ persisted + verifiable receipt **+ honest simulated fallback** when the IN sandbox sender can't send | `lib/payout/liberate`, `Payout` model, wallet Cash-out |
+| **Agent-selected funding** (Pay Later / Venmo / instant) | ❌ | ✅ the agent *chooses how* to pay the stacked price; one-tap override | `lib/paypal/funding`, `components/shop/FundingSelector`, `app/api/pay/order` |
 | **Agent executes money** | 🟡 dormant, no pay tools | ✅ `pay` / `payout` / `grant_mandate` tools | `lib/agent/actions`, `agents/orchestrator` |
 | Refunds + webhooks | 🟡 stored-only | ✅ persisted + webhooks update status | `Refund` model, `app/api/webhooks/paypal` |
 | Expiry cron | 🟡 stub | ✅ implemented + daily trigger | `lib/rewards/expiry`, `app/api/cron/expiry` |
-| **Insights (PRD "Must")** | ❌ not started | ✅ self-contained `/insights` dashboard | `app/insights`, `app/api/insights` |
+| **Insights (PRD "Must")** | ❌ not started | ✅ self-contained `/insights` dashboard **+ live PayPal account activity & balance** | `app/insights`, `app/api/insights`, `components/insights/PayPalActivity` |
 | Frontend journeys | ✅ | ✅ **+ onboarding, loaders, mandate, insights** | `app/*`, `components/*` |
 | Reward ingestion (real data) | 🟡 mock | 🟡 **still mock** (honestly labelled) | `lib/ingest/adapters/*` — needs Gmail OAuth |
 | Sponsor integrations (PayPal Agent Toolkit/MCP, AG Grid, Bryntum, APIMatic) | ❌ | 🟡 scoped, each behind a flag | A2A / Cognee dropped as out-of-thesis |
-| PayPal Transaction Search | ❌ | 🟡 insights from own data; TS add-on open | — |
+| **PayPal Transaction Search + Balances (Reporting API)** | ❌ | ✅ **live** on `/insights` — real settled txns + account balance (session-gated; labelled "RePal's own account, not your wallet") | `lib/paypal/reporting`, `app/api/paypal/transactions` |
 
 Legend: ✅ done · 🟡 partial · ❌ not started.
 
@@ -79,12 +80,14 @@ migrations applied to Neon.
    Agent Toolkit / MCP** (on-thesis), **AG Grid** insights, **Bryntum** timeline,
    **APIMatic** SDK/docs. A2A / Cognee dropped as out-of-thesis for the deadline.
 3. **Two live-demo gates (not code):**
-   - **Bedrock use-case form** (AWS console) — so live AI runs fire (today they
-     return a graceful `blocked`).
-   - **US sandbox business account** — so live Payouts complete (the current
-     India sandbox sender can't send Payouts).
-4. **Minor:** PayPal Transaction Search add-on; `/api/runs/:id/approve`
-   pause-resume (deferred — the threshold handles approval today).
+   - **Bedrock use-case form** (AWS console) — optional; the app runs Gemini-first
+     today, so AI is live regardless.
+   - **US sandbox business account** — only needed for *real* Payouts. The reward
+     cash-out now degrades to an **honest simulated payout** (real signed receipt,
+     labelled "sandbox · simulated") when the IN sandbox sender is restricted, so
+     the demo completes end-to-end either way.
+4. **Minor:** `/api/runs/:id/approve` pause-resume (deferred — the threshold
+   handles approval today). _(PayPal Transaction Search + Balances now shipped.)_
 
 ---
 
@@ -113,17 +116,20 @@ regardless of how good its AI is.
 ## Technical winning case: PayPal API breadth × agentic AI
 
 The judges reward *meaningful* PayPal + AI. RePal's technical edge is that it
-uses **~6 distinct PayPal products as one coherent money loop** — far beyond the
+uses **~9 distinct PayPal products as one coherent money loop** — far beyond the
 single-API (Checkout/Orders) integration most entries will ship:
 
 | PayPal product | How RePal uses it | File |
 |---|---|---|
-| **Log in with PayPal (OIDC)** | identity / sign-in | `app/api/auth/paypal/*` |
+| **Log in with PayPal (OIDC) + Identity** | identity / sign-in | `app/api/auth/paypal/*` |
 | **Vault v3 (setup + payment tokens)** | the **delegated-authority mandate** the agent spends against | `lib/paypal/vault` |
 | **Orders v2 (create + capture)** | mandate-gated pay-in, incl. agent-initiated `vault_id` (no redirect) | `lib/paypal/orders` |
-| **Payouts** | **reward→cash liberation** (the signature beat) | `lib/paypal/payouts` |
+| **Agent-selected funding** (Orders `payment_source`) | the agent *chooses how* to pay — instant balance / **Venmo** / **Pay Later** — deterministically, with a one-tap override | `lib/paypal/funding`, `app/api/pay/order` |
+| **Payouts** | **reward→cash liberation** (the signature beat); honest simulated fallback when the IN sandbox sender is restricted | `lib/paypal/payouts`, `lib/payout/liberate` |
 | **Refunds** | reversal + signed reversal receipt | `lib/paypal/refunds` |
 | **Webhooks (signature-verified)** | drive downstream Payout/Refund status | `app/api/webhooks/paypal` |
+| **Transaction Search (Reporting API)** | live settled-transaction history on `/insights` | `lib/paypal/reporting` |
+| **Balances (Reporting API)** | live account balance KPI on `/insights` | `lib/paypal/reporting` |
 
 On the AI side: an agentic **ToolLoopAgent** (AI SDK) on Bedrock Claude whose
 tools are a **deterministic** `lib/` layer, with a hard invariant — **the LLM
@@ -145,8 +151,9 @@ bolted onto a checkout button.
 | Originality / "what's next" | **A-** | Agentic **rewards→cash liberation under a Vault mandate** is a genuinely novel payment experience — exactly the "new ways to pay/get paid" the brief asks for. |
 | Impact / narrative | **B+** | Real consumer pain (stuck gift cards/points); clear story. |
 | Execution / polish | **A-** | Deployed, CI/CD, monitoring, verifiable Ed25519 receipts, polished UI. |
+| PayPal breadth (APIs used) | **A+** | ~9 PayPal products across the money loop + reporting (Txn Search, Balances) + agent-selected funding — far beyond the single-API norm. |
 | Sponsor-tool use | **B+** | Uses **Channel3** (a listed sponsor) for discovery. |
-| Demo readiness | **C+ → risk** | Two signature beats are gated: live AI (Bedrock use-case form) and live Payouts (needs a **US** sandbox sender). Must clear these or the video shows "blocked"/failed money movement. |
+| Demo readiness | **B+** | Both former gates mitigated: AI runs Gemini-first (no Bedrock dependency), and reward→cash completes via an honest **simulated payout** when the IN sandbox sender is restricted. A US sandbox business account is still needed only for a *real* on-chain-of-money payout. |
 
 ## Win prediction (calibrated — not hype)
 

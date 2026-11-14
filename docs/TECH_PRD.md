@@ -78,10 +78,12 @@ Sandbox base `https://api-m.sandbox.paypal.com`. README carries this table verba
 | Authority | Vault v3 setup + payment token | `POST /v3/vault/setup-tokens` → approve → `POST /v3/vault/payment-tokens` |
 | Pay-in | Orders v2 (buyer-present) | toolkit `create_order` → JS SDK v6 `createPayPalOneTimePaymentSession` → `pay_order` |
 | Pay-in | Orders v2 (agent-initiated) | `create_order` with `payment_source.paypal.vault_id` → `pay_order` (no redirect) |
-| **Pay-out** | **Payouts — reward liberation** | `POST /v1/payments/payouts` → user's sandbox personal balance |
+| **Funding choice** | Agent-selected funding (`lib/paypal/funding`) | deterministic `selectFunding(amount)` → Orders `payment_source`: `venmo` (Venmo wallet) or `paypal` (balance / **Pay Later** when eligible); one-tap override; falls back to `paypal` if a funding method fails |
+| **Pay-out** | **Payouts — reward liberation** | `POST /v1/payments/payouts` → user's sandbox personal balance. IN sandbox sender is restricted → **honest simulated payout** (real signed receipt, no money moved) |
 | Reversal | Refunds | `create_refund` → `POST /v2/payments/captures/{id}/refund` |
 | Feedback | Webhooks (signature-verified) | `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.PAYOUTSBATCH.SUCCESS`, refund events; verify via `/v1/notifications/verify-webhook-signature` |
-| Insights | Transaction Search | `list_transactions`, `get_merchant_insights` |
+| Insights | **Transaction Search (live)** | `GET /v1/reporting/transactions` → settled-txn history on `/insights` (session-gated; RePal's own account) |
+| Insights | **Balances (live)** | `GET /v1/reporting/balances` → account balance KPI on `/insights` |
 | Hands | Agent Toolkit / MCP | `@paypal/agent-toolkit/ai-sdk`; `@ai-sdk/mcp` → `mcp.sandbox.paypal.com` |
 
 Currency: INR is not a PayPal REST currency → settle **USD**, display ₹ on cross-border with a pinned FX and an honest note. Idempotency: `PayPal-Request-Id` on every create/capture/refund/payout.
