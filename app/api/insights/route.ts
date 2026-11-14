@@ -57,7 +57,9 @@ export async function GET(req: Request) {
   }
   const series = [...buckets.entries()].map(([date, v]) => ({ date, ...v }));
 
-  const recent = receipts.slice(0, 8).map((r) => ({
+  // Up to 100 rows so the grid's sort/filter/search/pagination are meaningful
+  // (receipts are already ordered newest-first above).
+  const recent = receipts.slice(0, 100).map((r) => ({
     id: r.id,
     item: r.item,
     merchant: r.merchant,

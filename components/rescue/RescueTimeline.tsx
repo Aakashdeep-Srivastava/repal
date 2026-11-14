@@ -36,9 +36,12 @@ function label(r: WalletReward): string {
 export default function RescueTimeline({
   rewards,
   license,
+  onSelect,
 }: {
   rewards: WalletReward[];
   license: string;
+  /** Fired when a reward bar is clicked — the panel opens its cash-out. */
+  onSelect?: (rewardId: string) => void;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const scheduler = useRef<SchedulerType | null>(null);
@@ -89,7 +92,13 @@ export default function RescueTimeline({
         columns: [{ type: "resourceInfo", text: "Reward", field: "name", width: 200 }],
         resources,
         events,
-        readOnly: true,
+        readOnly: true, // no drag-editing, but clicks still fire eventClick
+        listeners: {
+          // Clicking a bar (or its row's event) opens that reward's cash-out.
+          eventClick({ eventRecord }: { eventRecord: { id: string | number } }) {
+            onSelect?.(String(eventRecord.id));
+          },
+        },
       });
     });
 
@@ -98,7 +107,7 @@ export default function RescueTimeline({
       scheduler.current?.destroy();
       scheduler.current = null;
     };
-  }, [rewards, license]);
+  }, [rewards, license, onSelect]);
 
   return <div ref={el} className="h-[520px] w-full overflow-hidden rounded-xl border border-[var(--color-border)]" />;
 }
