@@ -1,4 +1,5 @@
 import { paypalRequest, newRequestId } from "@/lib/paypal/client";
+import type { FundingSource } from "@/lib/paypal/funding";
 
 /**
  * Orders v2 adapter — pay-in. See docs/TECH_PRD.md §4.
@@ -17,6 +18,14 @@ export interface CreateOrderInput {
    */
   returnUrl?: string;
   cancelUrl?: string;
+  /**
+   * Which funding method the agent picked (see lib/paypal/funding). Selects the
+   * Orders v2 `payment_source`: `venmo` → a dedicated Venmo source; `paypal` and
+   * `pay_later` → the PayPal wallet (Pay Later presented when eligible). Only
+   * meaningful on the buyer-present path; ignored when `vaultId` is set.
+   * Defaults to `paypal`.
+   */
+  funding?: FundingSource;
 }
 
 export interface PayPalOrder {
@@ -42,17 +51,20 @@ export async function createOrder(input: CreateOrderInput): Promise<PayPalOrder>
     body.payment_source = { paypal: { vault_id: input.vaultId } };
   } else if (input.returnUrl && input.cancelUrl) {
     // Buyer-present path: the order must be approved on PayPal before capture.
-    // The response carries a `payer-action` link to send the buyer to.
-    body.payment_source = {
-      paypal: {
-        experience_context: {
-          return_url: input.returnUrl,
-          cancel_url: input.cancelUrl,
-          user_action: "PAY_NOW",
-          shipping_preference: "NO_SHIPPING",
-        },
-      },
+    // The response carries a `payer-action` link to send the buyer to. The
+    // agent's chosen funding method selects which payment_source we open — Venmo
+    // gets its own wallet; `paypal`/`pay_later` both open the PayPal wallet (the
+    // approval page presents Pay Later / Pay-in-4 when the buyer is eligible).
+    const experience_context = {
+      return_url: input.returnUrl,
+      cancel_url: input.cancelUrl,
+      user_action: "PAY_NOW",
+      shipping_preference: "NO_SHIPPING",
     };
+    body.payment_source =
+      input.funding === "venmo"
+        ? { venmo: { experience_context } }
+        : { paypal: { experience_context } };
   }
 
   return paypalRequest<PayPalOrder>("/v2/checkout/orders", {

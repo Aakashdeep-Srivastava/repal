@@ -8,6 +8,7 @@ import { PaymentFlow } from "@/components/shop/PaymentFlow";
 import { ReceiptCard } from "@/components/shop/ReceiptCard";
 import { useJourney } from "@/lib/store/journey";
 import { isPaymentSuccess, type PaymentStatus } from "@/lib/shop/types";
+import type { FundingSource } from "@/lib/paypal/funding";
 
 /**
  * /checkout — the review → pay → receipt route. Content only; the persistent
@@ -46,6 +47,9 @@ export default function CheckoutPage() {
   const [sheetOpen, setSheetOpen] = useState(true);
   const [confirmed, setConfirmed] = useState(false);
   const [mode, setMode] = useState<"live" | "demo" | null>(null);
+  // null = defer to the agent's recommendation (FundingSelector resolves it);
+  // once the user taps a method it becomes an explicit override.
+  const [funding, setFunding] = useState<FundingSource | null>(null);
 
   // Mark mounted so we don't flash the empty state before the persisted store
   // (sessionStorage) has hydrated on a mid-checkout refresh.
@@ -153,6 +157,7 @@ export default function CheckoutPage() {
         plan={selectedPlan}
         product={selectedProduct}
         mode={mode}
+        funding={funding}
         disabled={!confirmed}
         onComplete={() => {
           /* receiptId + payment status are set in the store by PaymentFlow;
@@ -174,6 +179,8 @@ export default function CheckoutPage() {
         product={selectedProduct}
         confirmed={confirmed}
         onConfirmedChange={setConfirmed}
+        funding={funding}
+        onFundingChange={setFunding}
       />
     </div>
   );

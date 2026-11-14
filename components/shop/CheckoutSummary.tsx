@@ -2,7 +2,9 @@
 
 import { SharedElementTransition, AnimatedNumber } from "@/components/motion";
 import { ProductVisual } from "@/components/shop/ProductVisual";
+import { FundingSelector } from "@/components/shop/FundingSelector";
 import { sharedId } from "@/lib/motion/tokens";
+import type { FundingSource } from "@/lib/paypal/funding";
 import type { Product, PlanWithPolicy } from "@/lib/shop/types";
 
 /**
@@ -28,6 +30,9 @@ export interface CheckoutSummaryProps {
   /** Confirm-to-pay checkbox state (lifted to the page, which gates Pay). */
   confirmed: boolean;
   onConfirmedChange: (next: boolean) => void;
+  /** Agent-selected funding method (lifted to the page, sent to Orders v2). */
+  funding: FundingSource | null;
+  onFundingChange: (next: FundingSource) => void;
 }
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
@@ -37,6 +42,8 @@ export function CheckoutSummary({
   product,
   confirmed,
   onConfirmedChange,
+  funding,
+  onFundingChange,
 }: CheckoutSummaryProps) {
   const appliedDiscount = plan.useRewards.reduce((sum, r) => sum + r.appliedUsd, 0);
   const rewardCount = plan.useRewards.length;
@@ -105,11 +112,12 @@ export function CheckoutSummary({
         none — this plan applies only discounts that are confirmed now.
       </div>
 
-      {/* Payment method. */}
-      <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5">
-        <span className="text-sm text-[var(--color-muted)]">Payment method</span>
-        <span className="text-sm font-medium text-[var(--color-fg)]">PayPal</span>
-      </div>
+      {/* Payment method — the agent chooses the funding; user can override. */}
+      <FundingSelector
+        amountUsd={plan.cashUsd}
+        value={funding}
+        onChange={onFundingChange}
+      />
 
       {/* Terms + explicit confirm. */}
       <label className="flex cursor-pointer items-start gap-3 text-sm">
