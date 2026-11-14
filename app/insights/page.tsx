@@ -15,6 +15,17 @@ const TransactionGrid = dynamic(() => import("@/components/insights/TransactionG
   ),
 });
 
+// Live PayPal account activity (Transaction Search API) — client-only.
+const PayPalActivity = dynamic(
+  () => import("@/components/insights/PayPalActivity").then((m) => m.PayPalActivity),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-8 h-40 animate-pulse rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)]" />
+    ),
+  },
+);
+
 const usd = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 function Kpi({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: boolean }) {
@@ -128,6 +139,9 @@ export default function InsightsPage() {
                 )}
               </div>
             </section>
+
+            {/* Live PayPal account activity via the Transaction Search API. */}
+            <PayPalActivity />
           </>
         )}
       </div>
