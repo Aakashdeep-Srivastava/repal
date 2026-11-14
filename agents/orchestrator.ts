@@ -6,6 +6,7 @@ import { renderIntent } from "@/agents/intent";
 import { explainPlan } from "@/agents/explainer";
 import { planPurchase } from "@/lib/pipeline";
 import { agentPay, agentPayout } from "@/lib/agent/actions";
+import { paypalToolkitTools, isPayPalToolkitEnabled } from "@/lib/paypal/toolkit";
 import {
   fetchRewardEmails,
   isGmailConfigured,
@@ -47,12 +48,31 @@ const SYSTEM = [
   "returned by a tool.",
 ].join(" ");
 
+/**
+ * When the official PayPal Agent Toolkit is enabled, the agent also gets PayPal's
+ * own post-purchase / read commerce tools. CRITICAL: these NEVER move money —
+ * spending stays on RePal's deterministic, mandate-gated `pay`/`payout` path.
+ */
+const TOOLKIT_SYSTEM =
+  " You also have PayPal's official commerce tools (names like get_order," +
+  " create_shipment_tracking, get_shipment_tracking, list_disputes, get_dispute," +
+  " list_transactions). Use them for POST-PURCHASE and read tasks only — look up" +
+  " an order's status, add or read shipment tracking, review disputes, or list" +
+  " account transactions. NEVER use them to create or capture orders or move" +
+  " money; all spending goes through pay/payout, which enforce the mandate.";
+
+const SYSTEM_PROMPT = isPayPalToolkitEnabled() ? SYSTEM + TOOLKIT_SYSTEM : SYSTEM;
+
 export const orchestrator = new ToolLoopAgent({
   model: claude,
   temperature: 0,
-  instructions: SYSTEM,
+  instructions: SYSTEM_PROMPT,
   stopWhen: stepCountIs(10),
   tools: {
+    // PayPal's official Agent Toolkit tools (post-purchase / read only) merge in
+    // FIRST, so RePal's own gated money tools below always win on any name clash.
+    ...paypalToolkitTools(),
+
     render_intent: tool({
       description:
         "Turn the shopper's plain-language request into a structured purchase intent (category, optional budget, preferences).",
