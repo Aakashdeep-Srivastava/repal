@@ -301,6 +301,33 @@ export async function fetchInsights(): Promise<InsightsData> {
   return (await res.json()) as InsightsData;
 }
 
+// ─── PayPal Transaction Search (Reporting API) ───────────────────────────
+export interface PayPalTxnRow {
+  id: string;
+  date: string;
+  amountUsd: number;
+  currency: string;
+  status: string;
+  eventCode?: string;
+  payerEmail?: string;
+  feeUsd?: number;
+}
+
+export type PayPalTransactions =
+  | { available: true; transactions: PayPalTxnRow[]; from: string; to: string }
+  | { available: false; reason: string };
+
+/**
+ * GET /api/paypal/transactions — live Transaction Search over RePal's OWN PayPal
+ * account (not the user's wallet). Always resolves; an unavailable feature or
+ * unconfigured env comes back as `{ available: false, reason }`.
+ */
+export async function fetchPayPalTransactions(): Promise<PayPalTransactions> {
+  const res = await fetch("/api/paypal/transactions");
+  if (!res.ok) return { available: false, reason: `request failed (${res.status})` };
+  return (await res.json()) as PayPalTransactions;
+}
+
 // ─── Cold-start rewards feed ──────────────────────────────────────────
 export type RewardCategory =
   | "electronics" | "groceries" | "dining" | "coffee" | "travel" | "fashion"
