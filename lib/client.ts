@@ -205,8 +205,13 @@ export async function fetchMandate(): Promise<ActiveMandate | null> {
  */
 export async function createMandate(
   input: MandateInput,
+  opts?: { vault?: boolean },
 ): Promise<{ mandateId: string; approveUrl?: string; vault?: string }> {
-  const { status, data } = await postJson("/api/mandates", input);
+  // ?vault=1 opts into the real PayPal Vault setup-token flow (hands-free
+  // auto-pay); without it the server activates an instant signed policy-only
+  // mandate. The server falls back to instant signing if Vault is unavailable.
+  const path = opts?.vault ? "/api/mandates?vault=1" : "/api/mandates";
+  const { status, data } = await postJson(path, input);
   if (status === 429) throw new Error("Too many requests — give it a moment.");
   if (status !== 201) {
     throw new Error(
@@ -248,6 +253,10 @@ export interface PayoutResult {
   receiptId: string;
   verifyUrl: string;
   status?: string;
+  /** True when the payout was simulated (sandbox sender restriction). */
+  simulated?: boolean;
+  /** Explains a simulated payout; undefined for a real one. */
+  note?: string;
 }
 
 /**

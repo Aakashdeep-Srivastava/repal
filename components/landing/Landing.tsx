@@ -4,11 +4,11 @@ import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { judgeLogin } from "@/lib/client";
+import { judgeLogin, fetchMe } from "@/lib/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 
@@ -57,6 +57,12 @@ export function Landing() {
   const router = useRouter();
   const root = useRef<HTMLElement>(null);
   const demo = useMutation({ mutationFn: judgeLogin, onSuccess: () => router.push("/wallet") });
+  // Session awareness — once the visitor has logged in (PayPal or judge demo),
+  // the "Login with PayPal" CTAs flip to a "you're in" state so they aren't
+  // asked to connect again.
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe, retry: false });
+  const loggedIn = Boolean(me);
+  const firstName = me?.name?.split(" ")[0] ?? me?.email?.split("@")[0];
 
   useGSAP(() => {
     // hero intro (on load)
@@ -79,9 +85,12 @@ export function Landing() {
   const NAV = [["How it Works", "#how"], ["Rewards", "#money"], ["Security", "#trust"], ["For Merchants", "#personas"], ["Resources", "#how"]];
   const trust = [["You stay in control", Ic.shield], ["Pays with PayPal", Ic.bolt], ["Stacks only valid rewards", Ic.stack], ["Verifiable receipts", Ic.check]] as const;
 
-  const PrimaryCTA = ({ cls = "" }: { cls?: string }) => (
-    <a href="/api/auth/paypal/login" className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 ${cls}`} style={{ background: GRAD }}><Mark className="h-5 w-5 brightness-0 invert" />Login with PayPal</a>
-  );
+  const PrimaryCTA = ({ cls = "" }: { cls?: string }) =>
+    loggedIn ? (
+      <Link href="/wallet" className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 ${cls}`} style={{ background: GRAD }}><Ic.check className="h-5 w-5" />{firstName ? `Continue as ${firstName}` : "Go to your wallet"} →</Link>
+    ) : (
+      <a href="/api/auth/paypal/login" className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 ${cls}`} style={{ background: GRAD }}><Mark className="h-5 w-5 brightness-0 invert" />Login with PayPal</a>
+    );
   const DemoCTA = ({ dark = false, label = "Try Live Demo", cls = "" }: { dark?: boolean; label?: string; cls?: string }) => (
     <button onClick={() => demo.mutate()} disabled={demo.isPending} className={`inline-flex items-center justify-center gap-2 rounded-full border px-6 py-3 text-[15px] font-semibold transition-colors disabled:opacity-60 ${dark ? "border-white/30 bg-white/10 text-white hover:bg-white/20" : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-fg)] hover:border-[#2563eb]/40"} ${cls}`}><Ic.play className="h-5 w-5 text-[#2563eb]" />{demo.isPending ? "Starting…" : label}</button>
   );
@@ -100,7 +109,11 @@ export function Landing() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <button onClick={() => demo.mutate()} className="hidden items-center gap-1.5 rounded-full border border-[var(--color-border)] px-4 py-2 text-[13.5px] font-semibold text-[var(--color-fg)] hover:border-[#2563eb]/40 sm:inline-flex"><Ic.play className="h-4 w-4 text-[#2563eb]" />Live Demo</button>
-          <a href="/api/auth/paypal/login" className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-semibold text-white" style={{ background: GRAD }}><span className="hidden sm:inline">Login with PayPal</span><span className="sm:hidden">Login</span></a>
+          {loggedIn ? (
+            <Link href="/wallet" className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-semibold text-white" style={{ background: GRAD }}><Ic.check className="h-4 w-4" /><span className="hidden sm:inline">My wallet</span><span className="sm:hidden">Wallet</span></Link>
+          ) : (
+            <a href="/api/auth/paypal/login" className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-semibold text-white" style={{ background: GRAD }}><span className="hidden sm:inline">Login with PayPal</span><span className="sm:hidden">Login</span></a>
+          )}
         </div>
       </header>
 

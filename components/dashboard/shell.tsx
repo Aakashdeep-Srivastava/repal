@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -137,11 +137,40 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
 /* ─────────────────── notifications ─────────────────── */
 function NotificationsBell({ expiring, recent }: { expiring: WalletReward[]; recent: { id: string; merchant: string; cashUsd: number; createdAt: string }[] }) {
   const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  // Panel is positioned with measured viewport coords so it never overflows off
+  // a narrow screen (the bell sits in the LEFT cluster on mobile — plain
+  // `right-0` anchoring pushed the panel off the left edge).
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const count = expiring.length;
+
+  const place = useCallback(() => {
+    const el = btnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const width = Math.min(320, vw - 16);
+    // Right-align to the button, then clamp within the viewport [8, vw-8-width].
+    const left = Math.max(8, Math.min(r.right - width, vw - 8 - width));
+    setPos({ top: r.bottom + 8, left, width });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    place();
+    const onChange = () => place();
+    window.addEventListener("resize", onChange);
+    window.addEventListener("scroll", onChange, true);
+    return () => {
+      window.removeEventListener("resize", onChange);
+      window.removeEventListener("scroll", onChange, true);
+    };
+  }, [open, place]);
+
   return (
     <div className="relative">
-      <button onClick={() => setOpen((o) => !o)} aria-label="Notifications" className="relative grid h-10 w-10 place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm hover:text-[var(--color-fg)]"><I.bell className="h-5 w-5" />{count > 0 && <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{count}</span>}</button>
-      {open && <><div className="fixed inset-0 z-[65]" onClick={() => setOpen(false)} /><div className="absolute right-0 z-[70] mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xl"><div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3"><span className="text-sm font-semibold text-[var(--color-fg)]">Notifications</span><Link href="/rescue" onClick={() => setOpen(false)} className="text-[12px] font-medium text-[var(--color-brand)]">Rescue →</Link></div><div className="max-h-80 overflow-y-auto p-2">{count === 0 && recent.length === 0 && <p className="px-3 py-6 text-center text-[13px] text-[var(--color-muted)]">You&apos;re all caught up ✨</p>}{expiring.map((r) => { const d = daysLeft(r.expiresAt); return <Link key={r.id} href="/rescue" onClick={() => setOpen(false)} className="flex gap-3 rounded-xl px-3 py-2.5 hover:bg-[var(--color-bg)]"><span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-amber-500/12 text-amber-600">⏰</span><div className="min-w-0 flex-1"><div className="text-[13px] font-medium text-[var(--color-fg)]">Reward expiring soon</div><div className="truncate text-[12px] text-[var(--color-muted)]">{r.termsRaw.slice(0, 48)}… · {d <= 0 ? "today" : `${d}d left`}</div></div></Link>; })}{recent.slice(0, 3).map((a) => <div key={a.id} className="flex gap-3 rounded-xl px-3 py-2.5"><span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500/12 text-emerald-600">✓</span><div className="min-w-0 flex-1"><div className="text-[13px] font-medium text-[var(--color-fg)]">Payment completed</div><div className="truncate text-[12px] text-[var(--color-muted)]">{usd(a.cashUsd)} · {a.merchant} · {timeAgo(a.createdAt)}</div></div></div>)}</div></div></>}
+      <button ref={btnRef} onClick={() => setOpen((o) => !o)} aria-label="Notifications" className="relative grid h-10 w-10 place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm hover:text-[var(--color-fg)]"><I.bell className="h-5 w-5" />{count > 0 && <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">{count}</span>}</button>
+      {open && pos && <><div className="fixed inset-0 z-[65]" onClick={() => setOpen(false)} /><div className="fixed z-[70] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xl" style={{ top: pos.top, left: pos.left, width: pos.width }}><div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3"><span className="text-sm font-semibold text-[var(--color-fg)]">Notifications</span><Link href="/rescue" onClick={() => setOpen(false)} className="text-[12px] font-medium text-[var(--color-brand)]">Rescue →</Link></div><div className="max-h-80 overflow-y-auto p-2">{count === 0 && recent.length === 0 && <p className="px-3 py-6 text-center text-[13px] text-[var(--color-muted)]">You&apos;re all caught up ✨</p>}{expiring.map((r) => { const d = daysLeft(r.expiresAt); return <Link key={r.id} href="/rescue" onClick={() => setOpen(false)} className="flex gap-3 rounded-xl px-3 py-2.5 hover:bg-[var(--color-bg)]"><span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-amber-500/12 text-amber-600">⏰</span><div className="min-w-0 flex-1"><div className="text-[13px] font-medium text-[var(--color-fg)]">Reward expiring soon</div><div className="truncate text-[12px] text-[var(--color-muted)]">{r.termsRaw.slice(0, 48)}… · {d <= 0 ? "today" : `${d}d left`}</div></div></Link>; })}{recent.slice(0, 3).map((a) => <div key={a.id} className="flex gap-3 rounded-xl px-3 py-2.5"><span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500/12 text-emerald-600">✓</span><div className="min-w-0 flex-1"><div className="text-[13px] font-medium text-[var(--color-fg)]">Payment completed</div><div className="truncate text-[12px] text-[var(--color-muted)]">{usd(a.cashUsd)} · {a.merchant} · {timeAgo(a.createdAt)}</div></div></div>)}</div></div></>}
     </div>
   );
 }

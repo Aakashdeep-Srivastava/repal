@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { createPayout } from "@/lib/paypal/payouts";
+import { newRequestId } from "@/lib/paypal/client";
 import { issueReceipt } from "@/lib/receipts/issue";
 
 /**
@@ -34,6 +35,24 @@ export interface LiberateResult {
   receiptId: string;
   verifyUrl: string;
   status?: string;
+  /** True when PayPal couldn't send (sandbox sender restriction) and we issued
+   *  an honest simulated payout instead — still a real, verifiable receipt. */
+  simulated?: boolean;
+  /** Human-readable note explaining a simulated payout (undefined when real). */
+  note?: string;
+}
+
+/**
+ * A payout the SENDER account is not allowed to make — chiefly the sandbox
+ * sender-country restriction (e.g. an India business account can't send Payouts;
+ * PayPal returns 403 PAYOUT_NOT_AVAILABLE "You live in a country that is not
+ * allowed to send this payout"). This is an account/geography limitation, not a
+ * code bug, so we degrade to an honest simulated payout rather than failing.
+ */
+function isSenderRestricted(msg: string): boolean {
+  return /PAYOUT_NOT_AVAILABLE|not allowed to send|country that is not allowed|SENDER_[A-Z_]*RESTRICT/i.test(
+    msg,
+  );
 }
 
 export async function liberateReward(input: LiberateInput): Promise<LiberateResult> {
@@ -50,16 +69,34 @@ export async function liberateReward(input: LiberateInput): Promise<LiberateResu
     item = reward.termsRaw.slice(0, 80) || item;
   }
 
-  // Throws on a PayPal error (e.g. sender-country restriction) — the caller maps
-  // that to a 502 / an agent-visible failure. No DB writes happen before this.
-  const result = await createPayout({ receiverEmail: input.receiverEmail, amountUsd, note: input.note });
-  const payoutBatchId = result.batch_header.payout_batch_id;
+  // Attempt the real PayPal payout. A genuine failure (bad email, server error)
+  // bubbles up; only a sender-country/availability restriction degrades to an
+  // honest simulated payout so the demo can still complete. No DB writes happen
+  // until we've resolved which path we're on.
+  let payoutBatchId: string;
+  let batchStatus: string | undefined;
+  let simulated = false;
+  let note: string | undefined;
+  try {
+    const result = await createPayout({ receiverEmail: input.receiverEmail, amountUsd, note: input.note });
+    payoutBatchId = result.batch_header.payout_batch_id;
+    batchStatus = result.batch_header.batch_status ?? "PENDING";
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!isSenderRestricted(msg)) throw err; // real failure → let the caller map it
+    simulated = true;
+    payoutBatchId = `SIMULATED-PAYOUT-${newRequestId()}`;
+    batchStatus = "SIMULATED";
+    note =
+      "Simulated payout — this sandbox account isn't allowed to send PayPal Payouts " +
+      "(sender-country restriction). The receipt is genuine and verifiable; no real money moved.";
+  }
 
   const receipt = await issueReceipt({
     userId: input.userId,
     runId: `payout-${payoutBatchId}`,
     item,
-    merchant: "PayPal (payout)",
+    merchant: simulated ? "PayPal (payout · simulated)" : "PayPal (payout)",
     category: "reward-liberation",
     priceUsd: amountUsd,
     savedUsd: 0,
@@ -77,7 +114,7 @@ export async function liberateReward(input: LiberateInput): Promise<LiberateResu
       amountUsd,
       receiverEmail: input.receiverEmail,
       payoutBatchId,
-      status: result.batch_header.batch_status ?? "PENDING",
+      status: batchStatus,
     },
   });
 
@@ -90,6 +127,8 @@ export async function liberateReward(input: LiberateInput): Promise<LiberateResu
     amountUsd,
     receiptId: receipt.id,
     verifyUrl: `/verify/${receipt.id}`,
-    status: result.batch_header.batch_status,
+    status: batchStatus,
+    simulated,
+    note,
   };
 }
