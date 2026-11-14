@@ -109,6 +109,25 @@ export function PayPalActivity() {
         from PayPal&apos;s Reporting API. Data can lag live activity by up to ~3 hours.
       </p>
 
+      {/* Account balance (Balances API) — the one balance an app can read. */}
+      {data?.balance?.available && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 shadow-sm">
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Account balance</p>
+            <p className="font-display text-xl font-medium text-[var(--color-fg)]">
+              {usd(data.balance.availableUsd, data.balance.currency)}
+            </p>
+          </div>
+          {data.balance.withheldUsd > 0 && (
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-[var(--color-muted)]">Held</p>
+              <p className="text-sm font-medium text-[var(--color-fg)]">{usd(data.balance.withheldUsd, data.balance.currency)}</p>
+            </div>
+          )}
+          <span className="ml-auto text-[11px] text-[var(--color-muted)]">via Balances API</span>
+        </div>
+      )}
+
       <div className="mt-3">
         {isLoading ? (
           <div className="h-40 animate-pulse rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)]" />
