@@ -102,15 +102,19 @@ export function RewardCardV2({
   const [email, setEmail] = useState(defaultEmail ?? "");
   const [msg, setMsg] = useState<string | null>(null);
   const [verifyUrl, setVerifyUrl] = useState<string | null>(null);
+  const [simulated, setSimulated] = useState(false);
 
   async function cashOut() {
     if (!email.trim()) { setMode("error"); setMsg("Enter the PayPal email to receive the cash."); return; }
     setMode("busy"); setMsg(null);
     try {
       const r = await payoutReward({ rewardId: reward.id, receiverEmail: email.trim(), amountUsd: reward.valueUsd });
-      setVerifyUrl(r.verifyUrl); setMode("done"); onCashedOut?.();
+      setVerifyUrl(r.verifyUrl); setSimulated(Boolean(r.simulated)); setMode("done"); onCashedOut?.();
     } catch (e) {
-      setMode("error"); setMsg(e instanceof Error ? e.message : "Cash-out failed.");
+      // Never surface a raw PayPal JSON error to the user.
+      const raw = e instanceof Error ? e.message : "Cash-out failed.";
+      setMode("error");
+      setMsg(/failed \(\d+\)|\{.*\}/.test(raw) ? "Cash-out couldn't complete. Please try again." : raw);
     }
   }
 
@@ -179,10 +183,19 @@ export function RewardCardV2({
       {canCashOut && mode !== "idle" && (
         <div className="mt-4 border-t border-dashed border-[var(--color-border)] pt-3">
           {mode === "done" ? (
-            <p className="text-[12px] text-emerald-600">
-              ✓ Cashed out {usd(reward.valueUsd)}
-              {verifyUrl && (<>{" · "}<a href={verifyUrl} className="underline">receipt</a></>)}
-            </p>
+            <div className="space-y-1">
+              <p className="text-[12px] text-emerald-600">
+                ✓ Cashed out {usd(reward.valueUsd)}
+                {simulated ? " (sandbox · simulated)" : ""}
+                {verifyUrl && (<>{" · "}<a href={verifyUrl} className="underline">receipt</a></>)}
+              </p>
+              {simulated && (
+                <p className="text-[11px] leading-snug text-[var(--color-muted)]">
+                  This sandbox account can&apos;t send real PayPal payouts, so the transfer was
+                  simulated — the receipt is genuine and verifiable; no real money moved.
+                </p>
+              )}
+            </div>
           ) : (
             <div className="flex flex-col gap-2">
               <input

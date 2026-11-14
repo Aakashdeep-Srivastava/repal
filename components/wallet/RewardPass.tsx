@@ -109,6 +109,7 @@ export function RewardPass({
   const [email, setEmail] = useState(defaultEmail ?? "");
   const [msg, setMsg] = useState<string | null>(null);
   const [verifyUrl, setVerifyUrl] = useState<string | null>(null);
+  const [simulated, setSimulated] = useState(false);
 
   async function cashOut() {
     if (!email.trim()) {
@@ -121,11 +122,14 @@ export function RewardPass({
     try {
       const r = await payoutReward({ rewardId: reward.id, receiverEmail: email.trim(), amountUsd: reward.valueUsd });
       setVerifyUrl(r.verifyUrl);
+      setSimulated(Boolean(r.simulated));
       setMode("done");
       onCashedOut?.();
     } catch (e) {
+      // Keep failures friendly — never dump a raw PayPal JSON error at the user.
+      const raw = e instanceof Error ? e.message : "Cash-out failed.";
       setMode("error");
-      setMsg(e instanceof Error ? e.message : "Cash-out failed.");
+      setMsg(/failed \(\d+\)|\{.*\}/.test(raw) ? "Cash-out couldn't complete. Please try again." : raw);
     }
   }
 
@@ -230,15 +234,24 @@ export function RewardPass({
         {canCashOut && (
           <div className="mt-3 border-t border-dashed border-[var(--color-border)] pt-3">
             {mode === "done" ? (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                ✓ Cashed out {usd(reward.valueUsd)}
-                {verifyUrl && (
-                  <>
-                    {" · "}
-                    <a href={verifyUrl} className="underline">receipt</a>
-                  </>
+              <div className="space-y-1">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                  ✓ Cashed out {usd(reward.valueUsd)}
+                  {simulated ? " (sandbox · simulated)" : ""}
+                  {verifyUrl && (
+                    <>
+                      {" · "}
+                      <a href={verifyUrl} className="underline">receipt</a>
+                    </>
+                  )}
+                </p>
+                {simulated && (
+                  <p className="text-[11px] leading-snug text-[var(--color-muted)]">
+                    This sandbox account can&apos;t send real PayPal payouts, so the transfer was
+                    simulated — the receipt is genuine and verifiable; no real money moved.
+                  </p>
                 )}
-              </p>
+              </div>
             ) : mode === "idle" ? (
               <button
                 onClick={() => setMode("form")}

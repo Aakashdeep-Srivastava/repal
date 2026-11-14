@@ -87,17 +87,30 @@ const FILTERS = [
 
 /** The pivotal journey step: authorize the agent (set a signed spending mandate)
  *  before it can transact. Shown to every user — PayPal or judge — until set. */
-function MandateGate({ mandate, loading }: { mandate: { capUsd: number; approvalThresholdUsd: number } | null | undefined; loading: boolean }) {
+function MandateGate({ mandate, loading }: { mandate: { capUsd: number; approvalThresholdUsd: number; paypalVaultTokenId?: string | null } | null | undefined; loading: boolean }) {
   if (loading) return null;
   if (mandate) {
-    return (
+    // A mandate is a signed spending POLICY. Hands-free auto-pay additionally
+    // needs a connected PayPal funding source (a Vault token). Report the two
+    // states honestly instead of implying the agent can charge when it can't.
+    const funded = Boolean(mandate.paypalVaultTokenId);
+    return funded ? (
       <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-500 text-white"><I.shield className="h-5 w-5" /></span>
         <div className="min-w-0 flex-1">
-          <div className="text-[14.5px] font-semibold text-[var(--color-fg)]">Agent authorized — it can verify &amp; pay on your behalf</div>
-          <div className="text-[12.5px] text-[var(--color-muted)]">Per-purchase cap {usd(mandate.capUsd)} · asks you above {usd(mandate.approvalThresholdUsd)} · signed policy, revocable anytime.</div>
+          <div className="text-[14.5px] font-semibold text-[var(--color-fg)]">Agent authorized — hands-free pay enabled</div>
+          <div className="text-[12.5px] text-[var(--color-muted)]">PayPal funding connected · per-purchase cap {usd(mandate.capUsd)} · asks you above {usd(mandate.approvalThresholdUsd)} · revocable anytime.</div>
         </div>
         <Link href="/mandate" className="shrink-0 rounded-xl border border-[var(--color-border)] px-3.5 py-2 text-[13px] font-medium text-[var(--color-brand)] hover:bg-[var(--color-brand)]/5">Manage →</Link>
+      </div>
+    ) : (
+      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500 text-white"><I.shield className="h-5 w-5" /></span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[14.5px] font-semibold text-[var(--color-fg)]">Agent authorized — policy set, no funding connected yet</div>
+          <div className="text-[12.5px] text-[var(--color-muted)]">Spending limits are active (cap {usd(mandate.capUsd)} · asks above {usd(mandate.approvalThresholdUsd)}). Connect PayPal funding to let the agent pay hands-free; until then it prepares the payment for you to approve.</div>
+        </div>
+        <Link href="/mandate?vault=1" className="shrink-0 rounded-xl bg-[var(--color-brand)] px-3.5 py-2 text-[13px] font-medium text-white hover:-translate-y-0.5 transition-transform">Connect funding →</Link>
       </div>
     );
   }

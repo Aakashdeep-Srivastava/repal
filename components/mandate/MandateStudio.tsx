@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { fetchMandate, createMandate, revokeMandate, type MandateInput } from "@/lib/client";
@@ -104,10 +104,13 @@ export function MandateStudio() {
   const applyPreset = (k: PresetKey) => { setPreset(k); setCap(PRESETS[k].cap); setBudget(PRESETS[k].budget); setThr(PRESETS[k].thr); };
   const toggle = (arr: string[], set: (v: string[]) => void, v: string) => set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
+  // ?vault=1 (from "Connect funding →") opts into connecting a PayPal funding
+  // source for hands-free auto-pay; otherwise a signed policy-only mandate.
+  const wantVault = useSearchParams().get("vault") === "1";
   const create = useMutation({
     mutationFn: async () => {
       const input: MandateInput = { capUsd: cap, budgetUsd: budget, approvalThresholdUsd: thr, allowCategories: cats, allowMerchants: merch, expiresAt: new Date(Date.now() + 90 * 86_400_000).toISOString() };
-      return createMandate(input);
+      return createMandate(input, { vault: wantVault });
     },
     onSuccess: (r) => { if (r.approveUrl) { window.location.href = r.approveUrl; return; } qc.invalidateQueries({ queryKey: ["mandate"] }); setStep(4); },
   });
