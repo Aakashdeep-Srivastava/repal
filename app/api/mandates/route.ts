@@ -87,37 +87,47 @@ export async function POST(req: Request) {
     },
   });
 
-  // 2. Open the real PayPal Vault setup token (buyer approval).
-  const base = publicBase(req);
-  const returnUrl = `${base}/api/mandates/vault/callback?mandate=${row.id}`;
-  const cancelUrl = `${base}/mandate?cancelled=1`;
-  try {
-    const setup = await createSetupToken(returnUrl, cancelUrl);
-    const approveUrl = setup.links?.find(
-      (l) => l.rel === "approve" || l.rel === "payer-action",
-    )?.href;
-    if (!approveUrl) throw new Error("setup token returned no approve link");
-    await prisma.mandate.update({
-      where: { id: row.id },
-      data: { vaultSetupTokenId: setup.id },
-    });
-    return NextResponse.json(
-      { mandateId: row.id, approveUrl },
-      { status: 201, headers: rateLimitHeaders(rl) },
-    );
-  } catch {
-    // Vault unavailable (PayPal unconfigured / API error) — still activate a
-    // signed, enforceable policy-only mandate so the flow never dead-ends.
-    const signatureHash = signMandate(fieldsOf(row), userId);
-    const activated = await prisma.mandate.update({
-      where: { id: row.id },
-      data: { signatureHash, status: "active" },
-    });
-    return NextResponse.json(
-      { mandateId: row.id, mandate: activated, vault: "unavailable" },
-      { status: 201, headers: rateLimitHeaders(rl) },
-    );
+  // 2. Vault (hands-free auto-pay) is now OPT-IN via ?vault=1. The external
+  //    PayPal Vault approval round-trip is fragile in sandbox (limited Vault
+  //    support on some accounts) and, when it half-completes, PayPal bounces to
+  //    a default URL — so by DEFAULT we activate a real, Ed25519-signed,
+  //    enforceable mandate instantly, in-app, with no external redirect. That
+  //    signed policy IS the agent's delegated authority (the spend gate enforces
+  //    it). Vault only adds no-redirect auto-charge, and only when it works.
+  const wantVault = new URL(req.url).searchParams.get("vault") === "1";
+  if (wantVault) {
+    const base = publicBase(req);
+    const returnUrl = `${base}/api/mandates/vault/callback?mandate=${row.id}`;
+    const cancelUrl = `${base}/mandate?cancelled=1`;
+    try {
+      const setup = await createSetupToken(returnUrl, cancelUrl);
+      const approveUrl = setup.links?.find(
+        (l) => l.rel === "approve" || l.rel === "payer-action",
+      )?.href;
+      if (!approveUrl) throw new Error("setup token returned no approve link");
+      await prisma.mandate.update({
+        where: { id: row.id },
+        data: { vaultSetupTokenId: setup.id },
+      });
+      return NextResponse.json(
+        { mandateId: row.id, approveUrl },
+        { status: 201, headers: rateLimitHeaders(rl) },
+      );
+    } catch {
+      // Vault failed — fall through to instant signed activation below.
+    }
   }
+
+  // Default (and Vault-failure fallback): sign + activate immediately, in-app.
+  const signatureHash = signMandate(fieldsOf(row), userId);
+  const activated = await prisma.mandate.update({
+    where: { id: row.id },
+    data: { signatureHash, status: "active" },
+  });
+  return NextResponse.json(
+    { mandateId: row.id, mandate: activated },
+    { status: 201, headers: rateLimitHeaders(rl) },
+  );
 }
 
 /** GET /api/mandates — the current session user's active mandate (or null). */
