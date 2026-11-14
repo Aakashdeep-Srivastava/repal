@@ -18,6 +18,9 @@ const Body = z.object({
   amountUsd: z.number().positive(),
   description: z.string().optional(),
   vaultId: z.string().optional(), // agent-initiated, no redirect
+  // The agent's chosen funding method (lib/paypal/funding). Selects the Orders
+  // v2 payment_source on the buyer-present path. Defaults to standard PayPal.
+  funding: z.enum(["paypal", "pay_later", "venmo"]).optional(),
 });
 
 export async function POST(req: Request) {
