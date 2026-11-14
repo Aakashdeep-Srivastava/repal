@@ -322,9 +322,13 @@ export interface PayPalTxnRow {
   feeUsd?: number;
 }
 
-export type PayPalTransactions =
-  | { available: true; transactions: PayPalTxnRow[]; from: string; to: string }
+export type PayPalBalance =
+  | { available: true; currency: string; availableUsd: number; totalUsd: number; withheldUsd: number; asOf?: string }
   | { available: false; reason: string };
+
+export type PayPalTransactions =
+  | { available: true; transactions: PayPalTxnRow[]; from: string; to: string; balance?: PayPalBalance }
+  | { available: false; reason: string; balance?: PayPalBalance };
 
 /**
  * GET /api/paypal/transactions — live Transaction Search over RePal's OWN PayPal

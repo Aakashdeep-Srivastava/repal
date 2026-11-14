@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { searchTransactions } from "@/lib/paypal/reporting";
+import { searchTransactions, getAccountBalance } from "@/lib/paypal/reporting";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
@@ -22,6 +22,10 @@ export async function GET(req: Request) {
     );
   }
 
-  const result = await searchTransactions({ days: 30, pageSize: 50 });
-  return NextResponse.json(result, { headers: rateLimitHeaders(rl) });
+  // Fetch the account balance alongside the transactions (both Reporting API).
+  const [result, balance] = await Promise.all([
+    searchTransactions({ days: 30, pageSize: 50 }),
+    getAccountBalance("USD"),
+  ]);
+  return NextResponse.json({ ...result, balance }, { headers: rateLimitHeaders(rl) });
 }

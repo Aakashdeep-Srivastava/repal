@@ -126,3 +126,54 @@ export async function searchTransactions(
     return { available: false, reason: `PayPal reporting error: ${msg}` };
   }
 }
+
+// ─── Balances (Reporting API) ────────────────────────────────────────────
+
+export type BalanceResult =
+  | { available: true; currency: string; availableUsd: number; totalUsd: number; withheldUsd: number; asOf?: string }
+  | { available: false; reason: string };
+
+interface RawBalance {
+  currency?: string;
+  total_balance?: { value?: string; currency_code?: string };
+  available_balance?: { value?: string; currency_code?: string };
+  withheld_balance?: { value?: string; currency_code?: string };
+}
+interface RawBalanceResponse {
+  balances?: RawBalance[];
+  as_of_time?: string;
+}
+
+/**
+ * The authenticated account's PayPal balance (Reporting API). Like
+ * Transaction Search, this is RePal's OWN platform/business account balance —
+ * the ONLY balance an app can legitimately read (a buyer's funding balance is
+ * never exposed). Callers must label it as the account's balance.
+ */
+export async function getAccountBalance(currency = "USD"): Promise<BalanceResult> {
+  try {
+    const res = await paypalRequest<RawBalanceResponse>(
+      `/v1/reporting/balances?currency_code=${encodeURIComponent(currency)}`,
+    );
+    const b = (res.balances ?? []).find((x) => (x.currency ?? x.total_balance?.currency_code) === currency)
+      ?? res.balances?.[0];
+    if (!b) return { available: false, reason: "No balance returned for this account." };
+    return {
+      available: true,
+      currency: b.currency ?? b.available_balance?.currency_code ?? currency,
+      availableUsd: num(b.available_balance?.value),
+      totalUsd: num(b.total_balance?.value),
+      withheldUsd: num(b.withheld_balance?.value),
+      asOf: res.as_of_time,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/\b403\b|NOT_AUTHORIZED|permission|feature/i.test(msg)) {
+      return { available: false, reason: "Balances reporting isn't enabled on this PayPal app." };
+    }
+    if (/PAYPAL_CLIENT_ID|PAYPAL_CLIENT_SECRET|OAuth/i.test(msg)) {
+      return { available: false, reason: "PayPal is not configured in this environment." };
+    }
+    return { available: false, reason: `PayPal balance error: ${msg}` };
+  }
+}
