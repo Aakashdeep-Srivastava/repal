@@ -1,0 +1,37 @@
+{
+  "_comment": "Synthetic, test-only coupon codes mirroring the spec's two example offers (spec §6). Seeded by prisma/seedLedger.ts. Codes are fake demo values — not real redeemable codes.",
+  "coupons": [
+    {
+      "offerId": "off_texovera_watch",
+      "merchantId": "texovera",
+      "publisherId": "gpay",
+      "campaignId": "camp_texovera",
+      "code": "4EZ00WAAOQ",
+      "type": "amount_off",
+      "valueUsd": 5,
+      "minSpendUsd": 20,
+      "oneTimeUse": true,
+      "stackable": false,
+      "terms": "$5 off your prepaid order. Valid once per customer.",
+      "expiresAt": "2027-01-09"
+    },
+    {
+      "offerId": "off_cleartrip_flight",
+      "merchantId": "cleartrip",
+      "publisherId": "repal-mail",
+      "campaignId": "camp_cleartrip",
+      "code": "CTDOM",
+      "type": "pct_off",
+      "valueUsd": 25,
+      "minSpendUsd": 0,
+      "oneTimeUse": false,
+      "stackable": true,
+      "terms": "25% off domestic flight bookings.",
+      "expiresAt": "2027-01-07"
+    }
+  ],
+  "invalid": {
+    "wrongCode": "WRONGCODE",
+    "expiredOfferId": "off_expired_demo"
+  }
+}

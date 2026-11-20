@@ -23,7 +23,15 @@
     "paypal:mcp": "tsx scripts/paypal-mcp.ts",
     "bedrock:smoke": "tsx scripts/bedrock-smoke.ts",
     "e2e": "playwright test",
-    "e2e:report": "playwright show-report"
+    "e2e:report": "playwright show-report",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
+    "test:all": "npm run test:unit && npm run test:e2e",
+    "qa:ledger": "tsx scripts/ledger-smoke.ts",
+    "qa:security": "tsx scripts/security-ledger-smoke.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

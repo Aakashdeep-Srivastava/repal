@@ -30,8 +30,21 @@ function sweep(now: number) {
   for (const [k, b] of store) if (b.resetAt <= now) store.delete(k);
 }
 
+/**
+ * Explicit bypass for controlled test/E2E environments. On localhost there is no
+ * X-Forwarded-For, so clientIp() collapses every request into one "local"
+ * bucket and a parallel E2E suite trips its own 429s. A test run sets
+ * RATE_LIMIT_DISABLED=1 to opt out. Production MUST NEVER set this — the real
+ * limiter (per-client via trusted XFF) stays fully active there.
+ */
+const RATE_LIMIT_DISABLED =
+  process.env.RATE_LIMIT_DISABLED === "1" && process.env.NODE_ENV !== "production";
+
 export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
   const now = Date.now();
+  if (RATE_LIMIT_DISABLED) {
+    return { ok: true, limit, remaining: limit, resetAt: now + windowMs, retryAfterSec: 0 };
+  }
   sweep(now);
   const existing = store.get(key);
 
