@@ -53,6 +53,8 @@ model Payout {
   payoutBatchId String
   status        String   @default("PENDING")
   createdAt     DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Refund {
@@ -64,6 +66,9 @@ model Refund {
   amountUsd Float?
   status    String   @default("PENDING")
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([refundId])
 }
 
 model GoogleToken {
@@ -191,5 +196,254 @@ model CatalogOffer {
   popularity   Int      @default(0)
   expiresAt    DateTime
   isSample     Boolean  @default(true)
+  // Commercial-ledger wiring (additive, all nullable so existing rows are
+  // untouched). A redeemable offer carries a coupon code, the publisher that
+  // distributes it (attribution source) and the campaign that funds it (budget
+  // depletion). `stackable=false` marks an exclusive (not-combinable) offer.
+  code         String?
+  publisherId  String?
+  campaignId   String?
+  stackable    Boolean  @default(true)
   merchant     Merchant @relation(fields: [merchantId], references: [id])
+
+  @@index([publisherId])
+  @@index([campaignId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Commercial ledger (spec §6). Architectural rule: PayPal moves eligible PAYMENT
+// money; this ledger accounts for everything PayPal does NOT — coupon discounts,
+// campaign budgets, non-cash advertising credits, publisher commissions and
+// customer reward liabilities.
+//
+// All amounts are INTEGER CENTS (never Float) so balances are exact and
+// auditable, matching lib/optimizer/money.ts. Three balances are tracked
+// SEPARATELY and must never be conflated: media credits (non-cash), customer
+// cashback (reward liability), and commission (partner payable).
+//
+// References to existing tables (User, Reward, Receipt, Merchant, CatalogOffer)
+// are bare indexed scalar ids — the same convention as Reward.offerId /
+// Payout.userId — so this migration only ADDS tables and nullable columns and
+// never alters or constrains an existing table. Foreign keys are enforced only
+// WITHIN the ledger graph.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// A coupon/offer publisher: distributes a merchant's offers and earns a
+// contractual revenue share on the redemptions it drove (e.g. a payment app, an
+// email newsletter, an affiliate or card network).
+model Publisher {
+  id           String             @id // slug, e.g. "gpay"
+  name         String
+  kind         String // payment_app | email | affiliate_network | card_network | direct
+  createdAt    DateTime           @default(now())
+  agreements   PartnerAgreement[]
+  attributions Attribution[]
+}
+
+// Commercial terms between RePal and a publisher: RePal's fee on redeemed value
+// and the publisher's cut OF that fee. Basis points (1bp = 0.01%) keep the math
+// integer-exact.
+model PartnerAgreement {
+  id            String    @id @default(cuid())
+  publisherId   String
+  merchantId    String? // null = applies to every merchant
+  repalFeeBps   Int // RePal's commission on redeemed GMV, in basis points
+  revShareBps   Int // publisher's share OF RePal's fee, in basis points
+  status        String    @default("active") // active | suspended
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+  publisher     Publisher @relation(fields: [publisherId], references: [id])
+
+  @@index([publisherId])
+  @@index([merchantId])
+}
+
+// A brand/advertiser's funded promotional campaign. `budgetCents` is the funded
+// discount budget that depletes as offers redeem; `mediaCreditCents` is a
+// NON-CASH advertising allowance (never paid out). For the MVP the advertiser is
+// the merchant (a brand funds its own offers).
+model CampaignBudget {
+  id               String       @id @default(cuid())
+  merchantId       String // the funding brand/advertiser (== merchant for MVP)
+  name             String
+  currency         String       @default("USD")
+  budgetCents      Int // total funded discount budget
+  spentCents       Int          @default(0) // depleted by redemptions
+  mediaCreditCents Int          @default(0) // non-cash advertising credits granted
+  status           String       @default("active") // active | exhausted | paused
+  startsAt         DateTime     @default(now())
+  endsAt           DateTime?
+  createdAt        DateTime     @default(now())
+  redemptions      Redemption[]
+
+  @@index([merchantId])
+  @@index([status])
+}
+
+// The core commercial event: a validated coupon applied to a real purchase.
+// Created at capture time from the plan's applied rewards. `one_time_use` is
+// enforced in the recording transaction (a user holds at most one non-reversed
+// redemption per offer). RePal's ledger — not PayPal — accounts for the
+// face-value discount.
+model Redemption {
+  id             String                 @id @default(cuid())
+  userId         String // bare ref (existing convention)
+  rewardId       String? // the applied Reward row, if any
+  offerId        String? // CatalogOffer id, if from the catalog
+  merchantId     String
+  campaignId     String?
+  receiptId      String? // the signed purchase receipt
+  code           String? // coupon code presented at redemption
+  discountCents  Int // face value of the discount applied
+  grossCents     Int // pre-discount price
+  netPaidCents   Int // what PayPal actually moved
+  status         String                 @default("redeemed") // validated | redeemed | reversed
+  reversedReason String?
+  createdAt      DateTime               @default(now())
+  campaign       CampaignBudget?        @relation(fields: [campaignId], references: [id])
+  attribution    Attribution?
+  commissions    CommissionLedger[]
+  rewardCredits  CustomerRewardLedger[]
+
+  @@index([userId])
+  @@index([offerId])
+  @@index([merchantId])
+  @@index([receiptId])
+  @@index([status])
+}
+
+// Which publisher drove a redemption — the provenance that justifies a
+// revenue-share payout. One row per redemption.
+model Attribution {
+  id           String     @id @default(cuid())
+  redemptionId String     @unique
+  publisherId  String
+  merchantId   String
+  model        String     @default("last_touch") // last_touch | coupon_code
+  createdAt    DateTime   @default(now())
+  redemption   Redemption @relation(fields: [redemptionId], references: [id])
+  publisher    Publisher  @relation(fields: [publisherId], references: [id])
+
+  @@index([publisherId])
+  @@index([merchantId])
+}
+
+// Commission earned on a redemption. `party` is who the entry is owed TO; a
+// single redemption produces a RePal entry and (if a publisher drove it) a
+// publisher entry whose amount is carved out of RePal's fee. Lifecycle:
+// pending → payable → paid, or → reversed on refund/cancellation.
+model CommissionLedger {
+  id           String     @id @default(cuid())
+  redemptionId String
+  party        String // repal | publisher
+  publisherId  String? // set when party = publisher
+  merchantId   String
+  amountCents  Int // commission owed to `party`
+  currency     String     @default("USD")
+  status       String     @default("pending") // pending | payable | paid | reversed
+  payoutItemId String? // the PayoutItem that settled it (party = publisher)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  redemption   Redemption @relation(fields: [redemptionId], references: [id])
+
+  @@index([redemptionId])
+  @@index([party])
+  @@index([status])
+  @@index([merchantId])
+}
+
+// Non-cash advertising credits. A brand grants RePal a media allowance that is
+// an advertising ENTITLEMENT, never cash and never payable through PayPal —
+// tracked entirely apart from commission and cashback. `direction` gives the
+// sign; `amountCents` is always positive.
+model MediaCreditLedger {
+  id          String   @id @default(cuid())
+  merchantId  String
+  campaignId  String?
+  direction   String // grant | consume
+  amountCents Int
+  currency    String   @default("USD")
+  memo        String?
+  createdAt   DateTime @default(now())
+
+  @@index([merchantId])
+  @@index([campaignId])
+}
+
+// Customer cashback liability. A cashback offer accrues an obligation to the
+// shopper at redemption; it becomes payable, then paid via a PayPal Payout, or
+// reversed if the purchase is refunded.
+model CustomerRewardLedger {
+  id           String      @id @default(cuid())
+  userId       String
+  redemptionId String?
+  merchantId   String
+  amountCents  Int // cashback owed to the customer
+  currency     String      @default("USD")
+  status       String      @default("accrued") // accrued | payable | paid | reversed
+  payoutItemId String? // the PayoutItem that settled it
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  redemption   Redemption? @relation(fields: [redemptionId], references: [id])
+
+  @@index([userId])
+  @@index([redemptionId])
+  @@index([status])
+}
+
+// Unified record of PayPal PAYMENT money movement (orders, captures, refunds) —
+// a thin ledger over the existing Receipt/Refund rows so the commercial books
+// reconcile what PayPal actually moved, per seller. Seller fields anticipate
+// multi-seller; single-seller leaves them on the one unit. Holds only real
+// money — never coupon/commission/credit amounts.
+model PaymentLedger {
+  id               String   @id @default(cuid())
+  userId           String
+  receiptId        String?
+  kind             String // order | capture | refund
+  paypalOrderId    String?
+  paypalCaptureId  String?
+  sellerMerchantId String? // payee merchant for this unit (multi-seller ready)
+  amountCents      Int // positive for capture, negative for refund
+  currency         String   @default("USD")
+  status           String // CREATED | COMPLETED | PARTIALLY_COMPLETED | DECLINED | REFUNDED
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([receiptId])
+  @@index([paypalCaptureId])
+  @@index([kind])
+}
+
+// PayPal Payouts as a batch header + items (the existing flat Payout row has no
+// batch/item structure). Each item links to the ledger entry it settles — a
+// publisher commission or a customer cashback.
+model PayoutBatch {
+  id            String       @id @default(cuid())
+  senderBatchId String       @unique // our idempotency key → PayPal sender_batch_id
+  payoutBatchId String? // PayPal's assigned batch id
+  status        String       @default("PENDING") // PENDING | PROCESSING | SUCCESS | DENIED
+  totalCents    Int
+  currency      String       @default("USD")
+  createdAt     DateTime     @default(now())
+  items         PayoutItem[]
+}
+
+model PayoutItem {
+  id             String      @id @default(cuid())
+  batchId        String
+  purpose        String // publisher_commission | customer_cashback
+  receiverEmail  String
+  amountCents    Int
+  currency       String      @default("USD")
+  status         String      @default("PENDING") // PENDING | SUCCESS | FAILED | UNCLAIMED
+  commissionId   String? // CommissionLedger settled by this item
+  rewardLedgerId String? // CustomerRewardLedger settled by this item
+  payoutItemId   String? // PayPal's payout_item_id
+  createdAt      DateTime    @default(now())
+  batch          PayoutBatch @relation(fields: [batchId], references: [id])
+
+  @@index([batchId])
+  @@index([purpose])
+  @@index([status])
 }
