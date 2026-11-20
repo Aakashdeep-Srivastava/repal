@@ -75,6 +75,22 @@ export async function recordRedemption(
   // This transaction does ~10 sequential round-trips; give it headroom beyond
   // Prisma's 5s default so a cold compute / pooled (PgBouncer) connection can't
   // trip P2028 ("transaction not found") mid-write.
+  try {
+    return await recordRedemptionTxn(prisma, input);
+  } catch (e) {
+    // A concurrent double-redemption of a one-time offer loses the race on the
+    // unique oneTimeKey index (P2002) — report it the same as the fast-path check.
+    if (e != null && typeof e === "object" && (e as { code?: string }).code === "P2002") {
+      throw new RedemptionError("already_redeemed", "offer already redeemed (concurrent)");
+    }
+    throw e;
+  }
+}
+
+async function recordRedemptionTxn(
+  prisma: PrismaClient,
+  input: RecordRedemptionInput,
+): Promise<RedemptionResult> {
   return prisma.$transaction(async (tx) => {
     // 1. Resolve the offer (if any) for code / type / campaign / publisher / rules.
     const offer = input.offerId
@@ -92,7 +108,12 @@ export async function recordRedemption(
     }
 
     // 3. one_time_use: at most one non-reversed redemption per (user, offer).
-    if (input.offerId && hasOneTimeUse(offer?.rules)) {
+    //    The findFirst is a friendly fast path for the sequential case; the
+    //    authoritative guarantee is the unique `oneTimeKey` index below, which
+    //    makes a CONCURRENT double-redemption fail atomically (caught as P2002).
+    const isOneTime = !!(input.offerId && hasOneTimeUse(offer?.rules));
+    const oneTimeKey = isOneTime ? `${input.userId}:${input.offerId}` : null;
+    if (isOneTime) {
       const prior = await tx.redemption.findFirst({
         where: { userId: input.userId, offerId: input.offerId, status: { not: "reversed" } },
         select: { id: true },
@@ -148,6 +169,7 @@ export async function recordRedemption(
         grossCents: input.grossCents,
         netPaidCents: input.netPaidCents,
         status: "redeemed",
+        oneTimeKey,
       },
     });
 

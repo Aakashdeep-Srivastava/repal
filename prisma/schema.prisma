@@ -299,6 +299,12 @@ model Redemption {
   netPaidCents   Int // what PayPal actually moved
   status         String                 @default("redeemed") // validated | redeemed | reversed
   reversedReason String?
+  // Atomic one_time_use enforcement: set to `${userId}:${offerId}` ONLY for a
+  // one-time offer (null otherwise, and nulled on reversal). A unique index then
+  // makes a concurrent double-redemption fail at the DB (P2002) — an app-level
+  // check alone races. Postgres treats NULLs as distinct, so repeatable offers
+  // (null key) are never constrained.
+  oneTimeKey     String?                @unique
   createdAt      DateTime               @default(now())
   campaign       CampaignBudget?        @relation(fields: [campaignId], references: [id])
   attribution    Attribution?
