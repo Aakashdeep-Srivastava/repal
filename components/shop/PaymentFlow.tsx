@@ -5,7 +5,6 @@ import { MotionButton, AnimatedStatus, type StatusTone } from "@/components/moti
 import { useJourney } from "@/lib/store/journey";
 import { isPaymentSuccess, type PaymentStatus } from "@/lib/shop/types";
 import type { Product, PlanWithPolicy } from "@/lib/shop/types";
-import { selectFunding, type FundingSource } from "@/lib/paypal/funding";
 
 /**
  * PaymentFlow — the event-driven payment state machine. Every state transition
@@ -35,12 +34,6 @@ export interface PaymentFlowProps {
   plan: PlanWithPolicy;
   product: Product;
   mode: "live" | "demo";
-  /**
-   * The agent-selected funding method (page-owned). null = defer to the agent's
-   * deterministic recommendation. Sent to Orders v2 on the live path to pick the
-   * `payment_source`; the demo path makes no PayPal call so it's informational.
-   */
-  funding?: FundingSource | null;
   /** Called once, with the server-issued receipt id, on terminal success. */
   onComplete: (receiptId: string) => void;
   /** Gate from the confirm-to-pay checkbox (page-owned). */
@@ -87,7 +80,6 @@ export function PaymentFlow({
   plan,
   product,
   mode,
-  funding = null,
   onComplete,
   disabled = false,
 }: PaymentFlowProps) {
@@ -224,17 +216,15 @@ export function PaymentFlow({
       }
 
       // ── Live path: create order → buyer approves on PayPal → capture. ──
-      // The agent's chosen funding (or its default recommendation) selects the
-      // Orders v2 payment_source so PayPal opens the right wallet.
+      // PayPal is the sole funding source — the order opens the PayPal wallet.
       setPayment("preparing");
-      const chosenFunding = funding ?? selectFunding(plan.cashUsd).chosen.source;
       const orderRes = await fetch("/api/pay/order", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           amountUsd: plan.cashUsd,
           description: plan.offer.title,
-          funding: chosenFunding,
+          funding: "paypal",
         }),
       });
       const order = (await orderRes.json().catch(() => ({}))) as {
@@ -264,7 +254,7 @@ export function PaymentFlow({
       setPayment(cancelled ? "cancelled" : "failed", msg);
       submittingRef.current = false; // allow a fresh retry attempt.
     }
-  }, [buildDecision, funding, mode, onComplete, plan, setOrderId, setPayment, setReceiptId]);
+  }, [buildDecision, mode, onComplete, plan, setOrderId, setPayment, setReceiptId]);
 
   const retry = useCallback(() => {
     submittingRef.current = false;

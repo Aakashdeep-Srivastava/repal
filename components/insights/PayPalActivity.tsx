@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPayPalTransactions, type PayPalTxnRow } from "@/lib/client";
 
@@ -64,10 +65,15 @@ function Note({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Row({ t }: { t: PayPalTxnRow }) {
+function Row({ t, index }: { t: PayPalTxnRow; index: number }) {
   const st = statusMeta(t.status);
   return (
-    <div className="flex items-center gap-3 border-t border-[var(--color-border)] px-4 py-3 text-sm first:border-t-0">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: Math.min(index * 0.04, 0.4), ease: [0.22, 1, 0.36, 1] }}
+      className="flex flex-col gap-1.5 border-t border-[var(--color-border)] px-4 py-3 text-sm first:border-t-0 sm:flex-row sm:items-center sm:gap-3"
+    >
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-[var(--color-fg)]">{eventLabel(t.eventCode)}</p>
         <p className="truncate font-mono text-xs text-[var(--color-muted)]">
@@ -75,12 +81,16 @@ function Row({ t }: { t: PayPalTxnRow }) {
           {t.payerEmail ? ` · ${t.payerEmail}` : ""}
         </p>
       </div>
-      <span className="shrink-0 text-xs text-[var(--color-muted)]">{fmtDate(t.date)}</span>
-      <span className={`shrink-0 text-xs font-medium ${st.cls}`}>{st.label}</span>
-      <span className="tnum shrink-0 w-24 text-right font-medium text-[var(--color-fg)]">
-        {usd(t.amountUsd, t.currency)}
-      </span>
-    </div>
+      {/* On mobile the meta drops to its own line with the amount pushed right;
+          on sm+ it sits inline to the right of the label. */}
+      <div className="flex items-center gap-3">
+        <span className="shrink-0 text-xs text-[var(--color-muted)]">{fmtDate(t.date)}</span>
+        <span className={`shrink-0 text-xs font-medium ${st.cls}`}>{st.label}</span>
+        <span className="tnum ml-auto w-24 shrink-0 text-right font-medium text-[var(--color-fg)] sm:ml-0">
+          {usd(t.amountUsd, t.currency)}
+        </span>
+      </div>
+    </motion.div>
   );
 }
 
@@ -142,8 +152,8 @@ export function PayPalActivity() {
           </Note>
         ) : (
           <div className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
-            {data.transactions.slice(0, 12).map((t) => (
-              <Row key={t.id} t={t} />
+            {data.transactions.slice(0, 12).map((t, i) => (
+              <Row key={t.id} t={t} index={i} />
             ))}
           </div>
         )}

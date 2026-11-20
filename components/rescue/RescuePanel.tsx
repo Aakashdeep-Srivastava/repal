@@ -8,6 +8,7 @@
  */
 import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import RepalLoader from "@/components/brand/RepalLoader";
 import { RewardPass } from "@/components/wallet/RewardPass";
@@ -64,28 +65,47 @@ export default function RescuePanel({ license }: { license: string }) {
   return (
     <div className="space-y-5">
       <RescueTimeline rewards={active} license={license} onSelect={onSelect} />
-      {selected ? (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-[var(--color-fg)]">
-            Cash out this reward
-          </p>
-          <div className="max-w-md">
-            <RewardPass
-              reward={selected}
-              index={0}
-              defaultEmail={me?.email}
-              onCashedOut={() => {
-                qc.invalidateQueries({ queryKey: ["wallet", userId] });
-                setSelectedId(null);
-              }}
-            />
-          </div>
-        </div>
-      ) : (
-        <p className="text-xs text-[var(--color-muted)]">
-          👆 Click a reward bar on the timeline to cash it out to PayPal.
-        </p>
-      )}
+
+      {/* The cash-out panel reveals when a bar is clicked, and cross-fades when
+          the selection changes — a single, orchestrated moment of motion. */}
+      <AnimatePresence mode="wait" initial={false}>
+        {selected ? (
+          <motion.div
+            key={selected.id}
+            initial={{ opacity: 0, y: 14, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            className="space-y-3"
+          >
+            <p className="text-sm font-semibold text-[var(--color-fg)]">
+              Cash out this reward
+            </p>
+            <div className="max-w-md">
+              <RewardPass
+                reward={selected}
+                index={0}
+                defaultEmail={me?.email}
+                onCashedOut={() => {
+                  qc.invalidateQueries({ queryKey: ["wallet", userId] });
+                  setSelectedId(null);
+                }}
+              />
+            </div>
+          </motion.div>
+        ) : (
+          <motion.p
+            key="hint"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="text-xs text-[var(--color-muted)]"
+          >
+            👆 Click a reward bar on the timeline to cash it out to PayPal.
+          </motion.p>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
