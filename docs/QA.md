@@ -58,18 +58,18 @@ DATABASE_URL=<QA> DIRECT_URL=<QA_DIRECT> RATE_LIMIT_DISABLED=1 npm run test:e2e
 - **Unit/logic: 177 passed, 20 skipped** (optimizer, policy, receipts, tnc, funding, toolkit, **ledger commission/cashback/balances**).
 - **Ledger integration smoke: 19/19** (commission split, budget depletion, attribution, cashback, one-time guard, invalid code, balances, markPayable, reversal).
 - **Security smoke: 7/7** (concurrent one-time → exactly one; per-user scope; wrong code; media credits never payable; reversal leaves media credits untouched).
-- **Browser E2E: 15/17 passed** against the isolated DB. The 2 failures are finding F1 (real UI gap), not flakiness. The 3 shopping-journey tests failed first on self-inflicted 429s → fixed by the test-only rate-limit bypass (see §3).
+- **Browser E2E: 17/17 passed** against the isolated DB (after fixing F1 + the rate-limit testability bypass). An earlier run was 15/17 — the 2 were finding F1 (now fixed), and 3 shopping-journey tests first failed on self-inflicted 429s → fixed by the test-only rate-limit bypass (§3).
 
 ## 7. Findings (classified, not green-washed)
 
-- **F1 — real defect (open):** the signed-in persona name is never surfaced in the app shell. `components/nav/UserMenu.tsx` is implemented but **mounted nowhere**; the wallet shell greets the judge session as "Guest". Two E2E tests (`home.spec`, `journey.spec`) correctly fail on `getByText(/Maya/)`. Fix = mount `UserMenu` (or wire the shell greeting to `/api/me`). Left failing on purpose.
+- **F1 — real defect (FIXED):** after a client-side "Try Live Demo" login the shell greeted the user as "Guest"/"there". Root cause: the `judgeLogin` mutation navigated to `/wallet` without invalidating the `["me"]` React Query cache (populated as `null` on the logged-out landing page), so the shell read stale `me=null`. Fixed in `Landing.tsx` + `SiteFooter.tsx` (`invalidateQueries(["me"])` before navigating). `home.spec` + `journey.spec` now pass. (`components/nav/UserMenu.tsx` remains unmounted dead code — separate cleanup.)
 - **F2 — known gap (deferred):** `app/api/pay/capture` reads `purchase_units[0].payments.captures[0].id` with no status inspection — no `PARTIALLY_COMPLETED` / HTTP 207 handling. Safe today (single-seller) but must be fixed with multi-seller Orders v2. `tests/helpers/paypal.ts#readCapture` already surfaces per-unit status for the future test.
 - **F3 — real defect (FIXED this session):** concurrent one-time redemption double-redeemed (TOCTOU race; the app-level `findFirst` guard didn't hold). Fixed with a DB-level unique `oneTimeKey` index (`recordRedemption` sets it for one-time offers, `reverseRedemption` frees it, a P2002 maps to `already_redeemed`). Regression-guarded by `qa:security`.
 
 ## 8. Remaining work
-1. Fix F1 (mount the signed-in identity) → the 2 E2E tests go green honestly.
-2. CI (GitHub Actions): unit → migration-validation → E2E (isolated branch) → ledger/security smokes → report; block merge on fail.
-3. Playwright projects for Mobile Chromium + WebKit; automated a11y assertions.
-4. Duplicate-webhook idempotency + duplicate-capture + amount-manipulation E2E specs.
-5. Multi-seller 207 handling + its tests (F2).
-6. `/qa` engineering dashboard.
+1. CI (GitHub Actions): unit → migration-validation → E2E (isolated branch) → ledger/security smokes → report; block merge on fail.
+2. Playwright projects for Mobile Chromium + WebKit; automated a11y assertions.
+3. Duplicate-webhook idempotency + duplicate-capture + amount-manipulation E2E specs.
+4. Multi-seller 207 handling + its tests (F2).
+5. `/qa` engineering dashboard.
+6. Delete the unmounted `components/nav/UserMenu.tsx` dead code (or mount it as the real account menu).

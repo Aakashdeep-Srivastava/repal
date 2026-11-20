@@ -4,7 +4,7 @@ import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -55,8 +55,17 @@ const StepPill = ({ icon, label }: { icon: React.ReactNode; label: string }) => 
 
 export function Landing() {
   const router = useRouter();
+  const qc = useQueryClient();
   const root = useRef<HTMLElement>(null);
-  const demo = useMutation({ mutationFn: judgeLogin, onSuccess: () => router.push("/wallet") });
+  // Invalidate the cached ["me"] (populated as null while logged out) so the
+  // wallet shell shows the signed-in identity instead of stale "Guest"/"there".
+  const demo = useMutation({
+    mutationFn: judgeLogin,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["me"] });
+      router.push("/wallet");
+    },
+  });
   // Session awareness — once the visitor has logged in (PayPal or judge demo),
   // the "Login with PayPal" CTAs flip to a "you're in" state so they aren't
   // asked to connect again.
