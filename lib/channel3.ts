@@ -125,6 +125,34 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
   }
 }
 
+// ── Short-lived in-memory cache (browse path) ────────────────────────────────
+// The rich product search hits Channel3 live on every call; a brief TTL cache
+// spares the API under repeated/identical browsing without risking stale prices.
+// Keyed by query + filters + locale; 60s TTL; simple LRU eviction.
+const PRODUCT_TTL_MS = 60_000;
+const PRODUCT_CACHE_MAX = 200;
+const productCache = new Map<string, { value: Product[]; at: number }>();
+
+function cacheGet(key: string): Product[] | null {
+  const hit = productCache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at > PRODUCT_TTL_MS) {
+    productCache.delete(key);
+    return null;
+  }
+  productCache.delete(key); // refresh recency (move to newest)
+  productCache.set(key, hit);
+  return hit.value;
+}
+
+function cacheSet(key: string, value: Product[]): void {
+  productCache.set(key, { value, at: Date.now() });
+  if (productCache.size > PRODUCT_CACHE_MAX) {
+    const oldest = productCache.keys().next().value;
+    if (oldest !== undefined) productCache.delete(oldest);
+  }
+}
+
 // ── Mapping (Channel3 → our Product / Offer) ─────────────────────────────────
 
 /** Best (cheapest) offer in the requested currency, or null when none is usable. */
@@ -137,7 +165,13 @@ function bestOffer(
       (o.price.currency ?? CURRENCY).toUpperCase() === CURRENCY,
   );
   if (usable.length === 0) return null;
-  return usable.reduce((a, b) => (a.price.price <= b.price.price ? a : b));
+  return usable.reduce((a, b) => {
+    // The user ALWAYS gets the cheapest price. Only when two offers tie on price
+    // do we prefer the one that earns RePal more (affiliate commission) — a
+    // revenue lever that never costs the shopper a cent.
+    if (a.price.price !== b.price.price) return a.price.price < b.price.price ? a : b;
+    return (a.max_commission_rate ?? 0) >= (b.max_commission_rate ?? 0) ? a : b;
+  });
 }
 
 /** Prefer the background-removed CDN shot (best for grids), then the main image. */
@@ -161,7 +195,12 @@ function toMerchantOffers(offers: Channel3Api.ProductOffer[]): MerchantOffer[] {
       buyUrl: o.url,
       maxCommissionRate: o.max_commission_rate,
     }))
-    .sort((a, b) => a.priceUsd - b.priceUsd);
+    // Cheapest first; ties broken by higher commission (same rule as bestOffer).
+    .sort(
+      (a, b) =>
+        a.priceUsd - b.priceUsd ||
+        (b.maxCommissionRate ?? 0) - (a.maxCommissionRate ?? 0),
+    );
 }
 
 /**
@@ -208,6 +247,10 @@ export async function searchChannel3Products(
   query: string,
   opts: SearchOptions = {},
 ): Promise<Product[]> {
+  const cacheKey = `${query.trim()}|${opts.maxPriceUsd ?? ""}|${opts.limit ?? ""}|${COUNTRY}|${CURRENCY}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+
   const c = client();
   const req: Channel3Api.SearchRequest = {
     query: query.trim() || null,
@@ -219,9 +262,11 @@ export async function searchChannel3Products(
   }
   try {
     const page = await withRetry(() => c.products.search(req));
-    return (page.data ?? [])
+    const products = (page.data ?? [])
       .map((p) => mapProduct(p, query))
       .filter((x): x is Product => x !== null);
+    cacheSet(cacheKey, products);
+    return products;
   } catch (e) {
     throw toFailure(e);
   }
