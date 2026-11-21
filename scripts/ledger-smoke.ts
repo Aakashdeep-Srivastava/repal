@@ -11,6 +11,7 @@
  */
 import { prisma } from "../lib/db";
 import { recordRedemption, reverseRedemption, getBalances, markPayable, RedemptionError } from "../lib/ledger";
+import { confirmRedemption, getRedemptionAdapter } from "../lib/redemption";
 
 let failures = 0;
 function check(label: string, cond: boolean, detail?: unknown) {
@@ -102,12 +103,25 @@ async function main() {
   // publisher commissions: gpay 40c (texovera) + repal-mail 6% of $60 *15% = floor(360*1500/10000)=54 → 54c
   check("publisher commission payable = 40 + 54 = 94c", bal.commissionPayableCents === 94, bal);
 
-  // ── 6. markPayable advances the lifecycle ─────────────────────────────────
-  const mp = await markPayable(prisma);
-  check("markPayable advanced commissions + cashback", mp.commissionsMarked >= 1 && mp.cashbackMarked >= 1, mp);
+  // ── 6. Phase 3 gate: unconfirmed redemptions are NOT settleable ───────────
+  const adapter = getRedemptionAdapter({ forceSandbox: true });
+  const mpBefore = await markPayable(prisma);
+  check("markPayable advances NOTHING before merchant confirmation", mpBefore.commissionsMarked === 0 && mpBefore.cashbackMarked === 0, mpBefore);
 
-  // ── 7. Reversal unwinds the first redemption ──────────────────────────────
+  // Merchant/affiliate confirms both redemptions (sandbox adapter — labelled simulated).
+  const c1 = await confirmRedemption(prisma, r1.redemptionId, adapter);
+  await confirmRedemption(prisma, r2.redemptionId, adapter);
+  check("sandbox confirmation is labelled simulated, deterministic ref", c1.confirmed && c1.simulated && c1.confirmationRef === `SANDBOX-${r1.redemptionId}`, c1);
+  check("re-confirming r1 is idempotent", (await confirmRedemption(prisma, r1.redemptionId, adapter)).alreadyConfirmed === true);
+
+  // ── 7. markPayable advances the lifecycle AFTER confirmation ──────────────
+  const mp = await markPayable(prisma);
+  check("markPayable advanced commissions + cashback after confirmation", mp.commissionsMarked >= 1 && mp.cashbackMarked >= 1, mp);
+
+  // ── 8. Reversal unwinds the first (confirmed) redemption ──────────────────
   const rev = await reverseRedemption(prisma, r1.redemptionId, "refund (smoke)");
+  const r1row = await prisma.redemption.findUnique({ where: { id: r1.redemptionId } });
+  check("reversal cleared the merchant confirmation", r1row?.confirmedAt === null && r1row?.confirmationSource === null, r1row);
   check("reversal restored $5 to the campaign budget", rev.budgetRestoredCents === 500, rev);
   const campAfter = await prisma.campaignBudget.findUnique({ where: { id: "camp_texovera" } });
   check("campaign spend back to 0 after reversal", campAfter?.spentCents === 0, campAfter);

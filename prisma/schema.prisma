@@ -305,6 +305,15 @@ model Redemption {
   // check alone races. Postgres treats NULLs as distinct, so repeatable offers
   // (null key) are never constrained.
   oneTimeKey     String?                @unique
+  // Phase 3 — merchant/affiliate confirmation. A redemption RePal records from
+  // internal eligibility is NOT yet revenue: a commission is only payable once the
+  // merchant (or its affiliate network) confirms the redemption. These stay null
+  // until a RedemptionAdapter confirms; `markPayable` refuses to settle without
+  // `confirmedAt`. Nulled again on reversal. (`confirmationSource` names the adapter,
+  // e.g. "sandbox" or "affiliate:<network>"; `confirmationRef` is its external ref.)
+  confirmedAt        DateTime?
+  confirmationSource String?
+  confirmationRef    String?
   createdAt      DateTime               @default(now())
   campaign       CampaignBudget?        @relation(fields: [campaignId], references: [id])
   attribution    Attribution?
