@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
+import { cookies } from "next/headers";
 import { PAYPAL_BASE } from "@/lib/paypal/client";
 import { prisma } from "@/lib/db";
 import { setSession } from "@/lib/auth/session";
 import { grantWelcomeReward } from "@/lib/rewards/welcome";
+import { PP_STATE_COOKIE } from "@/lib/auth/paypal-state";
 
 /**
  * GET /api/auth/paypal/callback — Log in with PayPal (OIDC) code exchange.
@@ -19,6 +22,18 @@ export async function GET(req: Request) {
   const code = url.searchParams.get("code");
   if (!code) {
     return NextResponse.json({ error: "missing code" }, { status: 400 });
+  }
+
+  // CSRF: the `state` PayPal echoes back must match the one we stored in an
+  // httpOnly cookie at login. No/missing/mismatched state → reject before any
+  // token exchange or session mint. (Constant-time compare.)
+  const returnedState = url.searchParams.get("state") ?? "";
+  const jar = await cookies();
+  const expectedState = jar.get(PP_STATE_COOKIE)?.value ?? "";
+  const a = Buffer.from(returnedState);
+  const b = Buffer.from(expectedState);
+  if (!expectedState || a.length !== b.length || !timingSafeEqual(a, b)) {
+    return NextResponse.json({ error: "invalid OAuth state" }, { status: 400 });
   }
 
   const id = process.env.PAYPAL_CLIENT_ID;
@@ -81,7 +96,9 @@ export async function GET(req: Request) {
     // PAYPAL_OIDC_REDIRECT is the registered public callback, so its origin is
     // the app's true public base.
     const publicBase = new URL(redirect).origin;
-    return NextResponse.redirect(new URL("/wallet", publicBase));
+    const res = NextResponse.redirect(new URL("/wallet", publicBase));
+    res.cookies.set(PP_STATE_COOKIE, "", { path: "/api/auth/paypal", maxAge: 0 }); // one-time use
+    return res;
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "oidc failed" },

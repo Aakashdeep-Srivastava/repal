@@ -9,11 +9,24 @@ import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
  * Buyer-present (no `vaultId`): the order is created with return/cancel URLs
  * pointing back at /checkout, and the response includes `approveUrl` — the
  * PayPal page the buyer must approve on BEFORE /api/pay/capture can succeed.
- * The URLs are built server-side from this request's origin (never taken from
+ * The URLs are built server-side from the app's PUBLIC base (never taken from
  * the client) so the route can't be used as an open redirect.
+ *
+ * Why not `req.url`: behind CloudFront → ALB → ECS the request host is the
+ * internal instance hostname (e.g. ip-10-x.compute.internal:8080), so a return
+ * URL built from it sends the buyer's browser to an address only reachable
+ * inside AWS (DNS_PROBE_FINISHED_NXDOMAIN). We derive the public origin from
+ * PAYPAL_OIDC_REDIRECT (the registered public callback) instead — the same
+ * fix the login callback and the mandates routes already use.
  *
  * Agent-initiated (`vaultId`): pays with the stored Vault token, no redirect.
  */
+
+/** The app's public origin (CloudFront), NOT the internal request host. */
+function publicBase(req: Request): string {
+  const r = process.env.PAYPAL_OIDC_REDIRECT;
+  return r ? new URL(r).origin : new URL(req.url).origin;
+}
 const Body = z.object({
   amountUsd: z.number().positive(),
   description: z.string().optional(),
@@ -37,7 +50,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const origin = new URL(req.url).origin;
+  const origin = publicBase(req);
   const urls = {
     returnUrl: `${origin}/checkout?paypal=return`,
     cancelUrl: `${origin}/checkout?paypal=cancel`,

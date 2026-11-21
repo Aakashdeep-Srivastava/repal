@@ -1,0 +1,11 @@
+{
+  "_comment": "Synthetic demonstration merchants + their brand campaigns (spec §6, §9). These are NOT the real TexoVera / Cleartrip businesses — demo stand-ins seeded by prisma/seedLedger.ts. All amounts in cents.",
+  "merchants": [
+    { "id": "texovera", "name": "TexoVera (demo)", "category": "electronics", "campaignId": "camp_texovera", "budgetCents": 50000, "mediaCreditCents": 10000 },
+    { "id": "cleartrip", "name": "Cleartrip (demo)", "category": "travel", "campaignId": "camp_cleartrip", "budgetCents": 100000, "mediaCreditCents": 0 }
+  ],
+  "publishers": [
+    { "id": "gpay", "name": "Payment-App Offers (demo)", "repalFeeBps": 800, "revShareBps": 2500 },
+    { "id": "repal-mail", "name": "RePal Newsletter (demo)", "repalFeeBps": 600, "revShareBps": 1500 }
+  ]
+}

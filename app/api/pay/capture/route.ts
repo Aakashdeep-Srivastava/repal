@@ -4,6 +4,9 @@ import { captureOrder } from "@/lib/paypal/orders";
 import { issueReceipt } from "@/lib/receipts/issue";
 import { gateSpend } from "@/lib/policy/gate";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
+import { prisma } from "@/lib/db";
+import { toCents } from "@/lib/optimizer/money";
+import { recordRedemption } from "@/lib/ledger";
 
 /**
  * POST /api/pay/capture — capture an approved order and issue the signed
@@ -29,6 +32,18 @@ const Body = z.object({
       fxInrPerUsd: z.number().optional(),
       /** Explicit human approval — required when policy returns "ask". */
       approved: z.boolean().optional(),
+      /**
+       * Commercial-ledger linkage (all optional, additive). When present the
+       * capture also records a Redemption: the discount against the campaign
+       * budget, the commission (RePal + publisher share), attribution and any
+       * customer cashback. `merchantId` is the slug (not the display name).
+       */
+      merchantId: z.string().min(1).max(64).optional(),
+      offerId: z.string().min(1).max(64).optional(),
+      rewardId: z.string().min(1).max(64).optional(),
+      code: z.string().min(1).max(64).optional(),
+      publisherId: z.string().min(1).max(64).optional(),
+      campaignId: z.string().min(1).max(64).optional(),
     })
     .optional(),
 });
@@ -92,7 +107,40 @@ export async function POST(req: Request) {
       paypalOrderId: orderId,
       paypalCaptureId: captureId,
     });
-    return NextResponse.json({ capture, receiptId: receipt.id, verifyUrl: `/verify/${receipt.id}` });
+
+    // Record the commercial redemption AFTER the receipt. PayPal has already
+    // moved the money and the signed receipt is the source of truth, so this
+    // secondary bookkeeping is best-effort and must NEVER fail the capture. Only
+    // runs when the caller supplied the merchant slug (the commercial linkage).
+    let redemptionId: string | undefined;
+    if (decision.merchantId) {
+      try {
+        const result = await recordRedemption(prisma, {
+          userId: decision.userId,
+          merchantId: decision.merchantId,
+          grossCents: toCents(decision.priceUsd),
+          netPaidCents: toCents(decision.cashUsd),
+          discountCents: toCents(decision.savedUsd),
+          offerId: decision.offerId,
+          rewardId: decision.rewardId,
+          code: decision.code,
+          publisherId: decision.publisherId,
+          campaignId: decision.campaignId,
+          receiptId: receipt.id,
+        });
+        redemptionId = result.redemptionId;
+      } catch (ledgerErr) {
+        // Swallow — the purchase + receipt stand regardless of ledger bookkeeping.
+        console.error("[capture] recordRedemption failed (non-fatal):", ledgerErr);
+      }
+    }
+
+    return NextResponse.json({
+      capture,
+      receiptId: receipt.id,
+      verifyUrl: `/verify/${receipt.id}`,
+      ...(redemptionId ? { redemptionId } : {}),
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "capture failed" },

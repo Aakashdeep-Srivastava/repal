@@ -30,6 +30,64 @@ export interface ReceiptCardProps {
   demo: boolean;
 }
 
+/**
+ * SuccessCheck — a Google-Pay-style "payment done" flourish: the ring draws in,
+ * the tick strokes on, and a soft pulse radiates once. It fires only when a real
+ * server-signed receipt has been reached (this card renders on that state), so
+ * the celebration never runs ahead of the money. Reduced motion → a still tick.
+ */
+function SuccessCheck({ reduce }: { reduce: boolean }) {
+  if (reduce) {
+    return (
+      <span
+        aria-hidden
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-teal)]/15 text-[var(--color-teal)]"
+      >
+        ✓
+      </span>
+    );
+  }
+  return (
+    <span className="relative flex h-8 w-8 items-center justify-center" aria-hidden>
+      {/* One-shot pulse ring radiating out behind the badge. */}
+      <motion.span
+        className="absolute inset-0 rounded-full bg-[var(--color-teal)]/30"
+        initial={{ scale: 0.6, opacity: 0.6 }}
+        animate={{ scale: 1.9, opacity: 0 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+      />
+      <motion.span
+        className="absolute inset-0 rounded-full bg-[var(--color-teal)]/15"
+        initial={{ scale: 0.5 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 500, damping: 24 }}
+      />
+      <svg viewBox="0 0 24 24" className="relative h-5 w-5" fill="none">
+        <motion.circle
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="var(--color-teal)"
+          strokeWidth="2"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+        />
+        <motion.path
+          d="M7 12.5l3.2 3.2L17 9"
+          stroke="var(--color-teal)"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.3, ease: "easeOut", delay: 0.32 }}
+        />
+      </svg>
+    </span>
+  );
+}
+
 export function ReceiptCard({ plan, receiptId, demo }: ReceiptCardProps) {
   const router = useRouter();
   const reset = useJourney((s) => s.reset);
@@ -49,12 +107,7 @@ export function ReceiptCard({ plan, receiptId, demo }: ReceiptCardProps) {
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span
-            aria-hidden
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-teal)]/15 text-[var(--color-teal)]"
-          >
-            ✓
-          </span>
+          <SuccessCheck reduce={!!reduce} />
           <div>
             <h2 className="text-base font-semibold text-[var(--color-fg)]">
               {demo ? "Sandbox receipt issued" : "Payment complete"}

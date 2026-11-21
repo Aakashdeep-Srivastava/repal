@@ -4,7 +4,7 @@ import { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -47,8 +47,16 @@ function Node({ label, orb = false, children }: { label: string; orb?: boolean; 
 
 export function SiteFooter() {
   const router = useRouter();
+  const qc = useQueryClient();
   const root = useRef<HTMLElement>(null);
-  const demo = useMutation({ mutationFn: judgeLogin, onSuccess: () => router.push("/wallet") });
+  // Refresh the cached ["me"] after login so the wallet greets the real user.
+  const demo = useMutation({
+    mutationFn: judgeLogin,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["me"] });
+      router.push("/wallet");
+    },
+  });
 
   useGSAP(() => {
     const mm = gsap.matchMedia();

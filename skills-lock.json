@@ -1,11 +1,17 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "channel3-api": {
       "source": "channel3-ai/skills",
       "sourceType": "github",
       "skillPath": "skills/channel3-api/SKILL.md",
-      "computedHash": "ffc7ec0c8575a7f220cc805c106aacd14e9c73cd9f883a0f9c3cd069e9ad649d"
+      "computedHash": "79afc2d8393f0cf8943ede9dcf36f25d97e4028750b45b19c8c46a165e72b269"
+    },
+    "saas-product-demo-video": {
+      "source": "noamdorr/saas-product-demo-video",
+      "sourceType": "github",
+      "skillPath": "skills/saas-product-demo-video/SKILL.md",
+      "computedHash": "5f2331ddfd213364a3a588839535d6cbac2128e249a39de8dafd0537b670de19"
     }
   }
 }

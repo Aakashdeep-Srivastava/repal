@@ -11,7 +11,9 @@ import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
  * channel3), parses their T&Cs, and idempotently writes them to the user's
  * wallet. Returns an IngestSummary with per-source + aggregate counts.
  *
- * userId precedence: body.userId > session user > "demo-user".
+ * userId: always the session user in production (anonymous → demo/judge
+ * persona). A body.userId override is honored only outside production, so a
+ * caller can't drive another user's Gmail/LLM ingestion on the live deploy.
  * OWNER: AI agents layer (ingestion).
  */
 
@@ -37,7 +39,10 @@ export async function POST(req: Request) {
   }
 
   const sessionUser = await getSessionUser();
-  const userId = parsed.data.userId ?? sessionUser.userId ?? "demo-user";
+  const userId =
+    process.env.NODE_ENV === "production"
+      ? sessionUser.userId
+      : (parsed.data.userId ?? sessionUser.userId ?? "demo-user");
 
   const summary = await runIngestion(userId, parsed.data.sources);
   return NextResponse.json(summary);

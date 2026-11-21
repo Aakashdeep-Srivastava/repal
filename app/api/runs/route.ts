@@ -4,6 +4,7 @@ import { runAgent } from "@/agents/orchestrator";
 import { RunInputSchema } from "@/lib/schemas";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 import { persistRunArtifacts } from "@/lib/run-trace";
+import { getSessionUser } from "@/lib/auth/session";
 
 /**
  * POST /api/runs — start an agent run from a plain-language goal.
@@ -31,8 +32,17 @@ export async function POST(req: Request) {
       { status: 400, headers: rateLimitHeaders(rl) },
     );
   }
+  // Attribute the run (and its LLM spend) to the real session identity. In
+  // production a client-supplied userId is ignored so a run can't be charged to
+  // or logged against another user; non-prod keeps the body override for
+  // seeding/tests. Anonymous callers resolve to the demo (judge) persona.
+  const sessionUser = await getSessionUser();
+  const userId =
+    process.env.NODE_ENV === "production"
+      ? sessionUser.userId
+      : (parsed.data.userId ?? sessionUser.userId);
   const run = await prisma.agentRun.create({
-    data: { userId: parsed.data.userId, status: "running", step: "render_intent" },
+    data: { userId, status: "running", step: "render_intent" },
   });
 
   try {

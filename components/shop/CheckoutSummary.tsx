@@ -2,9 +2,7 @@
 
 import { SharedElementTransition, AnimatedNumber } from "@/components/motion";
 import { ProductVisual } from "@/components/shop/ProductVisual";
-import { FundingSelector } from "@/components/shop/FundingSelector";
 import { sharedId } from "@/lib/motion/tokens";
-import type { FundingSource } from "@/lib/paypal/funding";
 import type { Product, PlanWithPolicy } from "@/lib/shop/types";
 
 /**
@@ -30,9 +28,6 @@ export interface CheckoutSummaryProps {
   /** Confirm-to-pay checkbox state (lifted to the page, which gates Pay). */
   confirmed: boolean;
   onConfirmedChange: (next: boolean) => void;
-  /** Agent-selected funding method (lifted to the page, sent to Orders v2). */
-  funding: FundingSource | null;
-  onFundingChange: (next: FundingSource) => void;
 }
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
@@ -42,8 +37,6 @@ export function CheckoutSummary({
   product,
   confirmed,
   onConfirmedChange,
-  funding,
-  onFundingChange,
 }: CheckoutSummaryProps) {
   const appliedDiscount = plan.useRewards.reduce((sum, r) => sum + r.appliedUsd, 0);
   const rewardCount = plan.useRewards.length;
@@ -112,12 +105,18 @@ export function CheckoutSummary({
         none — this plan applies only discounts that are confirmed now.
       </div>
 
-      {/* Payment method — the agent chooses the funding; user can override. */}
-      <FundingSelector
-        amountUsd={plan.cashUsd}
-        value={funding}
-        onChange={onFundingChange}
-      />
+      {/* Payment method — PayPal is the sole funding source. */}
+      <div className="flex items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--color-brand)]/25 bg-[var(--color-brand)]/[0.04] px-3.5 py-3">
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--color-brand)] text-xs font-bold text-white">
+          PP
+        </span>
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-[var(--color-fg)]">PayPal</p>
+          <p className="text-xs text-[var(--color-muted)]">
+            Pay securely from your PayPal balance, card, or bank.
+          </p>
+        </div>
+      </div>
 
       {/* Terms + explicit confirm. */}
       <label className="flex cursor-pointer items-start gap-3 text-sm">

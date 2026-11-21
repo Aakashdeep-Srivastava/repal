@@ -1,0 +1,13 @@
+{
+  "_comment": "Synthetic, isolated test identities (spec §8). NOT production users. Each test worker should use its own prefixed user so parallel runs never collide. PayPal sandbox buyer/seller logins live in the PayPal developer dashboard, never here.",
+  "judgePersona": {
+    "userId": "judge-maya",
+    "name": "Maya (judge demo)",
+    "note": "Created on demand by POST /api/auth/judge-login — no real PayPal login needed."
+  },
+  "workers": [
+    { "prefix": "qa-w1-", "userId": "qa-w1-consumer", "email": "qa-w1@qa.example" },
+    { "prefix": "qa-w2-", "userId": "qa-w2-consumer", "email": "qa-w2@qa.example" },
+    { "prefix": "qa-sec-", "userId": "qa-sec-attacker", "email": "qa-sec@qa.example" }
+  ]
+}

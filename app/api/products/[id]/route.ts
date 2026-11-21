@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getChannel3Product, channel3DiscoveryMode, Channel3Failure } from "@/lib/channel3";
 import { getSandboxProduct } from "@/lib/shop/products";
+import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
  * GET /api/products/[id] — full details for one product by id.
@@ -28,9 +29,17 @@ function failureResponse(err: Channel3Failure) {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const rl = rateLimit(clientKey(req, "product-detail"), 30, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate limit exceeded — slow down", retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: rateLimitHeaders(rl) },
+    );
+  }
+
   const { id } = await params;
   if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
 

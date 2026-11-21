@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getProducts } from "@/lib/shop/products";
 import { Channel3Failure } from "@/lib/channel3";
+import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /** Map a Channel3 failure kind to an HTTP status + stable error code. */
 function failureResponse(err: Channel3Failure) {
@@ -32,6 +33,16 @@ function failureResponse(err: Channel3Failure) {
  * this one serves the richer Product view and never recomputes money.
  */
 export async function GET(req: Request) {
+  // Throttle the external (billed) Channel3 call against scraping/cost abuse —
+  // same budget as /api/offers.
+  const rl = rateLimit(clientKey(req, "products"), 30, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate limit exceeded — slow down", retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: rateLimitHeaders(rl) },
+    );
+  }
+
   const url = new URL(req.url);
   const q = url.searchParams.get("q")?.trim() ?? "";
 
