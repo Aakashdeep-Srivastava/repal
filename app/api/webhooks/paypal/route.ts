@@ -1,22 +1,25 @@
 import { NextResponse } from "next/server";
-import { verifyWebhookSignature } from "@/lib/paypal/webhooks";
+import { verifyWebhookForAnySeller } from "@/lib/paypal/webhooks";
+import { listConfiguredSellers } from "@/lib/paypal/merchants";
 import { prisma } from "@/lib/db";
 
 /**
  * POST /api/webhooks/paypal — signature-verified webhook sink.
  *
- * Verifies every event against PayPal (using PAYPAL_WEBHOOK_ID) before trusting
- * it, then persists it. Downstream state (receipt status, payout completion) is
- * driven off these. See docs/TECH_PRD.md §4.
+ * Phase 2: an inbound webhook may come from any of our configured seller apps, so we
+ * try each configured seller's webhook id + credentials until one verifies before
+ * trusting the event, then persist it. Downstream state (receipt status, payout
+ * completion) is driven off these. See docs/TECH_PRD.md §4.
  */
 export async function POST(req: Request) {
   const raw = await req.text();
 
   let verified = false;
-  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
-  if (webhookId) {
+  let verifiedMerchantId: string | null = null;
+  const merchantIds = listConfiguredSellers().map((s) => s.merchantId);
+  if (merchantIds.length > 0) {
     try {
-      verified = await verifyWebhookSignature(
+      const result = await verifyWebhookForAnySeller(
         {
           authAlgo: req.headers.get("paypal-auth-algo") ?? "",
           certUrl: req.headers.get("paypal-cert-url") ?? "",
@@ -25,8 +28,10 @@ export async function POST(req: Request) {
           transmissionTime: req.headers.get("paypal-transmission-time") ?? "",
         },
         raw,
-        webhookId,
+        merchantIds,
       );
+      verified = result.verified;
+      verifiedMerchantId = result.merchantId;
     } catch {
       verified = false;
     }
@@ -67,7 +72,7 @@ export async function POST(req: Request) {
   }
 
   // Always 200 so PayPal doesn't retry a stored event.
-  return NextResponse.json({ received: true, verified });
+  return NextResponse.json({ received: true, verified, merchantId: verifiedMerchantId });
 }
 
 async function applyEffects(event: {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createOrder, approvalUrlOf } from "@/lib/paypal/orders";
+import { resolveSeller } from "@/lib/paypal/merchants";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
@@ -34,6 +35,10 @@ const Body = z.object({
   // The agent's chosen funding method (lib/paypal/funding). Selects the Orders
   // v2 payment_source on the buyer-present path. Defaults to standard PayPal.
   funding: z.enum(["paypal", "pay_later", "venmo"]).optional(),
+  // Phase 2 — route this order to the seller that owns the product's merchant.
+  // Omit to use the platform seller (single-seller default). The client MUST echo
+  // the returned `merchantId` to /api/pay/capture so the capture hits the same seller.
+  merchantId: z.string().min(1).max(64).optional(),
 });
 
 export async function POST(req: Request) {
@@ -55,9 +60,24 @@ export async function POST(req: Request) {
     returnUrl: `${origin}/checkout?paypal=return`,
     cancelUrl: `${origin}/checkout?paypal=cancel`,
   };
+
+  // Phase 2 — resolve which seller handles this merchant's checkout (its own app
+  // if configured, else the platform seller). `seller.merchantId` is echoed back so
+  // the client sends the matching merchantId to capture.
+  let seller;
   try {
-    const order = await createOrder({ ...parsed.data, ...urls });
-    return NextResponse.json({ ...order, approveUrl: approvalUrlOf(order) });
+    seller = resolveSeller(parsed.data.merchantId);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "no seller configured" },
+      { status: 502, headers: rateLimitHeaders(rl) },
+    );
+  }
+  const sellerInfo = { merchantId: seller.merchantId, dedicatedSeller: seller.dedicated };
+
+  try {
+    const order = await createOrder({ ...parsed.data, ...urls }, seller.credentials);
+    return NextResponse.json({ ...order, approveUrl: approvalUrlOf(order), ...sellerInfo });
   } catch (err) {
     // Resilience: a non-default funding method (e.g. Venmo, which is US-only and
     // needs an eligible buyer) can be unavailable in sandbox and fail order
@@ -65,8 +85,8 @@ export async function POST(req: Request) {
     // PayPal so the purchase can still complete.
     if (parsed.data.funding && parsed.data.funding !== "paypal") {
       try {
-        const order = await createOrder({ ...parsed.data, funding: "paypal", ...urls });
-        return NextResponse.json({ ...order, approveUrl: approvalUrlOf(order), fundingFellBack: true });
+        const order = await createOrder({ ...parsed.data, funding: "paypal", ...urls }, seller.credentials);
+        return NextResponse.json({ ...order, approveUrl: approvalUrlOf(order), fundingFellBack: true, ...sellerInfo });
       } catch {
         /* fall through to the error below */
       }

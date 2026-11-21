@@ -1,4 +1,4 @@
-import { paypalRequest, newRequestId } from "@/lib/paypal/client";
+import { paypalRequest, newRequestId, type SellerCredentials } from "@/lib/paypal/client";
 import type { FundingSource } from "@/lib/paypal/funding";
 
 /**
@@ -34,8 +34,11 @@ export interface PayPalOrder {
   links?: { href: string; rel: string; method: string }[];
 }
 
-/** Create an Orders v2 order (intent CAPTURE), USD. */
-export async function createOrder(input: CreateOrderInput): Promise<PayPalOrder> {
+/**
+ * Create an Orders v2 order (intent CAPTURE), USD. `creds` routes the order to a
+ * specific seller's PayPal app (Phase 2); omit for the platform seller.
+ */
+export async function createOrder(input: CreateOrderInput, creds?: SellerCredentials): Promise<PayPalOrder> {
   const body: Record<string, unknown> = {
     intent: "CAPTURE",
     purchase_units: [
@@ -71,6 +74,7 @@ export async function createOrder(input: CreateOrderInput): Promise<PayPalOrder>
     method: "POST",
     body,
     requestId: newRequestId(),
+    creds,
   });
 }
 
@@ -83,10 +87,14 @@ export function approvalUrlOf(order: PayPalOrder): string | undefined {
   return (links.find((l) => l.rel === "payer-action") ?? links.find((l) => l.rel === "approve"))?.href;
 }
 
-/** Capture a previously created/approved order. */
-export async function captureOrder(orderId: string): Promise<PayPalOrder> {
+/**
+ * Capture a previously created/approved order. `creds` MUST be the same seller the
+ * order was created under (Phase 2) — a capture against the wrong seller 404s.
+ */
+export async function captureOrder(orderId: string, creds?: SellerCredentials): Promise<PayPalOrder> {
   return paypalRequest<PayPalOrder>(`/v2/checkout/orders/${orderId}/capture`, {
     method: "POST",
     requestId: newRequestId(),
+    creds,
   });
 }

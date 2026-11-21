@@ -14,28 +14,40 @@ const ENV = (process.env.PAYPAL_ENVIRONMENT ?? "SANDBOX").toUpperCase();
 export const PAYPAL_BASE =
   ENV === "LIVE" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
 
-function requireCreds(): { id: string; secret: string } {
-  const id = process.env.PAYPAL_CLIENT_ID;
-  const secret = process.env.PAYPAL_CLIENT_SECRET;
-  if (!id || !secret) {
+/** One PayPal seller's app credentials (Phase 2 — per-merchant routing). */
+export interface SellerCredentials {
+  clientId: string;
+  clientSecret: string;
+}
+
+function requireCreds(): SellerCredentials {
+  const clientId = process.env.PAYPAL_CLIENT_ID;
+  const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
     throw new Error(
       "Missing PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET. " +
         "Copy .env.example → .env.local and fill your sandbox app credentials " +
         "(see docs/PAYPAL_SETUP.md).",
     );
   }
-  return { id, secret };
+  return { clientId, clientSecret };
 }
 
-// ─── Access-token cache ───────────────────────────────────────────────
-let cached: { token: string; expiresAt: number } | null = null;
+// ─── Access-token cache — keyed per seller (clientId) so multiple merchants'
+// tokens never collide. The default (platform) seller is just one more entry. ──
+const tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
-/** Get a (cached) OAuth access token via client-credentials. */
-export async function getAccessToken(): Promise<string> {
-  if (cached && Date.now() < cached.expiresAt - 60_000) return cached.token;
+/**
+ * Get a (cached) OAuth access token via client-credentials for a seller. With no
+ * `creds` it uses the platform credentials from env (the single-seller default).
+ */
+export async function getAccessToken(creds?: SellerCredentials): Promise<string> {
+  const { clientId, clientSecret } = creds ?? requireCreds();
 
-  const { id, secret } = requireCreds();
-  const basic = Buffer.from(`${id}:${secret}`).toString("base64");
+  const hit = tokenCache.get(clientId);
+  if (hit && Date.now() < hit.expiresAt - 60_000) return hit.token;
+
+  const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
   const res = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
     method: "POST",
@@ -52,11 +64,9 @@ export async function getAccessToken(): Promise<string> {
   }
 
   const data = (await res.json()) as { access_token: string; expires_in: number };
-  cached = {
-    token: data.access_token,
-    expiresAt: Date.now() + data.expires_in * 1000,
-  };
-  return cached.token;
+  const entry = { token: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+  tokenCache.set(clientId, entry);
+  return entry.token;
 }
 
 /** A fresh idempotency key for create/capture/refund/payout calls. */
@@ -70,6 +80,8 @@ export interface PayPalRequestOptions {
   /** Sets PayPal-Request-Id for idempotency on mutating calls. */
   requestId?: string;
   headers?: Record<string, string>;
+  /** Route this call to a specific seller's app. Omit for the platform seller. */
+  creds?: SellerCredentials;
 }
 
 /** Authenticated JSON request against the PayPal REST API. */
@@ -77,7 +89,7 @@ export async function paypalRequest<T = unknown>(
   path: string,
   opts: PayPalRequestOptions = {},
 ): Promise<T> {
-  const token = await getAccessToken();
+  const token = await getAccessToken(opts.creds);
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
