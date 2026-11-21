@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { captureOrder } from "@/lib/paypal/orders";
+import { resolveSeller } from "@/lib/paypal/merchants";
 import { issueReceipt } from "@/lib/receipts/issue";
 import { gateSpend } from "@/lib/policy/gate";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
@@ -18,6 +19,10 @@ import { recordRedemption } from "@/lib/ledger";
  */
 const Body = z.object({
   orderId: z.string().min(1),
+  // Phase 2 — the seller the order was created under (echo the merchantId returned
+  // by /api/pay/order). Must match, or the capture 404s against the wrong app. Falls
+  // back to decision.merchantId, then the platform seller.
+  merchantId: z.string().min(1).max(64).optional(),
   decision: z
     .object({
       userId: z.string().min(1).max(64).default("demo-user"),
@@ -70,6 +75,18 @@ export async function POST(req: Request) {
   }
   const { orderId, decision } = parsed.data;
 
+  // Phase 2 — the order was created under one seller; capture it under the SAME one.
+  // Routing merchant: explicit top-level merchantId, else the ledger decision's slug.
+  let sellerCreds;
+  try {
+    sellerCreds = resolveSeller(parsed.data.merchantId ?? decision?.merchantId).credentials;
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "no seller configured" },
+      { status: 502, headers: rateLimitHeaders(rl) },
+    );
+  }
+
   try {
     // SECOND policy check — gate against the real active mandate BEFORE money
     // moves. deny → refuse; ask → require explicit approval. (No decision = a
@@ -95,7 +112,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const capture = await captureOrder(orderId);
+    const capture = await captureOrder(orderId, sellerCreds);
 
     if (!decision) {
       return NextResponse.json({ capture });
