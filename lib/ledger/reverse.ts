@@ -28,8 +28,16 @@ export async function reverseRedemption(
 
     await tx.redemption.update({
       where: { id: redemptionId },
-      // Null the oneTimeKey so a refunded one-time offer frees up for re-redemption.
-      data: { status: "reversed", reversedReason: reason, oneTimeKey: null },
+      // Null the oneTimeKey so a refunded one-time offer frees up for re-redemption,
+      // and clear the merchant confirmation (a reversed redemption is no longer settleable).
+      data: {
+        status: "reversed",
+        reversedReason: reason,
+        oneTimeKey: null,
+        confirmedAt: null,
+        confirmationSource: null,
+        confirmationRef: null,
+      },
     });
 
     // Reverse commission/cashback that has not yet been paid (paid money is gone).

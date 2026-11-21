@@ -42,8 +42,12 @@ export interface MarkPayableResult {
 
 /**
  * Advance settled obligations to `payable`: publisher commissions pending→payable
- * and customer cashback accrued→payable. Only entries whose redemption is still
- * live (not reversed) are advanced. Scopeable to one merchant.
+ * and customer cashback accrued→payable. Scopeable to one merchant.
+ *
+ * Phase 3 gate: only obligations whose redemption a merchant/affiliate has CONFIRMED
+ * (`Redemption.confirmedAt` set by `confirmRedemption`) and that is not reversed are
+ * advanced. Internal eligibility alone is NOT settleable — a commission becomes payable
+ * only once the party that owes it has confirmed the redemption really happened.
  */
 export async function markPayable(
   prisma: PrismaClient,
@@ -51,12 +55,22 @@ export async function markPayable(
 ): Promise<MarkPayableResult> {
   const merchantWhere = opts.merchantId ? { merchantId: opts.merchantId } : {};
   return prisma.$transaction(async (tx) => {
+    // The confirmation gate: ids of redemptions that are merchant/affiliate-confirmed
+    // and still live. updateMany can't filter on a relation across every Prisma version,
+    // so resolve the id set first, then scope the obligation updates to it.
+    const confirmed = await tx.redemption.findMany({
+      where: { ...merchantWhere, confirmedAt: { not: null }, status: { not: "reversed" } },
+      select: { id: true },
+    });
+    const ids = confirmed.map((r) => r.id);
+    if (ids.length === 0) return { commissionsMarked: 0, cashbackMarked: 0 };
+
     const commissions = await tx.commissionLedger.updateMany({
-      where: { ...merchantWhere, party: "publisher", status: "pending" },
+      where: { redemptionId: { in: ids }, party: "publisher", status: "pending" },
       data: { status: "payable" },
     });
     const cashback = await tx.customerRewardLedger.updateMany({
-      where: { ...merchantWhere, status: "accrued" },
+      where: { redemptionId: { in: ids }, status: "accrued" },
       data: { status: "payable" },
     });
     return { commissionsMarked: commissions.count, cashbackMarked: cashback.count };
