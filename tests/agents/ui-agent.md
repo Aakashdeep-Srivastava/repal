@@ -10,7 +10,7 @@ Pages: `/`, `/shop`, `/product/[id]`, `/wallet`, `/mandate`, `/insights`, `/chec
 |---|---|
 | Desktop layout | Nav, tables, dashboards, cards render; no horizontal overflow |
 | Mobile layout (≤640px) | Bottom nav/scroll, forms, safe areas, checkout usable |
-| Signed-in identity | Persona name/avatar visible in the shell *(current gap F1: `UserMenu` exists but is never mounted; shell shows "Guest")* |
+| Signed-in identity | Persona name visible in the shell *(F1 — fixed; the shell greeting now reads the refreshed `["me"]` query. `components/nav/UserMenu.tsx` remains unmounted dead code)* |
 | Navigation | All sidebar links resolve; active state correct |
 | Reduced motion | Journey fully functional with `prefers-reduced-motion` |
 | Accessibility | Headings/roles/labels present; interactive elements reachable; images have alt/aria |

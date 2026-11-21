@@ -21,7 +21,7 @@ _Last updated: 2026-11-21 · This is the authoritative, current source of truth 
 
 The defining thesis — delegated authority, deterministic policy enforced at spend time, reward→cash liberation, an agent that executes within signed limits — is **wired end-to-end and deployed**. As of today two major milestones landed:
 
-- **✅ Real USD PayPal checkout works in production.** The long-standing blocker (the sandbox *seller* was an India business account that can't accept USD) is **cleared**: a US sandbox business seller ("RockstartGame" app under `gta6@rockstargames.com`) is now the live `PAYPAL_CLIENT_ID`. Verified end-to-end — a live order resolves under the US app, and a full local run captured USD 12.34 with a signed receipt.
+- **✅ Real USD PayPal checkout works end-to-end — in PayPal SANDBOX.** ⚠️ This is a **real payment *flow*, not real money.** The app is deployed on AWS, but the PayPal seller is a **sandbox** business account; no live funds move. The long-standing blocker (the sandbox *seller* was an India business account that can't accept USD) is **cleared**: a US *sandbox* business seller ("RockstartGame" app under `gta6@rockstargames.com`) is now the live `PAYPAL_CLIENT_ID`. Verified end-to-end — a live order resolves under the US app, and a full run captured sandbox USD 12.34 with a signed receipt. **"Deployed on AWS" ≠ "live-money processing."**
 - **✅ The polished branch is deployed** (PR #94 → `main`): the demo-login identity fix, security headers (CSP/HSTS), the commercial-ledger code, and the autonomous QA framework are all live.
 
 **One important caveat:** the **commercial-ledger DB tables are not yet in production.** Their two migrations (`20261121000000_add_commercial_ledger`, `20261121010000_add_redemption_onetime_unique`) are committed but **applied manually** (CI does not run migrations). Until applied, the ledger code is **dormant in prod** (its one write path, `recordRedemption`, is best-effort/try-catch so it no-ops) — the consumer demo does not need it.
@@ -228,3 +228,29 @@ Session = signed httpOnly cookie (`repal_session`, HMAC, fail-closed in prod). R
   - **True single-checkout multi-seller** (one approval split across sellers, `purchase_units[]` + `payee`) — needs PayPal **marketplace partner approval** (external gate) for live; the code structure + 207 handling can be built now against the sandbox.
 - **Apply the ledger migrations to prod** — required to demo the commercial ledger (campaigns, commissions, attribution).
 - **Register the new app's webhook id** — only if live webhook events (payout/dispute) are needed on camera.
+
+---
+
+## 16. Honesty boundary — what RePal must NOT claim prematurely
+
+For investor/partner trust and an accurate financial model, these distinctions are load-bearing. Everything in the app is labelled accordingly (`source` provenance, "sandbox" badges, "simulated" payout labels).
+
+| Claim | Actual state |
+|---|---|
+| "Deployed on AWS = live-money processing" | ❌ No — PayPal is **sandbox**; no real funds move |
+| All Google Pay coupons auto-import | ❌ Not established (only authorized Gmail reward mail imports) |
+| Every coupon can be stacked | ❌ Only when the issuer's terms permit (`not_combinable_group`) |
+| Coupons from different merchants become one discount | ❌ Incorrect — each coupon validates against its own merchant |
+| One RePal session can contain multiple merchants | ✅ Achievable (separate single-seller checkouts — not yet built) |
+| One PayPal checkout settles all sellers at once | ❌ Requires PayPal marketplace integration + partner approval |
+| Coupon face value = merchant cost | ❌ Incorrect |
+| Every cashback payout is real | ❌ Some are **simulated** (honest fallback; still a real signed receipt) |
+| Merchant redemption is verified | ❌ Not yet — RePal validates with its own rules; no merchant-side handshake |
+
+**Positioning:** RePal turns forgotten promotional rewards into **actual, attributable purchases** — consumer reward intelligence + deterministic savings optimization + delegated PayPal payments + merchant-side commercial attribution. The moat is the merchant redemption + accounting relationship, not more integrations.
+
+---
+
+## 17. Product scope split (B2C core vs B2B2C expansion)
+
+See **[`docs/PRODUCT_SCOPE.md`](./PRODUCT_SCOPE.md)** for the formal separation of the **core consumer engine** (shipped) from the **commercial activation network** (early-stage), and the frozen phase roadmap (Phase 0 reconcile → 1 ledger activation → 2 per-merchant routing → 3 real redemption → 4 pilot → 5 marketplace).

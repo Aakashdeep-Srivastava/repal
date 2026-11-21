@@ -9,7 +9,7 @@
 | Test | Expected |
 |---|---|
 | Judge login | `{ok:true, user.name:"Maya (judge demo)"}`; session cookie set |
-| Signed-in identity surfaced in the shell | Persona name visible after login *(current gap — see QA findings F1)* |
+| Signed-in identity surfaced in the shell | Persona name visible after login *(F1 — fixed; regression-guarded by `home.spec`/`journey.spec`)* |
 | Import rewards (`/api/wallet/ingest`) | Sources processed; degrades gracefully if Bedrock/Gmail unconfigured |
 | Open wallet | Seeded rewards + values render |
 | 3-tap onboard (`/api/rewards/onboard`) | For-you feed personalises with zero history |
