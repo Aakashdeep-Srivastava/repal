@@ -1,5 +1,14 @@
 # RePal — Technical PRD (v3, PayPal-central)
 
+> ⚠️ **This is the original vision/architecture doc. For what is ACTUALLY built,
+> live, and gated, read [`docs/PRD_PROGRESS.md`](./PRD_PROGRESS.md) (the current
+> source of truth).** Known deltas since this was written: host is **AWS
+> ECS/Fargate + CloudFront**, not Render; the data model is now **25 Prisma
+> models** (not 9) incl. the commercial ledger; **Cognee and A2A were dropped**;
+> "AG Studio" shipped as **AG Grid**; the AI layer is a **multi-provider fallback
+> chain (Gemini-first)**, not Bedrock-only; the Nov-12 deadline has passed; and
+> **real USD PayPal checkout is live** on a US sandbox seller.
+
 > **RePal** = **Re**wards + Pay**Pal** — a fintech rewards agent built on PayPal.
 
 **One line:** An agentic rewards-to-money layer. You state a goal in plain language; the AI reads your rewards' fine print, a deterministic optimizer finds the cheapest SKU **after** your rewards, and **PayPal moves the money across the whole lifecycle** — identity, delegated authority (Vault), pay-in (Orders), pay-out (Payouts, which liberates stuck rewards into real cash), and reversal (Refunds).
