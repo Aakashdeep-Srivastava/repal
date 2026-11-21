@@ -43,15 +43,16 @@ DATABASE_URL=<QA> DIRECT_URL=<QA_DIRECT> RATE_LIMIT_DISABLED=1 npm run test:e2e
 | Area | Status |
 |---|---|
 | Judge/demo login, session | ✅ Implemented |
-| PayPal OIDC login | ⚠️ Gated (sandbox account; India can't accept USD) |
+| PayPal pay-in (USD, **sandbox** — US seller) | ✅ Implemented (real sandbox USD flow; NOT real money) |
 | Wallet, reward import, optimizer, T&C grounding | ✅ Implemented |
 | Discount calc, stacking (`not_combinable_group`), one-time redemption | ✅ Implemented |
 | Mandate/policy gate, Ed25519 receipts | ✅ Implemented |
 | PayPal order/capture/refund/payout/webhook (single-seller) | ✅ Implemented (payout simulated-fallback) |
-| Commercial ledger (campaigns, agreements, attribution, commission, media credits, cashback) | ✅ Implemented (migrations pending manual prod apply) |
-| Multi-seller Orders v2 + HTTP 207 handling | ❌ Missing (seller onboarding gated) |
-| Signed-in persona name in app shell | ❌ Missing (see F1) |
-| CI pipeline, mobile/WebKit projects, `/qa` dashboard | ❌ Not yet built |
+| Commercial ledger (campaigns, agreements, attribution, commission, media credits, cashback) | ✅ Code implemented; **DB tables pending manual prod migration (dormant in prod)** |
+| Signed-in persona name in app shell | ✅ Fixed (F1 — see §7) |
+| Multi-seller Orders v2 + HTTP 207 handling | ❌ Missing (marketplace partner approval gated) |
+| App CI/CD (verify → ECS deploy) | ✅ Implemented (`.github/workflows/ci.yml`) |
+| QA-framework CI integration, mobile/WebKit projects, `/qa` dashboard | ❌ Not yet built |
 
 ## 6. Coverage matrix & real results (this run)
 
