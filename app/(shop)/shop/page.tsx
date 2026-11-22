@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatedList } from "@/components/motion";
 import { ProductCard } from "@/components/shop/ProductCard";
+import { CategoryBar } from "@/components/shop/CategoryBar";
 import RepalLoader from "@/components/brand/RepalLoader";
 import { useJourney } from "@/lib/store/journey";
 import type { Product, ProductSearchResponse } from "@/lib/shop/types";
@@ -71,6 +72,9 @@ function ShopResults() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Amazon-style department nav — jump into a category with one tap. */}
+      <CategoryBar activeQuery={q} />
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-lg font-semibold text-[var(--color-fg)]">
@@ -78,7 +82,7 @@ function ShopResults() {
           </h1>
           {!q && (
             <p className="text-sm text-[var(--color-muted)]">
-              Showing the full catalog — search above to narrow it down.
+              Pick a category above, or search to find anything.
             </p>
           )}
         </div>
