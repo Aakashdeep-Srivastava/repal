@@ -242,11 +242,83 @@ export interface SearchOptions {
   limit?: number;
 }
 
+/**
+ * Seed queries for the default "browse" landing (empty search box).
+ *
+ * Channel3 has NO "return everything" call — an empty/null `query` is a hard 422
+ * ("At least one of 'query', 'image_url', 'base64_image', or 'page_token' must be
+ * provided"). So a blank query means "browse": we fan out a few broad, varied
+ * seed searches and interleave them into one storefront grid. Kept deliberately
+ * cross-category so the landing reflects the catalog's breadth, not one aisle.
+ */
+const DEFAULT_BROWSE_SEEDS = [
+  "best selling gifts",
+  "trending fashion",
+  "popular electronics",
+  "home essentials",
+] as const;
+
+/**
+ * Broad storefront grid for an empty query. Fans out the default seeds in
+ * parallel, dedupes by product id, and round-robin interleaves them for variety.
+ * Transient per-seed failures are tolerated; only a total wipeout (e.g. bad key)
+ * re-throws, so genuine auth/rate errors still surface instead of a blank grid.
+ */
+export async function browseDefaultChannel3(
+  opts: SearchOptions = {},
+): Promise<Product[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 12, 1), 30);
+  const cacheKey = `__browse__|${opts.maxPriceUsd ?? ""}|${COUNTRY}|${CURRENCY}|${limit}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+
+  const per = Math.max(3, Math.ceil(limit / DEFAULT_BROWSE_SEEDS.length) + 1);
+  const settled = await Promise.allSettled(
+    DEFAULT_BROWSE_SEEDS.map((seed) =>
+      searchChannel3Products(seed, { maxPriceUsd: opts.maxPriceUsd, limit: per }),
+    ),
+  );
+  const batches = settled
+    .filter((r): r is PromiseFulfilledResult<Product[]> => r.status === "fulfilled")
+    .map((r) => r.value);
+  if (batches.length === 0) {
+    // Every seed failed — surface the real failure (unauthorized / rate_limited / …).
+    const firstRej = settled.find((r) => r.status === "rejected") as
+      | PromiseRejectedResult
+      | undefined;
+    throw firstRej ? firstRej.reason : new Channel3Failure("upstream", 0, "Channel3 browse failed");
+  }
+
+  // Round-robin interleave across seeds, dedupe by id, cap at limit.
+  const seen = new Set<string>();
+  const merged: Product[] = [];
+  for (let i = 0; merged.length < limit; i++) {
+    let advanced = false;
+    for (const batch of batches) {
+      const p = batch[i];
+      if (!p) continue;
+      advanced = true;
+      if (seen.has(p.id)) continue;
+      seen.add(p.id);
+      merged.push(p);
+      if (merged.length >= limit) break;
+    }
+    if (!advanced) break; // all batches exhausted
+  }
+
+  cacheSet(cacheKey, merged);
+  return merged;
+}
+
 /** Live product search → rich Products (images + every merchant offer). */
 export async function searchChannel3Products(
   query: string,
   opts: SearchOptions = {},
 ): Promise<Product[]> {
+  // An empty/whitespace query is a "browse" intent, not a search. Channel3 rejects
+  // a null query (422), so never send one — fan out to the default seeds instead.
+  if (query.trim() === "") return browseDefaultChannel3(opts);
+
   const cacheKey = `${query.trim()}|${opts.maxPriceUsd ?? ""}|${opts.limit ?? ""}|${COUNTRY}|${CURRENCY}`;
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
