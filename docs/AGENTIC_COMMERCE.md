@@ -4,7 +4,9 @@ _How RePal fits the agentic-commerce landscape, how it integrates PayPal's offic
 Agent Toolkit, and whether it works as a business — with the **PayPal sandbox at the
 center**._
 
-_Last updated: 2026-11-14 · Companion to `docs/PAYPAL_SANDBOX.md`._
+_Last updated: 2026-11-14 (analysis) · status reviewed 2026-11-23 · Companion to `docs/PAYPAL_SANDBOX.md`._
+
+> **Status note (2026-11-23):** the landscape analysis below still holds. For what has since shipped — Phases 2–4 (per-merchant routing, merchant-confirmed redemption, commercial pilot loop), the custom domain `repal.shop`, and US-seller live USD — see **[`PRD_PROGRESS.md`](./PRD_PROGRESS.md)**.
 
 ---
 

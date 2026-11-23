@@ -1,8 +1,9 @@
 # RePal — demo video script (~3 min)
 
 Target: 2:45–3:00. Record against the live site
-(https://d14t147d5f4q6i.cloudfront.net). Use the **Judge demo** account so there's
-no login friction. Keep the "sample data" labels visible — never hide them.
+(https://repal.shop — or the CloudFront origin https://d14t147d5f4q6i.cloudfront.net;
+both serve the same app). Use the **Judge demo** account so there's no login
+friction. Keep the "sample data" labels visible — never hide them.
 
 > **AI note:** if AWS Bedrock access has cleared, run the agent box live. If it
 > hasn't, drive the deterministic "Try it now — no AI needed" optimizer and the
