@@ -106,7 +106,22 @@ export function MandateStudio() {
 
   // ?vault=1 (from "Connect funding →") opts into connecting a PayPal funding
   // source for hands-free auto-pay; otherwise a signed policy-only mandate.
-  const wantVault = useSearchParams().get("vault") === "1";
+  const sp = useSearchParams();
+  const wantVault = sp.get("vault") === "1";
+  // The Vault callback redirects back here with the outcome. Surface it —
+  // without this the user silently loops on "Connect funding" with no feedback,
+  // even when the mandate is already active and the agent is usable.
+  const vaultGranted = sp.get("granted") === "1";
+  const vaultFailed = sp.get("vault") === "failed";
+  const vaultCancelled = sp.get("cancelled") === "1";
+  const outcome =
+    vaultGranted && !vaultFailed
+      ? { ok: true, msg: "PayPal funding connected — your agent can now pay hands-free, within the limits you set." }
+      : vaultGranted && vaultFailed
+        ? { ok: false, msg: "Your mandate is active, but hands-free PayPal funding couldn't be connected (a sandbox Vault limitation). You don't need it to start — the agent prepares each payment for you to approve." }
+        : vaultCancelled
+          ? { ok: false, msg: "Funding connection cancelled. Your mandate is still active — the agent prepares each payment for your approval." }
+          : null;
   const create = useMutation({
     mutationFn: async () => {
       const input: MandateInput = { capUsd: cap, budgetUsd: budget, approvalThresholdUsd: thr, allowCategories: cats, allowMerchants: merch, expiresAt: new Date(Date.now() + 90 * 86_400_000).toISOString() };
@@ -116,11 +131,33 @@ export function MandateStudio() {
   });
   const revoke = useMutation({ mutationFn: () => revokeMandate(active!.id), onSuccess: () => qc.invalidateQueries({ queryKey: ["mandate"] }) });
 
+  // A completed Vault round-trip (success, failure, or cancel) lands back here;
+  // show the active mandate and refresh its state instead of a stale draft.
+  useEffect(() => {
+    if (vaultGranted || vaultCancelled) {
+      setStep(4);
+      qc.invalidateQueries({ queryKey: ["mandate"] });
+    }
+  }, [vaultGranted, vaultCancelled, qc]);
+
   const status = useMemo(() => (step === 4 ? "Active" : "In Draft"), [step]);
 
   return (
     <DashboardShell title="Mandate Studio" subtitle="Configure your AI agent's spending authority with PayPal.">
       <Stepper step={Math.min(step, 3)} onStep={setStep} />
+
+      {outcome && (
+        <div
+          className={`mt-4 flex items-start gap-3 rounded-2xl border p-4 text-[13.5px] ${
+            outcome.ok
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              : "border-amber-500/30 bg-amber-500/10 text-[var(--color-fg)]"
+          }`}
+        >
+          <span aria-hidden className="mt-0.5 font-semibold">{outcome.ok ? "✓" : "ℹ"}</span>
+          <p className="leading-snug">{outcome.msg}</p>
+        </div>
+      )}
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
         {/* LEFT — step content */}
