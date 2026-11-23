@@ -48,6 +48,25 @@ export const cardAdapter: Adapter = {
         termsRaw:
           "Mastercard: $15 back when you spend $75 or more on headphones or audio accessories. One redemption per cardholder.",
       },
+      // Credit/debit-card reward points. Points have no fixed cash value until
+      // redeemed (valueUsd 0 — the Terms agent reads the rate from termsRaw); shown
+      // so the agent can consider card points alongside coupons. Labelled SANDBOX.
+      {
+        source: "card",
+        type: "points",
+        valueUsd: 0,
+        expiresAt: inDays(120),
+        termsRaw:
+          "HDFC Credit Card: 5,000 reward points available. Redeem for statement credit at 1 point = $0.004, or for catalog gift vouchers. Points expire if unused.",
+      },
+      {
+        source: "card",
+        type: "points",
+        valueUsd: 0,
+        expiresAt: inDays(75),
+        termsRaw:
+          "Debit card rewards: 1,200 points earned this quarter. Redeemable for e-vouchers from partner brands via the rewards portal.",
+      },
     ];
   },
 };

@@ -35,8 +35,20 @@ export async function GET(req: Request) {
 
   const purchases = receipts.filter((r) => !REVERSAL.has(r.category));
   const totalSpent = purchases.reduce((s, r) => s + r.cashUsd, 0);
+  // Realized savings — summed from the signed receipts of actual purchases
+  // (not wallet reward face value). Each number is backed by a verifiable receipt.
   const totalSaved = purchases.reduce((s, r) => s + r.savedUsd, 0);
-  const totalLiberated = payouts.reduce((s, p) => s + p.amountUsd, 0);
+
+  // Split payouts: a sandbox account that can't send real money records a
+  // SIMULATED payout (status "SIMULATED" / batch id "SIMULATED-…"). Those must
+  // NOT be counted as real cash-out — they're surfaced separately so the UI can
+  // mark them honestly.
+  const isSimulated = (p: { status: string; payoutBatchId: string | null }) =>
+    p.status === "SIMULATED" || (p.payoutBatchId?.startsWith("SIMULATED") ?? false);
+  const realPayouts = payouts.filter((p) => !isSimulated(p));
+  const simPayouts = payouts.filter(isSimulated);
+  const totalLiberated = realPayouts.reduce((s, p) => s + p.amountUsd, 0);
+  const totalSimulated = simPayouts.reduce((s, p) => s + p.amountUsd, 0);
   const totalRefunded = refunds.reduce((s, r) => s + (r.amountUsd ?? 0), 0);
 
   // Daily spend + saved over the last 30 days (zero-filled).
@@ -75,9 +87,11 @@ export async function GET(req: Request) {
       totalSpent,
       totalSaved,
       totalLiberated,
+      totalSimulated,
       totalRefunded,
       purchases: purchases.length,
-      payouts: payouts.length,
+      payouts: realPayouts.length,
+      payoutsSimulated: simPayouts.length,
       refunds: refunds.length,
       runs,
       activeMandate,

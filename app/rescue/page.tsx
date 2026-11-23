@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { RepalLogo } from "@/components/brand/RepalLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import RescuePanel from "@/components/rescue/RescuePanel";
+
+// Authenticated recovery dashboard (personalized reward timeline) → noindex.
+export const metadata: Metadata = {
+  title: "Reward Rescue",
+  description: "Cash out rewards before they expire — a timeline of what to rescue first.",
+  robots: { index: false, follow: true },
+};
 
 /**
  * /rescue — a Bryntum Scheduler timeline of every active reward's life, so a

@@ -65,7 +65,7 @@ export function SiteFooter() {
       tl.from(".f-node", { opacity: 0, y: 14, scale: 0.9, stagger: 0.1, duration: 0.5, ease: "back.out(1.5)" })
         .from(".f-head", { opacity: 0, y: 24, duration: 0.6, ease: "power3.out" }, "<0.15")
         .from(".f-desc", { opacity: 0, y: 20, duration: 0.6, ease: "power3.out" }, "<0.15")
-        .from(".f-btn", { opacity: 0, y: 16, stagger: 0.1, duration: 0.5 }, "<0.1")
+        .from(".f-btn", { opacity: 0, y: 16, duration: 0.5 }, "<0.1")
         .from(".f-note", { opacity: 0, duration: 0.5 }, "<0.1")
         .from(".f-trust", { opacity: 0, y: 14, stagger: 0.1, duration: 0.5 }, "<0.05")
         .from(".f-box", { opacity: 0, y: 28, duration: 0.7, ease: "power3.out" }, "<0.1");
@@ -75,8 +75,8 @@ export function SiteFooter() {
   const NAV: { title: string; links: { label: string; href?: string; demo?: boolean }[] }[] = [
     { title: "Product", links: [{ label: "Reward Wallet", href: "/wallet" }, { label: "Mandate Studio", href: "/mandate" }, { label: "Shop", href: "/shop" }, { label: "Insights", href: "/insights" }] },
     { title: "Explore", links: [{ label: "Coupon Stacking", href: "/stack" }, { label: "Reward Rescue", href: "/rescue" }, { label: "How it works", href: "/#how" }, { label: "Live Demo", demo: true }] },
-    { title: "Trust", links: [{ label: "Security", href: "/#trust" }, { label: "Signed receipts", href: "/#trust" }, { label: "The money flow", href: "/#money" }, { label: "Login with PayPal", href: "/api/auth/paypal/login" }] },
-    { title: "Legal", links: [{ label: "Privacy", href: "/privacy" }, { label: "Terms", href: "/terms" }] },
+    { title: "Trust", links: [{ label: "Security", href: "/security" }, { label: "Signed receipts", href: "/#trust" }, { label: "The money flow", href: "/#money" }, { label: "Login with PayPal", href: "/api/auth/paypal/login" }] },
+    { title: "Legal", links: [{ label: "About", href: "/about" }, { label: "Privacy", href: "/privacy" }, { label: "Terms", href: "/terms" }] },
   ];
   const trust = [["User-controlled limits", Ic.shield], ["Eligible rewards only", Ic.stack], ["Verifiable receipts", Ic.receipt]] as const;
 
@@ -98,7 +98,7 @@ export function SiteFooter() {
         <h2 className="f-head font-display text-[32px] font-bold leading-tight tracking-tight text-[var(--color-fg)] sm:text-[46px]">Your next purchase could cost less.</h2>
         <p className="f-desc mx-auto mt-4 max-w-xl text-[15px] text-[var(--color-muted)] sm:text-[16px]">RePal reads the fine print on every reward you hold, stacks only the ones that are eligible, and settles the single lowest price with PayPal — all within the spending limits you set.</p>
         <div className="mt-8 flex flex-row flex-wrap items-center justify-center gap-3">
-          <button onClick={() => demo.mutate()} disabled={demo.isPending} className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_40px_-14px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:px-7" style={{ background: GRAD }}><Ic.play className="h-5 w-5" />{demo.isPending ? "Starting…" : "Try Live Demo"}</button>
+          <button onClick={() => demo.mutate()} disabled={demo.isPending} className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-transparent px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_40px_-14px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:px-7" style={{ background: GRAD }}><Ic.play className="h-5 w-5" />{demo.isPending ? "Starting…" : "Try Live Demo"}</button>
           <a href="/api/auth/paypal/login" className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-6 py-3.5 text-[15px] font-semibold text-[var(--color-fg)] transition-colors hover:border-[#2563eb]/40 sm:px-7"><Mark className="h-5 w-5" />Login with PayPal</a>
         </div>
         <p className="f-note mt-5 text-[12.5px] text-[var(--color-muted)]">No setup · Sample data · No real payment</p>

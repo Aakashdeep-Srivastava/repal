@@ -58,3 +58,8 @@ node_modules
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# demo/marketing video artifacts (large binaries — kept out of git)
+*.mp4
+*.webm
+*.mov

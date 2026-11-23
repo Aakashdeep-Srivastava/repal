@@ -21,7 +21,12 @@ import { PP_STATE_COOKIE } from "@/lib/auth/paypal-state";
 export async function GET(req: Request) {
   const origin = new URL(req.url).origin;
 
-  const clientId = process.env.PAYPAL_CLIENT_ID;
+  // "Log in with PayPal" (OIDC) needs an app that has the Log-in feature enabled
+  // and this callback registered as a Return URL. That is NOT necessarily the
+  // same app as PAYPAL_CLIENT_ID, which may be a platform/partner client used for
+  // per-merchant checkout routing. Prefer a dedicated OIDC client when set;
+  // fall back to PAYPAL_CLIENT_ID for backward compatibility.
+  const clientId = process.env.PAYPAL_OIDC_CLIENT_ID || process.env.PAYPAL_CLIENT_ID;
   const redirect = process.env.PAYPAL_OIDC_REDIRECT;
   if (!clientId || !redirect) {
     return NextResponse.redirect(new URL("/?auth=unconfigured", origin));
