@@ -3,8 +3,9 @@ import Link from "next/link";
 import { ContactLine, LegalPage } from "@/components/legal/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — RePal",
+  title: "Terms of Service",
   description: "The terms for using the RePal prototype.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {

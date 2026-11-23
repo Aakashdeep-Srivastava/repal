@@ -3,6 +3,7 @@ import { Geist_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/components/QueryProvider";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { SITE_URL } from "@/lib/site";
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
@@ -18,18 +19,86 @@ const fraunces = Fraunces({
   style: ["normal", "italic"],
 });
 
+const SITE_TITLE = "RePal — rewards to money, on PayPal";
+/** SERP-length (<=155 char) description; the longer pitch lives in OG below. */
+const SITE_DESCRIPTION =
+  "RePal reads your rewards' fine print, finds the cheapest price after rewards, and pays with PayPal — within the limits you set.";
+
 export const metadata: Metadata = {
-  title: "RePal — rewards to money, on PayPal",
-  description:
-    "An agentic rewards-to-money layer. State a goal; the AI reads your rewards' fine print, a deterministic optimizer finds the cheapest SKU after rewards, and PayPal moves the money across the whole lifecycle.",
+  metadataBase: new URL(SITE_URL),
+  // `template` gives child routes unique titles (e.g. "Reward Wallet — RePal")
+  // without each one repeating the brand suffix. `default` is the homepage.
+  title: { default: SITE_TITLE, template: "%s — RePal" },
+  description: SITE_DESCRIPTION,
   applicationName: "RePal",
   manifest: "/manifest.webmanifest",
+  // Homepage self-canonical; child routes override with their own path.
+  alternates: { canonical: "/" },
   appleWebApp: {
     capable: true,
     title: "RePal",
     statusBarStyle: "default",
   },
   formatDetection: { telephone: false },
+  openGraph: {
+    type: "website",
+    siteName: "RePal",
+    url: SITE_URL,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: "/rewards-panel.png",
+        width: 1358,
+        height: 874,
+        alt: "RePal showing the cheapest price after stacked rewards",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/rewards-panel.png"],
+  },
+};
+
+/**
+ * Entity / brand structured data, emitted site-wide from the root layout so
+ * every route inherits it. Only facts that are actually true on the site:
+ * real logo asset, real GitHub repo. No fabricated ratings, prices, or
+ * sameAs profiles — add those to `sameAs`/SoftwareApplication only when real.
+ */
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: "RePal",
+      url: `${SITE_URL}/`,
+      logo: `${SITE_URL}/brand/repal-monogram.png`,
+      description: SITE_DESCRIPTION,
+      sameAs: ["https://github.com/Aakashdeep-Srivastava/repal"],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: `${SITE_URL}/`,
+      name: "RePal",
+      publisher: { "@id": `${SITE_URL}/#organization` },
+      inLanguage: "en",
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "RePal",
+      url: `${SITE_URL}/`,
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Web",
+      description: SITE_DESCRIPTION,
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+  ],
 };
 
 export const viewport: Viewport = {
@@ -66,6 +135,10 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap"
         />
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
+        />
       </head>
       <body>
         <QueryProvider>{children}</QueryProvider>

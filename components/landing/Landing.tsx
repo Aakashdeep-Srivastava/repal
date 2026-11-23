@@ -96,9 +96,9 @@ export function Landing() {
 
   const PrimaryCTA = ({ cls = "" }: { cls?: string }) =>
     loggedIn ? (
-      <Link href="/wallet" className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 ${cls}`} style={{ background: GRAD }}><Ic.check className="h-5 w-5" />{firstName ? `Continue as ${firstName}` : "Go to your wallet"} →</Link>
+      <Link href="/wallet" className={`inline-flex items-center justify-center gap-2 rounded-full border border-transparent px-6 py-3 text-[15px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 ${cls}`} style={{ background: GRAD }}><Ic.check className="h-5 w-5" />{firstName ? `Continue as ${firstName}` : "Go to your wallet"} →</Link>
     ) : (
-      <a href="/api/auth/paypal/login" className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[15px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 ${cls}`} style={{ background: GRAD }}><Mark className="h-5 w-5 brightness-0 invert" />Login with PayPal</a>
+      <a href="/api/auth/paypal/login" className={`inline-flex items-center justify-center gap-2 rounded-full border border-transparent px-6 py-3 text-[15px] font-semibold text-white shadow-[0_14px_34px_-12px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 ${cls}`} style={{ background: GRAD }}><Mark className="h-5 w-5 brightness-0 invert" />Login with PayPal</a>
     );
   const DemoCTA = ({ dark = false, label = "Try Live Demo", cls = "" }: { dark?: boolean; label?: string; cls?: string }) => (
     <button onClick={() => demo.mutate()} disabled={demo.isPending} className={`inline-flex items-center justify-center gap-2 rounded-full border px-6 py-3 text-[15px] font-semibold transition-colors disabled:opacity-60 ${dark ? "border-white/30 bg-white/10 text-white hover:bg-white/20" : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-fg)] hover:border-[#2563eb]/40"} ${cls}`}><Ic.play className="h-5 w-5 text-[#2563eb]" />{demo.isPending ? "Starting…" : label}</button>

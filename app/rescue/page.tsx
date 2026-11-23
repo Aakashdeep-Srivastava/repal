@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/AppShell";
 import RescueDashboard from "@/components/rescue/RescueDashboard";
+
+// Authenticated recovery dashboard (personalized reward timeline) → noindex.
+export const metadata: Metadata = {
+  title: "Reward Rescue",
+  description: "Cash out rewards before they expire — a timeline of what to rescue first.",
+  robots: { index: false, follow: true },
+};
 
 /**
  * /rescue — the rewards-recovery dashboard. Surfaces expiring rewards and the

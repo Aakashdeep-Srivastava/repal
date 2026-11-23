@@ -48,7 +48,9 @@ const CSP = [
 const securityHeaders = [
   { key: "Content-Security-Policy", value: CSP },
   // 1 year HSTS; the app is only ever reachable over HTTPS (CloudFront).
-  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  // `preload` closes the first-request downgrade gap; submit the apex at
+  // https://hstspreload.org once this ships to make it effective.
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

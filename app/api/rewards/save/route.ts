@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth/session";
-import { CATALOG } from "@/lib/merchants/catalog";
+import { CATALOG, catalogRules } from "@/lib/merchants/catalog";
 import { rateLimit, clientKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 /**
@@ -63,9 +63,17 @@ export async function POST(req: Request) {
     }
   }
 
-  // Idempotent: saving the same offer twice returns the existing Reward.
+  // Idempotent: saving the same offer twice returns the existing Reward — but
+  // heal it first if it was stored before deterministic catalog rules existed.
   const existing = await prisma.reward.findFirst({ where: { userId, offerId } });
   if (existing) {
+    if (existing.parseConfidence < 1) {
+      const healed = await prisma.reward.update({
+        where: { id: existing.id },
+        data: { rules: catalogRules(offer) as object[], parseConfidence: 1 },
+      });
+      return NextResponse.json(healed, { headers: rateLimitHeaders(rl) });
+    }
     return NextResponse.json(existing, { headers: rateLimitHeaders(rl) });
   }
 
@@ -79,8 +87,10 @@ export async function POST(req: Request) {
       type: offer.type,
       valueUsd: offer.value,
       termsRaw: offer.termsRaw,
-      rules: {}, // Terms agent fills this asynchronously
-      parseConfidence: 0,
+      // Known catalog offer → deterministic rules, immediately auto-applicable
+      // (no dependency on the LLM Terms agent, which may be unavailable in prod).
+      rules: catalogRules(offer) as object[],
+      parseConfidence: 1,
       status: "saved",
       expiresAt: new Date(Date.now() + offer.expiresInDays * 86_400_000),
     },

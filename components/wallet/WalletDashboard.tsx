@@ -9,6 +9,7 @@ import { fetchWallet, ingestWallet, fetchInsights, fetchMandate } from "@/lib/cl
 import { RewardCardV2 } from "@/components/wallet/RewardCardV2";
 import { ConnectGmail } from "@/components/wallet/ConnectGmail";
 import { PaymentMethods } from "@/components/wallet/PaymentMethods";
+import { RewardsFeed } from "@/components/rewards/RewardsFeed";
 import { DashboardShell, useShellUser, intentRoute, usd, timeAgo, I, Mark } from "@/components/dashboard/shell";
 
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
@@ -107,10 +108,10 @@ function MandateGate({ mandate, loading }: { mandate: { capUsd: number; approval
       <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500 text-white"><I.shield className="h-5 w-5" /></span>
         <div className="min-w-0 flex-1">
-          <div className="text-[14.5px] font-semibold text-[var(--color-fg)]">Agent authorized — policy set, no funding connected yet</div>
-          <div className="text-[12.5px] text-[var(--color-muted)]">Spending limits are active (cap {usd(mandate.capUsd)} · asks above {usd(mandate.approvalThresholdUsd)}). Connect PayPal funding to let the agent pay hands-free; until then it prepares the payment for you to approve.</div>
+          <div className="text-[14.5px] font-semibold text-[var(--color-fg)]">Agent authorized — ready to shop</div>
+          <div className="text-[12.5px] text-[var(--color-muted)]">Your spending policy is active (cap {usd(mandate.capUsd)} · asks above {usd(mandate.approvalThresholdUsd)}) and the agent prepares each payment for you to approve. Connecting PayPal funding is optional — it lets the agent pay hands-free.</div>
         </div>
-        <Link href="/mandate?vault=1" className="shrink-0 rounded-xl bg-[var(--color-brand)] px-3.5 py-2 text-[13px] font-medium text-white hover:-translate-y-0.5 transition-transform">Connect funding →</Link>
+        <Link href="/mandate?vault=1" className="shrink-0 rounded-xl bg-[var(--color-brand)] px-3.5 py-2 text-[13px] font-medium text-white hover:-translate-y-0.5 transition-transform">Connect funding (optional) →</Link>
       </div>
     );
   }
@@ -214,6 +215,11 @@ export function WalletDashboard() {
           </ul>
         </aside>
       </div>
+
+      {/* Cold-start "Discover rewards" — lets a user with a near-empty wallet
+          claim the open day-one offers (and see what connecting Gmail/a card
+          unlocks), so there's real reward value to stack at checkout. */}
+      <RewardsFeed />
 
       <JourneyStrip />
     </DashboardShell>

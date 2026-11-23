@@ -36,8 +36,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "invalid OAuth state" }, { status: 400 });
   }
 
-  const id = process.env.PAYPAL_CLIENT_ID;
-  const secret = process.env.PAYPAL_CLIENT_SECRET;
+  // Must match the client used at /login (see note there): prefer the dedicated
+  // OIDC app credentials, fall back to the generic PayPal client.
+  const id = process.env.PAYPAL_OIDC_CLIENT_ID || process.env.PAYPAL_CLIENT_ID;
+  const secret = process.env.PAYPAL_OIDC_CLIENT_SECRET || process.env.PAYPAL_CLIENT_SECRET;
   const redirect = process.env.PAYPAL_OIDC_REDIRECT;
   if (!id || !secret || !redirect) {
     return NextResponse.json({ error: "PayPal OIDC not configured" }, { status: 500 });
