@@ -46,7 +46,7 @@
         },
         {
           "name": "PAYPAL_OIDC_REDIRECT",
-          "value": "https://d14t147d5f4q6i.cloudfront.net/api/auth/paypal/callback"
+          "value": "https://repal.shop/api/auth/paypal/callback"
         },
         {
           "name": "DEMO_MODE",
