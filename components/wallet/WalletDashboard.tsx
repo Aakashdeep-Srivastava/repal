@@ -9,6 +9,7 @@ import { fetchWallet, ingestWallet, fetchInsights, fetchMandate } from "@/lib/cl
 import { RewardCardV2 } from "@/components/wallet/RewardCardV2";
 import { ConnectGmail } from "@/components/wallet/ConnectGmail";
 import { PaymentMethods } from "@/components/wallet/PaymentMethods";
+import { RewardsFeed } from "@/components/rewards/RewardsFeed";
 import { DashboardShell, useShellUser, intentRoute, usd, timeAgo, I, Mark } from "@/components/dashboard/shell";
 
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
@@ -214,6 +215,11 @@ export function WalletDashboard() {
           </ul>
         </aside>
       </div>
+
+      {/* Cold-start "Discover rewards" — lets a user with a near-empty wallet
+          claim the open day-one offers (and see what connecting Gmail/a card
+          unlocks), so there's real reward value to stack at checkout. */}
+      <RewardsFeed />
 
       <JourneyStrip />
     </DashboardShell>
