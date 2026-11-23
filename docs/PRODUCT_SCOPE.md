@@ -62,8 +62,8 @@ Adapter interface for external coupon validation + redemption (`lib/redemption/`
 ### Phase 4 — Commercial pilot readiness · **✅ ENGINEERING COMPLETE** (merged, commit `34e42c9`; partner-gated)
 Reference-partner endpoint + real-HTTP redemption confirmation (`AffiliateHttpAdapter`) + `/api/insights/campaigns` campaign reporting. **Never combine advertising credits, customer cashback, and cash commissions in one balance** (three never-conflated balances). `PARTNER_REF_API_KEY` is live in prod; `AFFILIATE_API_URL` is **deliberately unset** (no signed partner yet → no real external confirmation fires). The remaining gate is a **signed reference partner**, not more code.
 
-### Phase 5 — True marketplace checkout (later) · **⬜ NOT STARTED** (external gate)
-Only after PayPal marketplace **partner approval**: a single buyer approval settling across multiple sellers (`purchase_units[]` + `payee`). Code structure + HTTP-207 handling can be built earlier against sandbox, but cannot go live until approved.
+### Phase 5 — True marketplace checkout · **✅ CODE STRUCTURE BUILT / ⏳ partner-approval-gated**
+The *buildable* part is done (`lib/paypal/marketplace.ts` + `app/api/pay/marketplace/order` + 14 unit tests): a single buyer approval settling across multiple sellers — one `purchase_unit` **per seller** with its own `payee` + `payment_instruction.platform_fees`, and the **`PARTIALLY_COMPLETED` ("HTTP-207") capture parsing** that a multi-seller capture requires (some legs settle, some fail). It is **gated OFF** (`PAYPAL_MARKETPLACE_ENABLED`, default `0`); the route returns `501` + the exact request it would send. **Going live still needs PayPal marketplace partner approval + sellers onboarded (Partner Referrals)** — an external gate, not more code. Until then it stays dormant; the live path is Phase 2 per-merchant routing.
 
 ---
 

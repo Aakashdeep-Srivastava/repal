@@ -136,7 +136,7 @@ All money fields in the ledger are integer cents; receipts/payouts use USD float
 - **Auth:** `auth/paypal/{login,callback}`, `auth/{demo-login,judge-login,judge-reset,logout}`, `me`.
 - **Wallet/rewards:** `wallet`, `wallet/{import,ingest}`, `rewards/{feed,onboard,save}`.
 - **Shop/plan:** `products`, `products/[id]`, `offers`, `plan`, `eligibility`.
-- **Pay/money:** `pay/{mode,order,capture,demo-capture,payout,refund}`.
+- **Pay/money:** `pay/{mode,order,capture,demo-capture,payout,refund}`, `pay/marketplace/order` (Phase 5, gated → 501).
 - **Mandates:** `mandates`, `mandates/vault/callback`.
 - **Webhooks/insights:** `webhooks/paypal`, `insights`, `insights/campaigns` (Phase 4 campaign reporting), `paypal/transactions`.
 - **Agent:** `runs`, `runs/[id]/stream` (SSE).
@@ -215,9 +215,9 @@ Session = signed httpOnly cookie (`repal_session`, HMAC, fail-closed in prod). R
 | **Commercial ledger (code)** | ✅ deployed, **tables pending migration** |
 | **Merchant-confirmed redemption (Phase 3)** | ✅ code in `main`, **tables pending migration** |
 | **Commercial pilot loop (Phase 4)** | ✅ engineering complete, **partner-gated** (`AFFILIATE_API_URL` unset) |
-| True single-checkout multi-seller marketplace (Phase 5) | ❌ needs PayPal partner approval |
+| **Marketplace structure + HTTP-207 handling (Phase 5)** | ✅ code built + tested, **gated OFF** (`PAYPAL_MARKETPLACE_ENABLED=0`) |
+| True single-checkout multi-seller marketplace — *live* | ❌ needs PayPal marketplace partner approval |
 | Webhook handling for capture/approval/dispute | ❌ stored but inert |
-| HTTP-207 / partial-capture handling | ❌ not built (needs marketplace) |
 
 ---
 
@@ -225,7 +225,7 @@ Session = signed httpOnly cookie (`repal_session`, HMAC, fail-closed in prod). R
 
 1. **Ledger + redemption-confirmation tables not in prod** — 3 migrations await manual `prisma migrate deploy`. Until then the commercial-ledger + Phase 3 redemption demo can't run live (code no-ops).
 2. **Webhook `applyEffects` is partial** — only payout-item + refund events mutate state; capture-completed / order-approved / dispute events are stored but inert. Fine for synchronous capture; needed for async robustness.
-3. **Capture assumes `captures[0].id`** with no HTTP-207 / `PARTIALLY_COMPLETED` handling — safe for single-seller, must be fixed with multi-seller.
+3. **Single-seller capture assumes `captures[0].id`** (safe for the live single-seller path). The **multi-seller path now has proper `PARTIALLY_COMPLETED` / HTTP-207 handling** (`lib/paypal/marketplace.ts` → `summarizeCapture`), but it's gated OFF pending marketplace partner approval; the single-seller capture route itself still reads `captures[0]`.
 4. **New seller app's webhook id not registered** — payout/refund webhook verification would fail against the live `PAYPAL_WEBHOOK_ID` (old app). Demo uses sync capture, so not blocking.
 5. **`components/nav/UserMenu.tsx` is dead code** (mounted nowhere) — the shell greeting is the real identity surface (now fixed to show the user).
 6. **Ingestion is mostly sample data** — only Gmail is a live source; paypal/card/loyalty/channel3 adapters are labelled SANDBOX stand-ins.
@@ -236,7 +236,7 @@ Session = signed httpOnly cookie (`repal_session`, HMAC, fail-closed in prod). R
 ## 15. Open decisions
 
 - **Per-merchant routing — DONE (Phase 2).** Products from different merchants route each purchase to that merchant's own PayPal app (separate single-seller checkouts). Shipped + live (platform + `cleartrip`). No partner approval needed.
-- **True single-checkout multi-seller (Phase 5)** — one approval split across sellers (`purchase_units[]` + `payee`) — still needs PayPal **marketplace partner approval** (external gate) for live; the code structure + 207 handling can be built now against the sandbox.
+- **True single-checkout multi-seller (Phase 5)** — the code structure (`purchase_units[]` + `payee` + `platform_fees`) and `PARTIALLY_COMPLETED` / HTTP-207 capture handling are **built + unit-tested and gated OFF** (`lib/paypal/marketplace.ts`, `app/api/pay/marketplace/order`). Going **live** still needs PayPal **marketplace partner approval** + sellers onboarded via Partner Referrals (external gate) — not more code.
 - **Apply the 3 ledger/redemption migrations to prod** — required to demo the commercial ledger + Phase 3 merchant-confirmed redemption (campaigns, commissions, attribution, redemption confirmation). Still pending explicit approval.
 - **Sign a reference partner + set `AFFILIATE_API_URL`** — the last gate for a real Phase 4 redemption confirmation to fire.
 - **Register a webhook id for the `cleartrip` app** (`PAYPAL_WEBHOOK_ID__CLEARTRIP`) — only if live webhook events (payout/dispute) are needed for that seller on camera.
