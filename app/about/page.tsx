@@ -65,6 +65,18 @@ export default function AboutPage() {
       </section>
 
       <section>
+        <h2>Investors</h2>
+        <p>
+          RePal is raising to build the rewards-activation network — turning
+          forgotten rewards into attributable purchases, with merchant-side
+          commercial attribution. If you back agentic commerce, reach the founder
+          directly at{" "}
+          <a href="mailto:aakashdeep@xphoraai.com">aakashdeep@xphoraai.com</a> or{" "}
+          <a href="tel:+916394958060">+91&nbsp;63949&nbsp;58060</a>.
+        </p>
+      </section>
+
+      <section>
         <h2>Current status</h2>
         <p>
           The live experience runs on PayPal&apos;s sandbox — no real money moves

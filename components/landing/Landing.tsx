@@ -53,6 +53,15 @@ const StepPill = ({ icon, label }: { icon: React.ReactNode; label: string }) => 
 );
 
 
+/** Landing FAQ — real trust/intent questions; also feeds AI-answer citability. */
+const FAQS: [string, string][] = [
+  ["Is it safe to connect PayPal?", "Yes. RePal never sees your PayPal password or card numbers. You grant a scoped PayPal Vault authority with spending limits you set, and you can revoke it anytime — payments outside your limits are refused before they ever reach PayPal."],
+  ["Is RePal free? How do you make money?", "Finding and stacking your rewards is free. RePal earns an agreed commission from merchants and partners when a reward actually drives a purchase — never by marking up your price."],
+  ["How do you know my savings are real?", "Every purchase produces an Ed25519-signed receipt you can verify independently. The savings aren't a claim — they're cryptographically provable."],
+  ["Does the AI decide how to spend my money?", "No. The AI only reads reward terms and proposes intent. Every amount and payment authority is decided by deterministic, tested code and a policy guard that can allow, ask, or deny."],
+  ["Which rewards and stores work?", "Coupons, cashback, gift cards, card points and statement credits. Connect a read-only Gmail scan to find rewards you already have, or claim day-one offers right in your wallet."],
+];
+
 export function Landing() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -130,7 +139,7 @@ export function Landing() {
       <section className="mx-auto max-w-5xl px-5 pt-14 text-center sm:pt-20">
         <div className="hero-in flex justify-center"><Pill>Your AI Rewards Agent</Pill></div>
         <h1 className="hero-in font-display mx-auto mt-6 max-w-3xl text-[44px] font-bold leading-[1.05] tracking-tight sm:text-[64px]">The cheapest price <em className="not-italic" style={{ background: GRAD, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", fontStyle: "italic" }}>after</em> your rewards.</h1>
-        <p className="hero-in mx-auto mt-5 max-w-xl text-[16px] text-[var(--color-muted)] sm:text-[18px]">RePal reads your rewards, stacks the best offers, and pays for you with PayPal — within the limits you set.</p>
+        <p className="hero-in mx-auto mt-5 max-w-xl text-[16px] text-[var(--color-muted)] sm:text-[18px]">RePal reads your rewards&apos; fine print, stacks every valid offer, and pays with PayPal — then hands you a signed receipt proving what you saved. All within the limits you set.</p>
         <div className="hero-in mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"><PrimaryCTA /><DemoCTA /></div>
         <div className="hero-in mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] font-medium text-[var(--color-muted)]">{trust.map(([l, I]) => <span key={l} className="inline-flex items-center gap-1.5"><I className="h-4 w-4 text-[#2563eb]" />{l}</span>)}</div>
         <a href="#how" className="hero-in mx-auto mt-10 grid h-9 w-9 animate-bounce place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm"><Ic.arrowD className="h-4 w-4" /></a>
@@ -235,6 +244,44 @@ export function Landing() {
             <div key={t as string} className="reveal rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)]/70 p-5 text-left shadow-sm backdrop-blur"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#2563eb]/10 text-[#2563eb]">{(I as (p: IP) => React.ReactNode)({ className: "h-5 w-5" })}</span><div className="mt-4 flex items-center gap-2"><span className="text-[16px] font-bold">{t as string}</span>{tag ? <span className="rounded-full bg-[var(--color-border)]/40 px-2 py-0.5 text-[10px] font-medium text-[var(--color-muted)]">{tag as string}</span> : null}</div><p className="mt-1.5 text-[13px] text-[var(--color-muted)]">{d as string}</p></div>
           ))}
         </div>
+      </section>
+
+      {/* WHY NOT AN ADVISOR — the differentiator vs rewards-advisor apps */}
+      <section className="mx-auto max-w-5xl px-5 pt-24">
+        <div className="flex flex-col items-start gap-2"><Pill>Why RePal</Pill>
+          <h2 className="font-display mt-2 text-[28px] font-bold leading-tight tracking-tight sm:text-[36px]">Rewards advisors tell you what to do. RePal does it — and proves it.</h2>
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm">
+            <div className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">A typical rewards app</div>
+            <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-fg)]">&ldquo;Use this card for 5% back.&rdquo; Then you have to remember it, apply it at checkout, and hope it actually worked.</p>
+          </div>
+          <div className="rounded-[22px] border border-[#2563eb]/30 bg-[#2563eb]/5 p-6 shadow-sm">
+            <div className="text-[12px] font-semibold uppercase tracking-wide text-[#2563eb]">RePal</div>
+            <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-fg)]">The agent reads the fine print, stacks every valid reward, pays with PayPal within your limits, and gives you a <strong>signed, verifiable receipt</strong> of exactly what you saved. Nothing to remember, nothing to trust on faith.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ — content depth, trust answers, and AI-answer citability */}
+      <section id="faq" className="mx-auto max-w-3xl px-5 pt-24">
+        <div className="flex flex-col items-start gap-2"><Pill>FAQ</Pill>
+          <h2 className="font-display mt-2 text-[28px] font-bold tracking-tight sm:text-[36px]">Questions people ask first.</h2>
+        </div>
+        <div className="mt-8 flex flex-col gap-3">
+          {FAQS.map(([q, a]) => (
+            <details key={q} className="group rounded-[18px] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-sm">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[15.5px] font-semibold text-[var(--color-fg)]">{q}<span aria-hidden className="shrink-0 text-xl text-[var(--color-muted)] transition-transform group-open:rotate-45">+</span></summary>
+              <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-muted)]">{a}</p>
+            </details>
+          ))}
+        </div>
+        <p className="mt-10 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-card)] p-5 text-center text-[14px] text-[var(--color-muted)]">
+          <span className="font-semibold text-[var(--color-fg)]">Backing the future of agentic commerce?</span> RePal is raising — let&apos;s talk.{" "}
+          <a href="mailto:aakashdeep@xphoraai.com" className="font-medium text-[var(--color-brand)] hover:underline">aakashdeep@xphoraai.com</a>
+          {" · "}
+          <a href="tel:+916394958060" className="font-medium text-[var(--color-brand)] hover:underline">+91&nbsp;63949&nbsp;58060</a>
+        </p>
       </section>
 
       {/* premium closing — CTA + multi-column footer */}

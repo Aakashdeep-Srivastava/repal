@@ -97,7 +97,7 @@ export function SiteFooter() {
       <div className="mx-auto mt-12 max-w-2xl text-center">
         <h2 className="f-head font-display text-[32px] font-bold leading-tight tracking-tight text-[var(--color-fg)] sm:text-[46px]">Your next purchase could cost less.</h2>
         <p className="f-desc mx-auto mt-4 max-w-xl text-[15px] text-[var(--color-muted)] sm:text-[16px]">RePal reads the fine print on every reward you hold, stacks only the ones that are eligible, and settles the single lowest price with PayPal — all within the spending limits you set.</p>
-        <div className="mt-8 flex flex-row flex-wrap items-center justify-center gap-3">
+        <div className="mt-8 flex flex-row flex-nowrap items-center justify-center gap-2.5 sm:gap-3">
           <button onClick={() => demo.mutate()} disabled={demo.isPending} className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-transparent px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_40px_-14px_rgba(37,99,235,.7)] transition-transform hover:-translate-y-0.5 disabled:opacity-60 sm:px-7" style={{ background: GRAD }}><Ic.play className="h-5 w-5" />{demo.isPending ? "Starting…" : "Try Live Demo"}</button>
           <a href="/api/auth/paypal/login" className="f-btn inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-6 py-3.5 text-[15px] font-semibold text-[var(--color-fg)] transition-colors hover:border-[#2563eb]/40 sm:px-7"><Mark className="h-5 w-5" />Login with PayPal</a>
         </div>
@@ -136,7 +136,7 @@ export function SiteFooter() {
           </div>
           <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-[12.5px] text-white/50 sm:flex-row">
             <span>© {2026} RePal · rewards to real money, on PayPal</span>
-            <div className="flex gap-5"><Link href="/privacy" className="hover:text-white">Privacy</Link><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/wallet" className="hover:text-white">Dashboard</Link></div>
+            <div className="flex gap-5"><a href="mailto:aakashdeep@xphoraai.com" className="hover:text-white">Invest</a><Link href="/privacy" className="hover:text-white">Privacy</Link><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/wallet" className="hover:text-white">Dashboard</Link></div>
           </div>
         </div>
       </div>
