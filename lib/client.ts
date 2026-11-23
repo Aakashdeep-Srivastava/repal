@@ -283,9 +283,13 @@ export interface InsightsData {
     totalSpent: number;
     totalSaved: number;
     totalLiberated: number;
+    /** Payouts the sandbox could not really send — shown marked as simulated. */
+    totalSimulated: number;
     totalRefunded: number;
     purchases: number;
+    /** Completed (non-simulated) payout count. */
     payouts: number;
+    payoutsSimulated: number;
     refunds: number;
     runs: number;
     activeMandate: number;

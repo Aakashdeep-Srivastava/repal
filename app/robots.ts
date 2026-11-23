@@ -24,6 +24,7 @@ export default function robots(): MetadataRoute.Robots {
           "/stack",
           "/rescue",
           "/mandate",
+          "/operations",
           "/shop",
           "/product/",
           "/checkout",
