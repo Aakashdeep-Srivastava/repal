@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
 import { StackEngine } from "@/components/stack/StackEngine";
+
+// Interactive demo surface, not marketing content → noindex.
+export const metadata: Metadata = {
+  title: "The Stack",
+  description: "One tap stacks every eligible reward into a single PayPal payment.",
+  robots: { index: false, follow: true },
+};
 
 /** /stack — "The Stack": a cinematic obsidian stacking engine. Fonts are loaded
  *  at runtime via <link> (not next/font) so the sandboxed CI image builds offline.

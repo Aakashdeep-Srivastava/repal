@@ -75,8 +75,8 @@ export function SiteFooter() {
   const NAV: { title: string; links: { label: string; href?: string; demo?: boolean }[] }[] = [
     { title: "Product", links: [{ label: "Reward Wallet", href: "/wallet" }, { label: "Mandate Studio", href: "/mandate" }, { label: "Shop", href: "/shop" }, { label: "Insights", href: "/insights" }] },
     { title: "Explore", links: [{ label: "Coupon Stacking", href: "/stack" }, { label: "Reward Rescue", href: "/rescue" }, { label: "How it works", href: "/#how" }, { label: "Live Demo", demo: true }] },
-    { title: "Trust", links: [{ label: "Security", href: "/#trust" }, { label: "Signed receipts", href: "/#trust" }, { label: "The money flow", href: "/#money" }, { label: "Login with PayPal", href: "/api/auth/paypal/login" }] },
-    { title: "Legal", links: [{ label: "Privacy", href: "/privacy" }, { label: "Terms", href: "/terms" }] },
+    { title: "Trust", links: [{ label: "Security", href: "/security" }, { label: "Signed receipts", href: "/#trust" }, { label: "The money flow", href: "/#money" }, { label: "Login with PayPal", href: "/api/auth/paypal/login" }] },
+    { title: "Legal", links: [{ label: "About", href: "/about" }, { label: "Privacy", href: "/privacy" }, { label: "Terms", href: "/terms" }] },
   ];
   const trust = [["User-controlled limits", Ic.shield], ["Eligible rewards only", Ic.stack], ["Verifiable receipts", Ic.receipt]] as const;
 

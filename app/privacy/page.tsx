@@ -3,8 +3,9 @@ import Link from "next/link";
 import { ContactLine, LegalPage } from "@/components/legal/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — RePal",
+  title: "Privacy Policy",
   description: "What RePal collects, why, who processes it, and your choices.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {
