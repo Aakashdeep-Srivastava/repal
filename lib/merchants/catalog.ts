@@ -1,4 +1,5 @@
 // lib/merchants/catalog.ts
+import type { RewardRule } from "@/lib/types";
 // Day-one offer catalog for RePal. A new user has no history, so this is what
 // they see first (same pattern as the GPay "Offers" channel / PayPal savable offers).
 //
@@ -147,3 +148,43 @@ export const CATALOG: CatalogOffer[] = [
 ];
 
 export const merchantById = Object.fromEntries(MERCHANTS.map((m) => [m.id, m]));
+
+/**
+ * Deterministic rules for a KNOWN catalog offer. The structured fields we
+ * authored (type/value/minSpend/maxReward/merchant) ARE the terms — there is
+ * nothing for an LLM to "parse". So a claimed cold-start reward can auto-apply
+ * immediately (parseConfidence 1.0) instead of waiting on the Terms agent, which
+ * may be unavailable in prod. Arbitrary Gmail-ingested rewards still go through
+ * the LLM Terms agent (lib/ingest/registry).
+ *
+ * Returns rules in the exact predicate vocabulary lib/optimizer/evaluate reads.
+ */
+export function catalogRules(offer: CatalogOffer): RewardRule[] {
+  const q = offer.termsRaw; // the authored terms are the honest quoted clause
+  const rules: RewardRule[] = [];
+
+  // Discount shape. cashback % is treated as percent-off of the "price after
+  // rewards" (consistent with how the Terms agent parses "N% back").
+  if (offer.type === "pct_off" || offer.type === "cashback_pct") {
+    rules.push({ predicate: "percent_off", value: offer.value, quotedClause: q });
+  } else if (offer.type === "amount_off" || offer.type === "welcome_cash") {
+    rules.push({ predicate: "flat_off_usd", value: offer.value, quotedClause: q });
+  }
+  // free_shipping (and any value-only reward): no discount rule — the optimizer
+  // falls back to reward.valueUsd.
+
+  if (typeof offer.minSpendUsd === "number") {
+    rules.push({ predicate: "min_spend_usd", value: offer.minSpendUsd, quotedClause: q });
+  }
+  if (typeof offer.maxRewardUsd === "number") {
+    rules.push({ predicate: "max_discount_usd", value: offer.maxRewardUsd, quotedClause: q });
+  }
+  // Merchant-specific offers only apply at that merchant (matched by domain or
+  // name). RePal's own welcome reward (source "repal") is merchant-agnostic.
+  if (offer.source !== "repal") {
+    const m = merchantById[offer.merchantId];
+    if (m) rules.push({ predicate: "merchant_allow", value: [m.domain, m.name], quotedClause: q });
+  }
+
+  return rules;
+}
