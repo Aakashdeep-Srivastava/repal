@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { CATALOG } from "@/lib/merchants/catalog";
+import { CATALOG, catalogRules } from "@/lib/merchants/catalog";
 
 /**
  * Grant the RePal welcome reward ($5 on the first agent purchase) to a user,
@@ -27,8 +27,9 @@ export async function grantWelcomeReward(userId: string) {
       type: offer.type,
       valueUsd: offer.value,
       termsRaw: offer.termsRaw,
-      rules: {}, // Terms agent fills this asynchronously
-      parseConfidence: 0,
+      // Deterministic rules for RePal's own welcome offer — auto-applicable.
+      rules: catalogRules(offer) as object[],
+      parseConfidence: 1,
       status: "saved",
       expiresAt: new Date(Date.now() + offer.expiresInDays * 86_400_000),
     },
