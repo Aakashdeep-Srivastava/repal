@@ -1,6 +1,6 @@
 # RePal — Devpost submission
 
-**Live:** https://d14t147d5f4q6i.cloudfront.net (click **Judge demo**)
+**Live:** https://repal.shop (click **Judge demo**) · also at https://d14t147d5f4q6i.cloudfront.net (CloudFront origin)
 **Repo:** https://github.com/Aakashdeep-Srivastava/repal
 
 ## Elevator pitch

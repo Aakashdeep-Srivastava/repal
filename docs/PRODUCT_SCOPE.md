@@ -1,6 +1,6 @@
 # RePal — Product Scope & Engineering Roadmap
 
-_Created 2026-11-21 (Phase 0 scope freeze). This doc formally separates the two product scopes and freezes the build order so we stop expanding breadth and start proving the commercial economics. For the current implementation state, see [`PRD_PROGRESS.md`](./PRD_PROGRESS.md); for the original architecture, [`TECH_PRD.md`](./TECH_PRD.md)._
+_Created 2026-11-21 (Phase 0 scope freeze); roadmap status updated 2026-11-23. This doc formally separates the two product scopes and freezes the build order so we stop expanding breadth and start proving the commercial economics. **Progress: Phase 0 done; Phases 2, 3, and 4 are engineering-complete and merged to `main`; Phase 1 (applying the migrations to prod) and a signed partner remain the gates to activating the commercial loop live.** For the current implementation state, see [`PRD_PROGRESS.md`](./PRD_PROGRESS.md); for the original architecture, [`TECH_PRD.md`](./TECH_PRD.md)._
 
 ---
 
@@ -34,10 +34,10 @@ Scope B is the commercial *expansion* of Scope A — not a replacement.
 
 | Dimension | Estimate | Note |
 |---|---|---|
-| Original AI + PayPal MVP (Scope A) | **85–90%** | Agent, optimizer, Orders, Vault, receipts, reporting, deploy, QA |
+| Original AI + PayPal MVP (Scope A) | **85–90%** | Agent, optimizer, Orders, Vault, receipts, reporting, deploy, QA; now on a custom domain |
 | Hackathon demonstration | **80–85%** | Strong single-seller demo; payout can be simulated; ledger not active in prod |
-| Expanded coupon network (Scope B) | **35–40%** | Ledger code exists; real merchant redemption, publisher relationships, multi-merchant routing incomplete |
-| Commercial validation | **Early stage** | No verified partner redemption economics or incremental-sales results yet |
+| Expanded coupon network (Scope B) | **55–60%** | Per-merchant routing **shipped**; redemption-confirmation + commercial-pilot code **merged** (adapter, settlement gate, campaign reporting) but tables unmigrated + no signed partner |
+| Commercial validation | **Early stage** | Code path exists end-to-end; still **no verified partner redemption economics or incremental-sales results** (the code is honest-dormant) |
 
 **Correction on record:** the site is deployed on AWS, but the PayPal seller is a **sandbox** account. This is **not** evidence of production live-money processing.
 
@@ -47,22 +47,22 @@ Scope B is the commercial *expansion* of Scope A — not a replacement.
 
 > Rule: do not mix scopes or add features out of order. Each phase delivers a checkpoint (changed files + commit, tests run + actual results, evidence, remaining deps, prod risks, next phase). **No production DB mutation or live-payment without explicit approval.**
 
-### Phase 0 — Scope freeze & doc reconciliation · **IN PROGRESS (this change)**
-Reconcile `9c4568f` with current `main` (verified: code identical to deployed main — only docs differ). Update `PRD_PROGRESS.md` against actual code; fix `QA.md` consistency (F1 done, CI status, sandbox-not-live-money); preserve `TECH_PRD.md`; create this scope doc. **Done when these docs are consistent and merged to main.**
+### Phase 0 — Scope freeze & doc reconciliation · **✅ DONE** (merged, PR #95)
+Reconciled `9c4568f` with `main` (code identical to deployed main — only docs differed). Updated `PRD_PROGRESS.md` against actual code; fixed `QA.md` consistency (F1 done, CI status, sandbox-not-live-money); preserved `TECH_PRD.md`; created this scope doc.
 
-### Phase 1 — Activate the economic engine (ledger) · **NEXT (prep only; needs approval to execute)**
-Review both ledger migrations; verify on the isolated Neon QA branch; check prod data for uniqueness conflicts (esp. the new `Redemption.oneTimeKey` unique index); prepare backup + recovery instructions; provide migration SQL + verification results for **manual review**. **Do NOT execute prod migrations without explicit approval.** On approval, activate: campaign budgets, publisher agreements, attribution, commission accounting, media credits, customer reward liabilities, redemption accounting.
+### Phase 1 — Activate the economic engine (ledger) · **⏳ PENDING APPROVAL (not executed)**
+Review the ledger/redemption migrations; verify on the isolated Neon QA branch; check prod data for uniqueness conflicts (esp. the `Redemption.oneTimeKey` unique index); prepare backup + recovery instructions; provide migration SQL + verification results for **manual review**. **Prod migrations NOT executed — still awaiting explicit approval.** On approval, activate: campaign budgets, publisher agreements, attribution, commission accounting, media credits, customer reward liabilities, redemption accounting. _(The 3 migrations are committed: `_add_commercial_ledger`, `_add_redemption_onetime_unique`, `_add_redemption_confirmation`.)_
 
-### Phase 2 — Per-merchant PayPal routing
-Separate single-seller checkout flows (Seller A / Seller B sandbox accounts). Build: trusted merchant→PayPal config registry, server-side per-merchant credentials, product→merchant mapping, per-seller OAuth token caching, per-seller order create/capture, per-merchant webhook verification, seller-level reconciliation, failure isolation. **One RePal session, separate PayPal approvals + captures — NOT one unified marketplace transaction.**
+### Phase 2 — Per-merchant PayPal routing · **✅ SHIPPED** (merged, commit `598f1a5`; live)
+Separate single-seller checkout flows. Built: trusted merchant→PayPal seller registry (`lib/paypal/merchants.ts`), server-side per-merchant credentials (`PAYPAL_CLIENT_ID__<MID>`), product→merchant mapping, per-seller order create/capture, per-merchant webhook verification, failure isolation. Platform seller + a dedicated `cleartrip` seller wired in Secrets Manager + task def. **One RePal session, separate PayPal approvals + captures — NOT one unified marketplace transaction.**
 
-### Phase 3 — Real coupon redemption (business-critical)
-Adapter interface for external coupon validation + redemption; integrate **one** authorized merchant / coupon issuer. Build: offer feed/API, coupon validation, code reservation/redemption, order confirmation, attribution, commission confirmation + reversal. **Internal eligibility checks ≠ merchant-confirmed redemption.** Recognize a commission as payable only after required merchant/affiliate-network confirmation.
+### Phase 3 — Real coupon redemption (business-critical) · **✅ CODE MERGED** (commit `d838e50`; tables pending migration)
+Adapter interface for external coupon validation + redemption (`lib/redemption/`) + settlement gate. Built: adapter layer, code reservation/redemption, attribution, commission confirmation + reversal. **Internal eligibility checks ≠ merchant-confirmed redemption** — a commission is recognised payable only after merchant/affiliate-network confirmation. Dormant in prod until migration `_add_redemption_confirmation` is applied.
 
-### Phase 4 — Commercial pilot readiness
-One publisher + 1–2 merchants. Workflows: publisher inventory, campaign budgets, distribution rights, attribution, redemption confirmation, commission settlement, non-cash media credits, reward liabilities, campaign reporting. **Never combine advertising credits, customer cashback, and cash commissions in one balance.** Measure: redemption rate, incremental purchases, merchant ROI, affiliate income, RePal contribution margin.
+### Phase 4 — Commercial pilot readiness · **✅ ENGINEERING COMPLETE** (merged, commit `34e42c9`; partner-gated)
+Reference-partner endpoint + real-HTTP redemption confirmation (`AffiliateHttpAdapter`) + `/api/insights/campaigns` campaign reporting. **Never combine advertising credits, customer cashback, and cash commissions in one balance** (three never-conflated balances). `PARTNER_REF_API_KEY` is live in prod; `AFFILIATE_API_URL` is **deliberately unset** (no signed partner yet → no real external confirmation fires). The remaining gate is a **signed reference partner**, not more code.
 
-### Phase 5 — True marketplace checkout (later)
+### Phase 5 — True marketplace checkout (later) · **⬜ NOT STARTED** (external gate)
 Only after PayPal marketplace **partner approval**: a single buyer approval settling across multiple sellers (`purchase_units[]` + `payee`). Code structure + HTTP-207 handling can be built earlier against sandbox, but cannot go live until approved.
 
 ---

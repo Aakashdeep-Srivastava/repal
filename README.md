@@ -7,9 +7,11 @@
 Your rewards are scattered across a dozen apps — coupons, gift cards, cashback, points — and half of them expire before you ever use them.
 **RePal** is an agentic rewards‑to‑money layer: state a goal in plain language, the AI reads every reward's fine print, a **deterministic** optimizer **stacks the eligible ones** into the cheapest price, and **PayPal moves the money** end‑to‑end.
 
-[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-Judge_one--click-2457e6?style=for-the-badge)](https://d14t147d5f4q6i.cloudfront.net)
+[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-Judge_one--click-2457e6?style=for-the-badge)](https://repal.shop)
 &nbsp;
 [![PayPal AI Hackathon](https://img.shields.io/badge/PayPal_AI-Hackathon-003087?style=for-the-badge&logo=paypal&logoColor=white)](https://devpost.com)
+
+**Live:** [repal.shop](https://repal.shop) &nbsp;·&nbsp; also at [d14t147d5f4q6i.cloudfront.net](https://d14t147d5f4q6i.cloudfront.net) (CloudFront origin)
 
 ![Next.js](https://img.shields.io/badge/Next.js_15-000?logo=next.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -50,7 +52,7 @@ RePal checks **every** reward you hold against **one** purchase, reads each one'
            coupons → gift cards/certificates → cashback, in one PayPal capture
 ```
 
-**4 of 9 fit. 5 don't — and RePal tells you exactly why.** The money math is deterministic (`lib/stack/compute.ts`, unit‑tested); the LLM only parses the terms. See it at **[`/stack`](https://d14t147d5f4q6i.cloudfront.net/stack).**
+**4 of 9 fit. 5 don't — and RePal tells you exactly why.** The money math is deterministic (`lib/stack/compute.ts`, unit‑tested); the LLM only parses the terms. See it at **[`/stack`](https://repal.shop/stack).**
 
 ---
 

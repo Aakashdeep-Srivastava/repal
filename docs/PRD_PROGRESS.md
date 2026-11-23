@@ -1,6 +1,6 @@
 # RePal — Complete Implementation State (End-to-End)
 
-_Last updated: 2026-11-21 · This is the authoritative, current source of truth for what is built, live, gated, and pending. It supersedes the 2026-11-14 progress snapshot. `docs/TECH_PRD.md` holds the original vision/architecture; where the two disagree, THIS doc reflects reality._
+_Last updated: 2026-11-23 · This is the authoritative, current source of truth for what is built, live, gated, and pending. It supersedes the 2026-11-21 snapshot (which predated Phases 2–4 and the custom domain). `docs/TECH_PRD.md` holds the original vision/architecture; where the two disagree, THIS doc reflects reality._
 
 ---
 
@@ -12,19 +12,23 @@ _Last updated: 2026-11-21 · This is the authoritative, current source of truth 
 
 **Prime directive (enforced structurally, not by convention):** **the LLM never computes money.** Every amount flows from deterministic integer-cents code (`lib/optimizer`, `lib/stack`, `lib/ledger`) or a PayPal response. The model only routes, reads, extracts, explains, and asks — at `temperature: 0`.
 
-- **Live:** `https://d14t147d5f4q6i.cloudfront.net` (AWS ECS/Fargate behind CloudFront).
+- **Live:** `https://repal.shop` (primary, custom domain) · `https://d14t147d5f4q6i.cloudfront.net` (CloudFront origin, still live — the hackathon submission link). AWS ECS/Fargate behind CloudFront.
 - **Repo:** `github.com/Aakashdeep-Srivastava/repal`.
 
 ---
 
-## 1. Status headline (2026-11-21)
+## 1. Status headline (2026-11-23)
 
-The defining thesis — delegated authority, deterministic policy enforced at spend time, reward→cash liberation, an agent that executes within signed limits — is **wired end-to-end and deployed**. As of today two major milestones landed:
+The defining thesis — delegated authority, deterministic policy enforced at spend time, reward→cash liberation, an agent that executes within signed limits — is **wired end-to-end and deployed**. Since the 2026-11-21 snapshot, the whole frozen commercial roadmap (Phases 2–4) landed in `main`, and the app moved onto a real domain.
 
 - **✅ Real USD PayPal checkout works end-to-end — in PayPal SANDBOX.** ⚠️ This is a **real payment *flow*, not real money.** The app is deployed on AWS, but the PayPal seller is a **sandbox** business account; no live funds move. The long-standing blocker (the sandbox *seller* was an India business account that can't accept USD) is **cleared**: a US *sandbox* business seller ("RockstartGame" app under `gta6@rockstargames.com`) is now the live `PAYPAL_CLIENT_ID`. Verified end-to-end — a live order resolves under the US app, and a full run captured sandbox USD 12.34 with a signed receipt. **"Deployed on AWS" ≠ "live-money processing."**
-- **✅ The polished branch is deployed** (PR #94 → `main`): the demo-login identity fix, security headers (CSP/HSTS), the commercial-ledger code, and the autonomous QA framework are all live.
+- **✅ Custom domain live (2026-11-23).** `https://repal.shop` serves the app over HTTPS (apex + `www`), via **Route 53 + ACM (us-east-1) + CloudFront aliases** on distribution `ECX7AU2KJOIDE`. DNS moved off GoDaddy to Route 53. The CloudFront URL stays live (hackathon submission link). The app's OAuth callback origin (`PAYPAL_OIDC_REDIRECT`, which also derives the Gmail callback) is being switched to `repal.shop` once both consoles register it.
+- **✅ Phase 2 — per-merchant PayPal routing (merged + live).** A trusted-merchant→seller registry routes each product's checkout to the seller that owns it (platform seller + a dedicated `cleartrip` seller app, wired in Secrets Manager + task def). One RePal session, **separate** single-seller approvals + captures — not one cross-seller marketplace transaction. See §6.
+- **✅ Phase 3 — merchant-confirmed redemption (merged; dormant pending migration).** An adapter layer + settlement gate: a commission is recognised payable **only after** merchant/affiliate confirmation, not on internal eligibility. Code in `main` (`lib/redemption/`); its migration `20261121020000_add_redemption_confirmation` is **pending manual prod apply**.
+- **✅ Phase 4 — commercial pilot loop (merged; partner-gated).** Reference-partner endpoint + real-HTTP redemption confirmation (`AffiliateHttpAdapter`) + `/api/insights/campaigns` reporting. Engineering complete; `PARTNER_REF_API_KEY` is live in prod but `AFFILIATE_API_URL` is **deliberately unset** (honest — no signed partner yet, so no real external confirmation fires).
+- **✅ Shop discovery hardened (2026-11-23).** Fixed a 400 on empty/blank search (Channel3 rejects a null query) — empty now fans out to seeded browse — and added Amazon-style category navigation. See §3.
 
-**One important caveat:** the **commercial-ledger DB tables are not yet in production.** Their two migrations (`20261121000000_add_commercial_ledger`, `20261121010000_add_redemption_onetime_unique`) are committed but **applied manually** (CI does not run migrations). Until applied, the ledger code is **dormant in prod** (its one write path, `recordRedemption`, is best-effort/try-catch so it no-ops) — the consumer demo does not need it.
+**One important caveat:** the **commercial-ledger + redemption-confirmation DB tables are not yet in production.** Their three migrations (`20261121000000_add_commercial_ledger`, `20261121010000_add_redemption_onetime_unique`, `20261121020000_add_redemption_confirmation`) are committed but **applied manually** (CI does not run migrations). Until applied, the ledger/redemption code is **dormant in prod** (write paths are best-effort/try-catch so they no-op) — the consumer demo does not need it.
 
 ---
 
@@ -44,7 +48,7 @@ Single **Next.js 15** app (App Router, React 19, TypeScript). A clean `lib/` cor
 
 | Stage | What happens | Key files |
 |---|---|---|
-| **Discover** | Channel3 product search (live key → real SKUs; else 12 labelled sandbox products). 60s LRU cache; cheapest-first, ties → higher affiliate commission. | `lib/channel3.ts`, `lib/shop/products.ts`, `app/api/products` |
+| **Discover** | Channel3 product search (live key → real SKUs; else 12 labelled sandbox products). 60s LRU cache; cheapest-first, ties → higher affiliate commission. Empty/blank query fans out to **seeded browse** (Channel3 rejects a null query); **Amazon-style category nav** (`lib/shop/categories.ts`, `components/shop/CategoryBar.tsx`). | `lib/channel3.ts`, `lib/shop/products.ts`, `app/api/products` |
 | **Plan / optimize** | Deterministic branch-and-bound over SKU × stackable rewards → up to 3 plans ("Cheapest after rewards", "Keep points") + per-reward rejection with the verbatim clause. Integer cents throughout. | `lib/pipeline.ts`, `lib/optimizer/*`, `app/api/plan`, `app/api/eligibility` |
 | **Policy gate #1** | `checkPolicy` → `allow` / `ask` / `deny` on each plan (cap, budget, allow-lists, approval threshold). | `lib/policy/index.ts` |
 | **Order** | PayPal Orders v2 create. Buyer-present → `approveUrl` (return/cancel built from the public base, never the request host). Agent path → `payment_source.paypal.vault_id`, no redirect. Agent-selected funding (Pay Later ≥$100 / Venmo ≤$30 / balance) with fallback. | `lib/paypal/orders.ts`, `lib/paypal/funding.ts`, `app/api/pay/order` |
@@ -108,7 +112,9 @@ RePal uses **~9 PayPal products as one money loop** — the core differentiator:
 - **Buyer (US personal):** `aakash@paypal.com` ($100k, test cards + banks).
 - The old India account is retired from the pay-in path.
 
-**Gating that remains:** a *single* PayPal checkout that splits across *both* sellers at once (true marketplace multi-seller) needs PayPal **marketplace partner approval** — an external gate. Per-merchant routing (each purchase to its own seller via separate single-seller checkouts) is buildable without it. Webhook events for the new app would need its webhook id re-registered (demo uses synchronous capture, so not required).
+**Per-merchant routing (Phase 2) is now built + live.** A trusted-merchant→seller registry (`lib/paypal/merchants.ts`) routes each product's order/capture to the seller that owns it: the platform seller (`PAYPAL_CLIENT_ID`) by default, or a dedicated seller app for a mapped merchant (`PAYPAL_CLIENT_ID__<MID>`, e.g. `__CLEARTRIP`, wired in Secrets Manager + task def). Each purchase is a separate single-seller order + approval + capture under one RePal session — **not** one cross-seller transaction. A merchant with no dedicated app falls back to the platform seller (failure-isolated).
+
+**Gating that remains:** a *single* PayPal checkout that splits across *multiple* sellers at once (true marketplace, `purchase_units[]` + `payee`) needs PayPal **marketplace partner approval** — an external gate (Phase 5). Dedicated seller apps that also need live payout/dispute webhooks would each need their own webhook id registered + a `PAYPAL_WEBHOOK_ID__<MID>` secret (the `cleartrip` app has none yet; demo uses synchronous capture, so not required).
 
 ---
 
@@ -118,7 +124,7 @@ RePal uses **~9 PayPal products as one money loop** — the core differentiator:
 - **Cold-start catalog:** `Merchant`, `CatalogOffer` (+ `code`/`publisherId`/`campaignId`/`stackable`).
 - **Commercial ledger (11):** see §5.
 
-All money fields in the ledger are integer cents; receipts/payouts use USD floats at the PayPal boundary. 8 migrations total; the last 2 (ledger) are pending manual prod apply.
+All money fields in the ledger are integer cents; receipts/payouts use USD floats at the PayPal boundary. **9 migrations total; the last 3 (commercial ledger + redemption one-time-unique + redemption confirmation) are pending manual prod apply.**
 
 ---
 
@@ -132,7 +138,7 @@ All money fields in the ledger are integer cents; receipts/payouts use USD float
 - **Shop/plan:** `products`, `products/[id]`, `offers`, `plan`, `eligibility`.
 - **Pay/money:** `pay/{mode,order,capture,demo-capture,payout,refund}`.
 - **Mandates:** `mandates`, `mandates/vault/callback`.
-- **Webhooks/insights:** `webhooks/paypal`, `insights`, `paypal/transactions`.
+- **Webhooks/insights:** `webhooks/paypal`, `insights`, `insights/campaigns` (Phase 4 campaign reporting), `paypal/transactions`.
 - **Agent:** `runs`, `runs/[id]/stream` (SSE).
 - **Cron/connect/health/misc:** `cron/expiry`, `connect/gmail{,/start,/callback}`, `health{,/channel3}`, `receipts/[id]`, `payment-methods`.
 
@@ -174,9 +180,10 @@ Session = signed httpOnly cookie (`repal_session`, HMAC, fail-closed in prod). R
 
 ## 12. Deployment & infra
 
-- **CI/CD** (`.github/workflows/ci.yml`): `verify` (typecheck + 177 tests + build) on every push/PR → `deploy` on push to `main` via GitHub **OIDC** (no stored keys) → ECR → ECS/Fargate rollout (circuit breaker + auto-rollback) → CloudFront `/api/health` smoke → Discord notify. Region `us-west-2`, account `413790912706`.
-- **Topology:** CloudFront → ALB → ECS/Fargate. Secrets in AWS Secrets Manager (`repal/*`).
-- **Migrations are MANUAL** (not in CI) — `prisma migrate deploy` run by hand. ⚠️ The 2 ledger migrations are pending.
+- **CI/CD** (`.github/workflows/ci.yml`): `verify` (typecheck + tests + build) on every push/PR → `deploy` on push to `main` via GitHub **OIDC** (no stored keys) → ECR → ECS/Fargate rollout (circuit breaker + auto-rollback) → `/api/health` smoke → Discord notify. Region `us-west-2`, account `413790912706`.
+- **Topology:** `repal.shop` (Route 53) → CloudFront (`ECX7AU2KJOIDE`, ACM cert in us-east-1) → ALB → ECS/Fargate. Secrets in AWS Secrets Manager (`repal/*`).
+- **Custom domain:** Route 53 hosted zone `Z0065647E1E211YNSCD7`; apex + `www` are ACM-secured CloudFront aliases. See `docs/DEPLOY_AWS.md`.
+- **Migrations are MANUAL** (not in CI) — `prisma migrate deploy` run by hand. ⚠️ The 3 ledger/redemption migrations are pending.
 - **Cron:** daily expiry scan via notifier Lambda/EventBridge → `/api/cron/expiry` (secret-gated).
 - AWS CLI access for ops via the dedicated `reclevo-repal` profile (IAM user `skydeep`).
 
@@ -202,32 +209,37 @@ Session = signed httpOnly cookie (`repal_session`, HMAC, fail-closed in prod). R
 | Sponsors: Channel3 / AG Grid / Bryntum / Agent Toolkit | ✅ live |
 | Security headers / CSRF / rate-limit hardening | ✅ live |
 | Autonomous QA framework | ✅ in repo |
+| Shop category nav + empty-query seeded browse | ✅ live (2026-11-23) |
+| Custom domain `repal.shop` (Route 53 + ACM + CloudFront) | ✅ live (2026-11-23) |
+| **Per-merchant PayPal routing (Phase 2)** | ✅ **live** (platform + `cleartrip` seller) |
 | **Commercial ledger (code)** | ✅ deployed, **tables pending migration** |
-| Multi-seller / per-merchant routing | ❌ not built (decision open — §15) |
+| **Merchant-confirmed redemption (Phase 3)** | ✅ code in `main`, **tables pending migration** |
+| **Commercial pilot loop (Phase 4)** | ✅ engineering complete, **partner-gated** (`AFFILIATE_API_URL` unset) |
+| True single-checkout multi-seller marketplace (Phase 5) | ❌ needs PayPal partner approval |
 | Webhook handling for capture/approval/dispute | ❌ stored but inert |
-| HTTP-207 / partial-capture handling | ❌ not built (needs multi-seller) |
+| HTTP-207 / partial-capture handling | ❌ not built (needs marketplace) |
 
 ---
 
 ## 14. Known gaps & honest tech-debt ledger
 
-1. **Ledger tables not in prod** — 2 migrations await manual `prisma migrate deploy`. Until then the commercial-ledger demo can't run live (code no-ops).
+1. **Ledger + redemption-confirmation tables not in prod** — 3 migrations await manual `prisma migrate deploy`. Until then the commercial-ledger + Phase 3 redemption demo can't run live (code no-ops).
 2. **Webhook `applyEffects` is partial** — only payout-item + refund events mutate state; capture-completed / order-approved / dispute events are stored but inert. Fine for synchronous capture; needed for async robustness.
 3. **Capture assumes `captures[0].id`** with no HTTP-207 / `PARTIALLY_COMPLETED` handling — safe for single-seller, must be fixed with multi-seller.
 4. **New seller app's webhook id not registered** — payout/refund webhook verification would fail against the live `PAYPAL_WEBHOOK_ID` (old app). Demo uses sync capture, so not blocking.
 5. **`components/nav/UserMenu.tsx` is dead code** (mounted nowhere) — the shell greeting is the real identity surface (now fixed to show the user).
 6. **Ingestion is mostly sample data** — only Gmail is a live source; paypal/card/loyalty/channel3 adapters are labelled SANDBOX stand-ins.
-7. **Reward *redemption* ≠ programmatic merchant redemption** — discounts are applied-as-plan; there is no merchant-side coupon-validation handshake (RePal + its own rules validate).
+7. **Merchant-confirmed redemption is built but not proven live** — Phase 3 adds the adapter + settlement gate (commission payable only after merchant/affiliate confirmation) and Phase 4 the real-HTTP `AffiliateHttpAdapter`, but with no signed partner (`AFFILIATE_API_URL` unset) and the redemption-confirmation table unmigrated, no real external redemption has fired. The code path is honest-dormant, not exercised.
 
 ---
 
 ## 15. Open decisions
 
-- **Multi-merchant** (both US sellers live in the demo). Two realistic paths:
-  - **Per-merchant routing** — products from different merchants route each purchase to that merchant's own PayPal app (separate single-seller checkouts). **Buildable now**, no partner approval. Matches the original "multi-merchant" vision.
-  - **True single-checkout multi-seller** (one approval split across sellers, `purchase_units[]` + `payee`) — needs PayPal **marketplace partner approval** (external gate) for live; the code structure + 207 handling can be built now against the sandbox.
-- **Apply the ledger migrations to prod** — required to demo the commercial ledger (campaigns, commissions, attribution).
-- **Register the new app's webhook id** — only if live webhook events (payout/dispute) are needed on camera.
+- **Per-merchant routing — DONE (Phase 2).** Products from different merchants route each purchase to that merchant's own PayPal app (separate single-seller checkouts). Shipped + live (platform + `cleartrip`). No partner approval needed.
+- **True single-checkout multi-seller (Phase 5)** — one approval split across sellers (`purchase_units[]` + `payee`) — still needs PayPal **marketplace partner approval** (external gate) for live; the code structure + 207 handling can be built now against the sandbox.
+- **Apply the 3 ledger/redemption migrations to prod** — required to demo the commercial ledger + Phase 3 merchant-confirmed redemption (campaigns, commissions, attribution, redemption confirmation). Still pending explicit approval.
+- **Sign a reference partner + set `AFFILIATE_API_URL`** — the last gate for a real Phase 4 redemption confirmation to fire.
+- **Register a webhook id for the `cleartrip` app** (`PAYPAL_WEBHOOK_ID__CLEARTRIP`) — only if live webhook events (payout/dispute) are needed for that seller on camera.
 
 ---
 

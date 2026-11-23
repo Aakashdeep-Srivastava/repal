@@ -2,7 +2,9 @@
 
 _The agentic rewards-to-money layer, with the PayPal sandbox at the center of the idea._
 
-_Last updated: 2026-11-14 · PayPal AI Hackathon 2026 · Sandbox (`PAYPAL_ENVIRONMENT=SANDBOX`)_
+_Last updated: 2026-11-23 · PayPal AI Hackathon 2026 · Sandbox (`PAYPAL_ENVIRONMENT=SANDBOX`)_
+
+> **Current status pointer:** this doc is the deep PayPal reference. For the live, up-to-date state (US sandbox seller now live, OIDC `state` now verified, per-merchant routing shipped, custom domain), **[`PRD_PROGRESS.md`](./PRD_PROGRESS.md) is the source of truth** — where the two disagree, trust it. Key deltas since the original draft are inlined below.
 
 ---
 
@@ -60,17 +62,22 @@ Every stage maps to a real PayPal REST call (§3) and a verifiable, signed artif
 | Var | Purpose |
 |---|---|
 | `PAYPAL_ENVIRONMENT` | `SANDBOX` (default) or `LIVE` → selects the base host (`lib/paypal/client.ts:12`). |
-| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | OAuth client-credentials (Basic auth). |
-| `PAYPAL_OIDC_REDIRECT` | OIDC callback URL; also the source of the public origin for post-login redirects. |
-| `PAYPAL_WEBHOOK_ID` | Required for webhook signature verification; unset ⇒ events stored but not verified/applied. |
+| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | OAuth client-credentials (Basic auth) for the **platform** seller. |
+| `PAYPAL_CLIENT_ID__<MID>` / `PAYPAL_CLIENT_SECRET__<MID>` | Per-merchant seller app (Phase 2 routing), e.g. `__CLEARTRIP`. A merchant with none falls back to the platform seller. |
+| `PAYPAL_OIDC_REDIRECT` | OIDC callback URL **and** the single source of the app's public origin (post-login redirect, checkout return, mandates callback, **and the derived Gmail callback**). As of 2026-11-23 → `https://repal.shop/api/auth/paypal/callback` (CloudFront URL still registered too). |
+| `PAYPAL_WEBHOOK_ID` (+ `PAYPAL_WEBHOOK_ID__<MID>`) | Required for webhook signature verification; unset ⇒ events stored but not verified/applied. Platform id is set; the `cleartrip` app has none yet. |
 
 Base host (`lib/paypal/client.ts:14`): `https://api-m.sandbox.paypal.com` (sandbox) ·
 `https://api-m.paypal.com` (live). OIDC authorize host: `https://www.sandbox.paypal.com/connect`.
 
 ### 2.3 Sandbox accounts
-- **Business** account backs the API credentials (the merchant). **⚠️ It is India-region (IN).**
-- **Personal** (buyer) accounts (`sb-…@personal.example.com`, pre-funded) are used to log in and
-  to receive Payouts.
+- **Business** account backs the API credentials (the merchant). As of 2026-11-21 this is a **US
+  sandbox business seller** (`gta6@rockstargames.com`, app `APP-11Y82502XE264774E`) — the old
+  India (IN) account is **retired from the pay-in path**, so real USD orders capture. A dedicated
+  `cleartrip` US seller app backs Phase 2 per-merchant routing. _(The simulated-payout fallback
+  below remains as a safety net for any sender restriction.)_
+- **Personal** (buyer) accounts (`aakash@paypal.com`, pre-funded) are used to log in and to
+  receive Payouts.
 
 ### 2.4 Known sandbox gotchas (all handled in code — see §5)
 | Gotcha | Effect | RePal's handling |
@@ -78,7 +85,7 @@ Base host (`lib/paypal/client.ts:14`): `https://api-m.sandbox.paypal.com` (sandb
 | **IN business account can't send Payouts** | `403 PAYOUT_NOT_AVAILABLE` | Degrades to an honest **simulated payout** (real signed receipt, no money moved). |
 | **Vault approval is fragile in sandbox** | setup-token round-trip can half-complete | Vault is **opt-in** (`?vault=1`); default is an instant signed policy-only mandate; Vault failure degrades to it. |
 | **"Log in with PayPal" has no Google option** | friction | A one-click **judge/demo login** persona exists. |
-| **OIDC consent needs Privacy + User-Agreement URLs** | consent won't save | Google policy URLs registered (a `cloudfront.net` root was rejected). |
+| **OIDC consent needs Privacy + User-Agreement URLs** | consent won't save | Policy URLs registered — `https://repal.shop/privacy` + `/terms` (the custom domain is accepted where a bare `cloudfront.net` root was rejected). |
 | **Reporting data lags ~3h** | new txns not instantly visible | UI states this explicitly. |
 
 ---
@@ -98,7 +105,8 @@ safety margin (`getAccessToken()`).
 
 Session accessors: `getSession()` (nullable) · `getSessionUser()` (falls back to `JUDGE_USER_ID`
 for public read-only surfaces — **never for money**) · `requireUserId()` (strict, 401, used by
-payout/refund). **⚠️ `state` is generated but not verified** — a documented demo CSRF trade-off (§7).
+payout/refund). **✅ The OIDC `state` is now persisted + constant-time verified** (CSRF closed;
+`lib/auth/paypal-state.ts`) — superseding the earlier "generated but unchecked" trade-off.
 
 ### 3.2 Authority — the Vault mandate (`lib/paypal/vault.ts`, `app/api/mandates/*`)
 The mandate **is** the agent's delegated spending authority: cap, rolling budget, allow-list,
@@ -221,12 +229,12 @@ even when no live capture happened.
    the *correct* agentic pattern (reserve funds on intent, capture when the order is confirmed),
    and it unlocks **partial captures** and **voids/reauth**. _(A direct competitor already does
    this.)_
-2. **Verify the OIDC `state`.** Persist + compare `state` (CSRF) before trusting the callback —
-   currently generated but unchecked (`login/route.ts:14`).
+2. ~~**Verify the OIDC `state`.**~~ ✅ **Done** — persisted + constant-time compared (`lib/auth/paypal-state.ts`).
 3. **Idempotent money writes.** `PayPal-Request-Id` is set on PayPal calls; add a dedupe key on
    `Receipt`/`Payout` so a retried capture/payout can't double-issue a receipt.
-4. **US sandbox business account** so Payouts + Vault complete *live* (removes the simulated path
-   from the camera demo). Infra, not code.
+4. ~~**US sandbox business account**~~ ✅ **Done (2026-11-21)** — US seller (`gta6@rockstargames.com`)
+   is the live `PAYPAL_CLIENT_ID`; real USD orders capture. Payout sender may still fall back to
+   simulated depending on the sender account.
 
 **P1 — depth / polish**
 5. **Partial captures + refunds end-to-end** in the UI (capture less than authorized; refund a

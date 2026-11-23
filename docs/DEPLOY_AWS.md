@@ -24,11 +24,13 @@ without re-architecting.
 > fully staged and becomes a one-command deploy once the hold is lifted; the
 > Fargate/ALB/CloudFront stack can then be torn down.
 
-**Public URL (staging): https://d14t147d5f4q6i.cloudfront.net**
+**Public URL: https://repal.shop** (primary, custom domain) · **https://d14t147d5f4q6i.cloudfront.net** (CloudFront origin, still live — the hackathon submission link).
 
 | Resource | Name / ID |
 |---|---|
-| CloudFront distribution | `ECX7AU2KJOIDE` → `d14t147d5f4q6i.cloudfront.net` (HTTPS, redirect-to-https, caching disabled, forwards all) |
+| Custom domain | `repal.shop` + `www.repal.shop` → Route 53 hosted zone `Z0065647E1E211YNSCD7` → CloudFront aliases (apex = Alias A/AAAA, `www` = Alias A/AAAA) |
+| ACM certificate | `repal.shop` + `www.repal.shop`, DNS-validated, **us-east-1** (CloudFront reads certs only from us-east-1), auto-renews |
+| CloudFront distribution | `ECX7AU2KJOIDE` → `d14t147d5f4q6i.cloudfront.net` (HTTPS, redirect-to-https, caching disabled, forwards all); alternate domain names `repal.shop`, `www.repal.shop` |
 | ALB (internet-facing) | `repal-alb` → `repal-alb-664958638.us-west-2.elb.amazonaws.com` (HTTP:80) |
 | Target group | `repal-tg` (ip, 8080, health `/api/health`) |
 | ECS cluster / service | `repal` / `repal-web` (Fargate, 1 vCPU / 2 GB, desired 1) |
@@ -38,9 +40,18 @@ without re-architecting.
 | Security groups | `repal-alb-sg` (80 from world), `repal-svc-sg` (8080 from ALB SG) |
 | Logs | CloudWatch `/ecs/repal-web` (14-day retention) |
 
-**Request path:** viewer → CloudFront (TLS) → ALB:80 → Fargate task:8080.
-HTTPS terminates at CloudFront on the `cloudfront.net` cert; the browser-facing
-connection is HTTPS, so `Secure` session cookies and PayPal webhooks/OIDC work.
+**Request path:** viewer → `repal.shop` (Route 53) → CloudFront (TLS, ACM cert) → ALB:80 → Fargate task:8080.
+HTTPS terminates at CloudFront (ACM cert for `repal.shop`/`www`, or the default
+`cloudfront.net` cert on the origin URL); the browser-facing connection is HTTPS,
+so `Secure` session cookies and PayPal webhooks/OIDC work on either host.
+
+**Custom domain (added 2026-11-23):** DNS was moved off GoDaddy to **Route 53**
+(nameservers delegated). The apex and `www` are **Alias A/AAAA** records to the
+CloudFront distribution (hosted-zone id `Z2FDTNDATAQYW2`). The ACM cert lives in
+**us-east-1** and was DNS-validated via a CNAME in the same zone. The CloudFront
+URL stays fully functional. To make `repal.shop` the canonical OAuth callback
+origin, `PAYPAL_OIDC_REDIRECT` is set to `https://repal.shop/api/auth/paypal/callback`
+(see §PayPal below) — this single env var also drives the derived Gmail callback.
 
 **Redeploy a new image (Fargate):**
 ```bash
@@ -137,15 +148,26 @@ standalone server and runs as a non-root user on `node:20-alpine`, listening on
 
 ## 5. PayPal wiring (after the URL exists)
 
-PayPal needs the public URL, so this is done once the service is up:
+PayPal needs the public URL, so this is done once the service is up. As of
+2026-11-23 the canonical origin is **`repal.shop`** (the CloudFront URL stays
+registered alongside, so both work):
 
 1. **OIDC return URL:** set `PAYPAL_OIDC_REDIRECT` =
-   `https://d14t147d5f4q6i.cloudfront.net/api/auth/paypal/callback` and add it as a return URL
-   on the sandbox app (PayPal Developer dashboard).
-2. **Webhook:** register `https://d14t147d5f4q6i.cloudfront.net/api/webhooks/paypal` as a
-   webhook on the sandbox app, copy the generated **Webhook ID** into
-   `repal/PAYPAL_WEBHOOK_ID`.
-3. Redeploy so the new secret is picked up.
+   `https://repal.shop/api/auth/paypal/callback` and add it as a return URL on the
+   **default/platform** sandbox app's *Log in with PayPal* (PayPal Developer
+   dashboard). Keep the `cloudfront.net` return URL registered too. This single
+   env var is the app's public-origin source of truth — it also derives the Gmail
+   callback (`/api/connect/gmail/callback`), the post-login redirect, the checkout
+   return, and the mandates callback.
+2. **Webhook:** register `https://repal.shop/api/webhooks/paypal` on the platform
+   app, copy the generated **Webhook ID** into `repal/PAYPAL_WEBHOOK_ID`. Dedicated
+   seller apps (Phase 2, e.g. `cleartrip`) are checkout-only and need a webhook
+   only if `PAYPAL_WEBHOOK_ID__<MID>` is wired (none today).
+3. **Google (Gmail OAuth):** add `https://repal.shop/api/connect/gmail/callback` as
+   an authorized redirect URI and `https://repal.shop` as a JS origin on the OAuth
+   web client; keep the cloudfront entries.
+4. Redeploy so the new secret/env is picked up (CI renders
+   `deploy/ecs-task-definition.json` on every deploy).
 
 `POST /api/webhooks/paypal` verifies every event's signature server-side against
 `PAYPAL_WEBHOOK_ID` and upserts by `event.id` (so duplicate deliveries are
