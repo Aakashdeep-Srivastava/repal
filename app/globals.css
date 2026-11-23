@@ -16,6 +16,10 @@
   --color-violet: #2563eb; /* AI */
   --color-surface: #f7f9fc;
 
+  /* Status — reserved for expiry urgency ONLY (red = critical, amber = soon). */
+  --color-danger: #ef4444;
+  --color-warn: #f59e0b;
+
   /* Semantic (light theme defaults) */
   --color-bg: #f7f9fc;
   --color-fg: #0b1220;
@@ -61,6 +65,8 @@
   --color-muted: #93a0b4;
   --color-card: #121b2e;
   --color-border: rgba(255, 255, 255, 0.1);
+  --color-danger: #f87171;
+  --color-warn: #fbbf24;
 }
 
 /* Smooth the light⇄dark flip (the global reduced-motion rule neutralizes it). */
