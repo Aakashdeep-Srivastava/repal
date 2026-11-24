@@ -173,8 +173,8 @@ describe("bestStack", () => {
     const s = bestStack(p, [late, soon, ten], ctx);
     expect(s.savedUsd).toBe(30);
     expect(s.applied).toEqual([
-      { rewardId: "soon", appliedUsd: 20 },
-      { rewardId: "ten", appliedUsd: 10 },
+      { rewardId: "soon", appliedUsd: 20, effect: "instant" },
+      { rewardId: "ten", appliedUsd: 10, effect: "instant" },
     ]);
   });
 
@@ -182,8 +182,8 @@ describe("bestStack", () => {
     const p = offer("p", 30, "x.com");
     const s = bestStack(p, [reward([rule("flat_off_usd", 25)], { id: "a", expiresAt: inDays(1) }), reward([rule("flat_off_usd", 25)], { id: "b", expiresAt: inDays(2) })], ctx);
     expect(s.applied).toEqual([
-      { rewardId: "a", appliedUsd: 25 },
-      { rewardId: "b", appliedUsd: 5 },
+      { rewardId: "a", appliedUsd: 25, effect: "instant" },
+      { rewardId: "b", appliedUsd: 5, effect: "instant" },
     ]);
     expect(s.savedUsd).toBe(30);
   });
@@ -218,9 +218,15 @@ describe("optimize", () => {
     const [a] = res.plans;
     expect(a.name).toBe(PLAN_CHEAPEST);
     expect(a.offer.id).toBe("bb");
-    // 279.99 − (40 + 25 + 15 + 30 points) = 169.99; Amazon would be 249.99 − 45 = 204.99
-    expect(a.savedUsd).toBe(110);
-    expect(a.cashUsd).toBe(169.99);
+    // Instant only reduces the charge now: the $40 Best Buy gift certificate.
+    // chase-25 + mc-15 are cashback (post-purchase), points-30 is points — these
+    // no longer reduce "pay now" (financial accuracy). So 279.99 − 40 = 239.99,
+    // with $40 cashback + $30 points value credited/realised separately. Amazon
+    // would be 249.99 (the gift cert is Best Buy-only), so Best Buy still wins.
+    expect(a.savedUsd).toBe(40);
+    expect(a.cashUsd).toBe(239.99);
+    expect(a.cashbackUsd).toBe(40);
+    expect(a.pointsUsd).toBe(30);
   });
 
   it("Plan B keeps points", () => {
@@ -228,7 +234,8 @@ describe("optimize", () => {
     const b = res.plans[1];
     expect(b.name).toBe(PLAN_KEEP_POINTS);
     expect(b.useRewards.map((r) => r.rewardId)).not.toContain("points-30");
-    expect(b.cashUsd).toBe(199.99);
+    // Points never reduce "pay now" anymore, so cashUsd matches Plan A's instant-only total.
+    expect(b.cashUsd).toBe(239.99);
   });
 
   it("omits Plan B when it is identical to Plan A", () => {

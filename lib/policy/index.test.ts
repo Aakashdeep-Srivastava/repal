@@ -21,6 +21,8 @@ const plan = (cashUsd: number, retailer = "bestbuy.com"): Plan => ({
   offer: { id: "o1", title: "Headphones", priceUsd: cashUsd, retailer, buyUrl: "" },
   useRewards: [],
   savedUsd: 0,
+  cashbackUsd: 0,
+  pointsUsd: 0,
   cashUsd,
 });
 

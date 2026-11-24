@@ -46,29 +46,42 @@ export function RewardMapping({ eligible, rejected, rewardsById }: RewardMapping
         <AnimatedList className="flex flex-col gap-2">
           {eligible.map((e) => {
             const r = rewardsById[e.rewardId];
+            const eff = e.effect;
+            const instant = eff === "instant";
+            const tag =
+              instant ? "Applied now" : eff === "cashback" ? "After purchase" : "Points · redemption value";
+            const amount =
+              instant ? `−${usd(e.appliedUsd)}` : eff === "cashback" ? `≈ −${usd(e.appliedUsd)}` : `~${usd(e.appliedUsd)}`;
             return (
               <div
                 key={e.rewardId}
-                className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-emerald-500/30 bg-emerald-500/10 px-3 py-2"
+                className={`flex items-center justify-between gap-3 rounded-[var(--radius-md)] border px-3 py-2 ${
+                  instant ? "border-emerald-500/30 bg-emerald-500/10" : "border-[var(--color-border)] bg-[var(--color-card)]"
+                }`}
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <span
                     aria-hidden
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[11px] font-bold text-white"
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${
+                      instant ? "bg-emerald-500" : "bg-[var(--color-muted)]"
+                    }`}
                   >
-                    ✓
+                    {instant ? "✓" : "⏱"}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium capitalize text-[var(--color-fg)]">
                       {label(r, e.rewardId)}
+                      <span className="ml-1.5 rounded-full bg-[var(--color-bg)] px-1.5 py-0.5 text-[10px] font-medium normal-case text-[var(--color-muted)] ring-1 ring-[var(--color-border)]">
+                        {tag}
+                      </span>
                     </p>
                     {r?.termsRaw && (
                       <p className="truncate text-xs text-[var(--color-muted)]">{r.termsRaw}</p>
                     )}
                   </div>
                 </div>
-                <span className="tnum shrink-0 text-sm font-semibold text-emerald-500">
-                  −{usd(e.appliedUsd)}
+                <span className={`tnum shrink-0 text-sm font-semibold ${instant ? "text-emerald-500" : "text-[var(--color-muted)]"}`}>
+                  {amount}
                 </span>
               </div>
             );

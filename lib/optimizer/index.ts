@@ -63,6 +63,8 @@ function rankPlans(
       offer,
       useRewards: stack.applied,
       savedUsd: stack.savedUsd,
+      cashbackUsd: stack.cashbackUsd,
+      pointsUsd: stack.pointsUsd,
       cashUsd: fromCents(cashCents),
     };
     const policy = checkPolicy(intent, plan, mandate, { now: opts.now, spentUsd: opts.spentUsd });

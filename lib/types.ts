@@ -61,9 +61,19 @@ export interface Mandate {
 }
 
 // ─── Optimizer output ────────────────────────────────────────────────
+/**
+ * How a reward's value is realised, for financial accuracy:
+ *  - "instant"   — a checkout discount; reduces the amount paid now (cashUsd).
+ *  - "cashback"  — paid back after the purchase (statement credit / cashback);
+ *                  an estimate that does NOT reduce today's charge.
+ *  - "points"    — loyalty points/miles; value depends on redemption.
+ */
+export type RewardEffect = "instant" | "cashback" | "points";
+
 export interface AppliedReward {
   rewardId: string;
   appliedUsd: number;
+  effect: RewardEffect;
 }
 
 export interface RejectedReward {
@@ -76,8 +86,13 @@ export interface Plan {
   name: string; // "Cheapest after rewards" | "Keep points" | ...
   offer: Offer;
   useRewards: AppliedReward[];
-  savedUsd: number;
-  cashUsd: number; // what PayPal actually moves
+  savedUsd: number; // INSTANT discounts only — what reduces the charge now
+  /** Post-purchase cashback / statement credit — estimated, paid AFTER, does
+   *  NOT reduce cashUsd. */
+  cashbackUsd: number;
+  /** Loyalty points/miles value — redemption-dependent, informational only. */
+  pointsUsd: number;
+  cashUsd: number; // what PayPal actually moves now (price − savedUsd)
 }
 
 export interface OptimizeResult {
