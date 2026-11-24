@@ -131,6 +131,18 @@
           "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/ANTHROPIC_API_KEY-cD95F1"
         },
         {
+          "name": "GROQ_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/GROQ_API_KEY-Pgl0Y5"
+        },
+        {
+          "name": "GEMINI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/GEMINI_API_KEY-ABnGLW"
+        },
+        {
+          "name": "OPENROUTER_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/OPENROUTER_API_KEY-sDkJxx"
+        },
+        {
           "name": "BRYNTUM_LICENSE",
           "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/BRYNTUM_LICENSE-ULt48B"
         },
