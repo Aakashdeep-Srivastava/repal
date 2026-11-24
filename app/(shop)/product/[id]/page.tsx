@@ -13,6 +13,7 @@ import { ProductVisual } from "@/components/shop/ProductVisual";
 import { RewardMapping } from "@/components/shop/RewardMapping";
 import { SavingsBreakdown } from "@/components/shop/SavingsBreakdown";
 import { ConnectedSourcesBar } from "@/components/shop/ConnectedSourcesBar";
+import { ThinkingStatus } from "@/components/shop/ThinkingStatus";
 import { sharedId } from "@/lib/motion/tokens";
 import { useJourney } from "@/lib/store/journey";
 import { fetchWallet } from "@/lib/client";
@@ -272,7 +273,9 @@ export default function ProductDetailPage() {
       {/* ── REWARD MAPPING + OPTIMIZATION ──────────────────────────── */}
       <div className="flex flex-col gap-5">
         {eligQ.isLoading && (
-          <p className="text-sm text-[var(--color-muted)]">Checking your rewards…</p>
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3">
+            <ThinkingStatus />
+          </div>
         )}
 
         {eligQ.isError && (
