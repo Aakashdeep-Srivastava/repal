@@ -38,8 +38,11 @@ export function CheckoutSummary({
   confirmed,
   onConfirmedChange,
 }: CheckoutSummaryProps) {
-  const appliedDiscount = plan.useRewards.reduce((sum, r) => sum + r.appliedUsd, 0);
-  const rewardCount = plan.useRewards.length;
+  // Instant discounts only reduce the charge now; cashback/points are deferred.
+  const appliedDiscount = plan.savedUsd;
+  const rewardCount = plan.useRewards.filter((r) => r.effect === "instant").length;
+  const cashback = plan.cashbackUsd ?? 0;
+  const points = plan.pointsUsd ?? 0;
 
   return (
     <div className="space-y-5">
@@ -99,10 +102,22 @@ export function CheckoutSummary({
         </div>
       </dl>
 
-      {/* Conditional / future rewards — kept SEPARATE from the savings above. */}
+      {/* Post-purchase value — kept SEPARATE; never folded into "payable now". */}
       <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted)]">
-        <span className="font-medium text-[var(--color-fg)]">Pending / future rewards:</span>{" "}
-        none — this plan applies only discounts that are confirmed now.
+        {cashback > 0 || points > 0 ? (
+          <>
+            <span className="font-medium text-[var(--color-fg)]">After purchase:</span>{" "}
+            {cashback > 0 && <>≈ {usd(cashback)} cashback / statement credit</>}
+            {cashback > 0 && points > 0 && " · "}
+            {points > 0 && <>~{usd(points)} points value (redemption-dependent)</>}
+            {" "}— doesn&apos;t reduce today&apos;s charge.
+          </>
+        ) : (
+          <>
+            <span className="font-medium text-[var(--color-fg)]">Pending / future rewards:</span>{" "}
+            none — this plan applies only discounts that are confirmed now.
+          </>
+        )}
       </div>
 
       {/* Payment method — PayPal is the sole funding source. */}

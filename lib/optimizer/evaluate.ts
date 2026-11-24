@@ -1,4 +1,4 @@
-import type { Offer, Reward, RewardRule, RejectedReward } from "@/lib/types";
+import type { Offer, Reward, RewardRule, RejectedReward, RewardEffect } from "@/lib/types";
 import { categoryMatches } from "@/lib/tnc/categories";
 import { merchantMatches } from "@/lib/tnc/merchants";
 import { toCents, fromCents, fmtUsd } from "@/lib/optimizer/money";
@@ -20,6 +20,21 @@ import { toCents, fromCents, fmtUsd } from "@/lib/optimizer/money";
  *     capped by max_discount_usd and by the price itself → zero = No value
  *  7. discount < LOW_VALUE_FRACTION of price → Low value for this purchase
  */
+
+/**
+ * Classify how a reward's value is realised, from its free-form `type`:
+ *  - cashback / statement credit / rebate → "cashback" (post-purchase, estimated)
+ *  - points / miles / stars / loyalty     → "points"   (redemption-dependent)
+ *  - everything else (coupon, gift card, $-off, %-off, welcome cash, store credit)
+ *    → "instant" (reduces the amount paid now)
+ * This is what keeps cashback from being shown as instant money off.
+ */
+export function rewardEffect(reward: { type: string }): RewardEffect {
+  const t = (reward.type ?? "").toLowerCase();
+  if (/cash\s?back|statement\s?credit|rebate/.test(t)) return "cashback";
+  if (/points|miles|stars|loyalty/.test(t)) return "points";
+  return "instant";
+}
 
 /** Rewards parsed with lower confidence are shown but never auto-applied. */
 export const MIN_PARSE_CONFIDENCE = 0.8;

@@ -1,5 +1,5 @@
 import type { Offer, Reward, AppliedReward, RejectedReward } from "@/lib/types";
-import { evaluateReward, isRejected, stackingGroup, type EvalContext } from "@/lib/optimizer/evaluate";
+import { evaluateReward, isRejected, rewardEffect, stackingGroup, type EvalContext } from "@/lib/optimizer/evaluate";
 import { toCents, fromCents } from "@/lib/optimizer/money";
 
 /**
@@ -61,20 +61,86 @@ function byExpiryThenId(a: Candidate, b: Candidate): number {
 }
 
 export interface StackResult {
+  /** Every applied reward, each tagged with how it's realised (effect). */
   applied: AppliedReward[];
+  /** INSTANT discounts only — what reduces the amount paid now. */
   savedUsd: number;
+  /** Post-purchase cashback / statement credit (estimate) — not paid now. */
+  cashbackUsd: number;
+  /** Loyalty points/miles value — redemption-dependent, informational only. */
+  pointsUsd: number;
   /** Rewards that cannot apply to this offer, with reason + quoted clause. */
   rejected: RejectedReward[];
   /** Rewards that could apply but were left out (stacking conflict / not needed). */
   unused: RejectedReward[];
 }
 
+/**
+ * Deferred (cashback/points) rewards: eligible sum, ≤1 per not_combinable group,
+ * NOT capped by the price — they don't reduce today's charge, so the price-cap
+ * branch-and-bound used for instant discounts doesn't apply.
+ */
+function deferredSum(
+  rewards: Reward[],
+  offer: Offer,
+  ctx: EvalContext,
+  effect: "cashback" | "points",
+): { applied: AppliedReward[]; cents: number; rejected: RejectedReward[]; unused: RejectedReward[] } {
+  const rejected: RejectedReward[] = [];
+  const cands: { reward: Reward; cents: number; group: string | null; groupClause?: string }[] = [];
+  for (const reward of rewards) {
+    const r = evaluateReward(reward, offer, ctx);
+    if (isRejected(r)) {
+      rejected.push(r);
+      continue;
+    }
+    const g = stackingGroup(reward);
+    cands.push({ reward, cents: toCents(r.appliedUsd), group: g?.group ?? null, groupClause: g?.quotedClause });
+  }
+  // Keep all ungrouped; for each not_combinable group keep the highest-value one.
+  const byGroup = new Map<string, (typeof cands)[number]>();
+  const chosen: (typeof cands)[number][] = [];
+  for (const c of cands) {
+    if (c.group === null) {
+      chosen.push(c);
+      continue;
+    }
+    const cur = byGroup.get(c.group);
+    if (!cur || c.cents > cur.cents) byGroup.set(c.group, c);
+  }
+  for (const c of byGroup.values()) chosen.push(c);
+
+  const chosenIds = new Set(chosen.map((c) => c.reward.id));
+  const applied = chosen.map((c) => ({ rewardId: c.reward.id, appliedUsd: fromCents(c.cents), effect }));
+  const cents = chosen.reduce((s, c) => s + c.cents, 0);
+  const unused: RejectedReward[] = cands
+    .filter((c) => !chosenIds.has(c.reward.id))
+    .map((c) => ({
+      rewardId: c.reward.id,
+      reason: `Stacking conflict: not combinable with the ${effect} reward already applied (group "${c.group}")`,
+      ...(c.groupClause ? { quotedClause: c.groupClause } : {}),
+    }));
+  return { applied, cents, rejected, unused };
+}
+
 export function bestStack(offer: Offer, rewards: Reward[], ctx: EvalContext): StackResult {
   const price = toCents(offer.priceUsd);
   const rejected: RejectedReward[] = [];
-  const candidates: Candidate[] = [];
 
-  for (const reward of rewards) {
+  // Partition by how each reward is realised. Only INSTANT discounts reduce the
+  // amount paid now; cashback + points are deferred and summed separately so
+  // they never understate "total payable now".
+  const instantRewards: Reward[] = [];
+  const cashbackRewards: Reward[] = [];
+  const pointsRewards: Reward[] = [];
+  for (const r of rewards) {
+    const e = rewardEffect(r);
+    (e === "cashback" ? cashbackRewards : e === "points" ? pointsRewards : instantRewards).push(r);
+  }
+
+  // ── INSTANT: exact branch-and-bound, savings capped by the price. ──
+  const candidates: Candidate[] = [];
+  for (const reward of instantRewards) {
     const r = evaluateReward(reward, offer, ctx);
     if (isRejected(r)) {
       rejected.push(r);
@@ -138,7 +204,7 @@ export function bestStack(offer: Offer, rewards: Reward[], ctx: EvalContext): St
   for (const c of [...best].sort(byExpiryThenId)) {
     const use = Math.min(c.cents, left);
     left -= use;
-    applied.push({ rewardId: c.reward.id, appliedUsd: fromCents(use) });
+    applied.push({ rewardId: c.reward.id, appliedUsd: fromCents(use), effect: "instant" });
   }
   const savedCents = price - left;
 
@@ -160,5 +226,16 @@ export function bestStack(offer: Offer, rewards: Reward[], ctx: EvalContext): St
       };
     });
 
-  return { applied, savedUsd: fromCents(savedCents), rejected, unused };
+  // ── DEFERRED: cashback + points, summed separately (not price-capped). ──
+  const cb = deferredSum(cashbackRewards, offer, ctx, "cashback");
+  const pts = deferredSum(pointsRewards, offer, ctx, "points");
+
+  return {
+    applied: [...applied, ...cb.applied, ...pts.applied],
+    savedUsd: fromCents(savedCents),
+    cashbackUsd: fromCents(cb.cents),
+    pointsUsd: fromCents(pts.cents),
+    rejected: [...rejected, ...cb.rejected, ...pts.rejected],
+    unused: [...unused, ...cb.unused, ...pts.unused],
+  };
 }

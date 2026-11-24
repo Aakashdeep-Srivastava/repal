@@ -29,8 +29,10 @@ describe("explainPlan", () => {
         retailer: "bestbuy.com",
         buyUrl: "https://bestbuy.com/x",
       },
-      useRewards: [{ rewardId: "r1", appliedUsd: 30 }],
+      useRewards: [{ rewardId: "r1", appliedUsd: 30, effect: "instant" }],
       savedUsd: 30,
+      cashbackUsd: 0,
+      pointsUsd: 0,
       cashUsd: 318,
     };
     const explanation =
