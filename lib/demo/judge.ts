@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import type { RewardRule } from "@/lib/types";
 
 /**
  * Judge demo persona — a one-click, self-contained US account so hackathon
@@ -18,16 +19,49 @@ type SampleReward = {
   valueUsd: number;
   termsRaw: string;
   expiresInDays: number;
+  rules: RewardRule[];
 };
 
-/** US-flavoured sample rewards — unparsed (rules:[]) so the Terms agent can
- * parse one live on camera. Labelled sample data in the UI. */
+/** US-flavoured sample rewards with DETERMINISTIC rules (parseConfidence 1), so
+ * the demo applies + stacks even when the LLM Terms agent is unavailable in prod
+ * (it would otherwise leave them unparsed and nothing would auto-apply). The
+ * quoted clause on each rule is the reward's own terms — honest grounding.
+ * Labelled sample data in the UI. The three reward EFFECTS are represented:
+ * instant (gift card, Best Buy coupon, Nike credit), cashback (Chase), points (Starbucks). */
 const SAMPLE_REWARDS: SampleReward[] = [
-  { type: "giftcard", valueUsd: 50, expiresInDays: 5, termsRaw: "Target eGiftCard worth $50 — EXPIRES IN 5 DAYS. Redeemable storewide, online or in app." },
-  { type: "cashback", valueUsd: 20, expiresInDays: 60, termsRaw: "Chase Freedom: $20 cash back when you spend $100+ at electronics retailers this quarter." },
-  { type: "coupon", valueUsd: 15, expiresInDays: 20, termsRaw: "Best Buy: $15 off a purchase of $100 or more. Single use, excludes gift cards." },
-  { type: "points", valueUsd: 0, expiresInDays: 120, termsRaw: "Starbucks Rewards: 450 Stars (~$10 value) — redeemable on food and drink." },
-  { type: "credit", valueUsd: 30, expiresInDays: 9, termsRaw: "Nike Member store credit: $30, valid on full-price items. Expires soon." },
+  {
+    type: "giftcard", valueUsd: 50, expiresInDays: 5,
+    termsRaw: "Target eGiftCard worth $50 — EXPIRES IN 5 DAYS. Redeemable storewide, online or in app.",
+    rules: [{ predicate: "merchant_allow", value: ["target.com", "Target"], quotedClause: "Redeemable storewide at Target" }],
+  },
+  {
+    type: "cashback", valueUsd: 20, expiresInDays: 60,
+    termsRaw: "Chase Freedom: $20 cash back when you spend $100+ at electronics retailers this quarter.",
+    rules: [
+      { predicate: "flat_off_usd", value: 20, quotedClause: "$20 cash back" },
+      { predicate: "min_spend_usd", value: 100, quotedClause: "when you spend $100+" },
+      { predicate: "category_allow", value: ["electronics"], quotedClause: "at electronics retailers" },
+    ],
+  },
+  {
+    type: "coupon", valueUsd: 15, expiresInDays: 20,
+    termsRaw: "Best Buy: $15 off a purchase of $100 or more. Single use, excludes gift cards.",
+    rules: [
+      { predicate: "flat_off_usd", value: 15, quotedClause: "$15 off" },
+      { predicate: "min_spend_usd", value: 100, quotedClause: "a purchase of $100 or more" },
+      { predicate: "merchant_allow", value: ["bestbuy.com", "Best Buy"], quotedClause: "Best Buy" },
+    ],
+  },
+  {
+    type: "points", valueUsd: 10, expiresInDays: 120,
+    termsRaw: "Starbucks Rewards: 450 Stars (~$10 value) — redeemable on food and drink.",
+    rules: [{ predicate: "category_allow", value: ["coffee", "dining"], quotedClause: "redeemable on food and drink" }],
+  },
+  {
+    type: "credit", valueUsd: 30, expiresInDays: 9,
+    termsRaw: "Nike Member store credit: $30, valid on full-price items. Expires soon.",
+    rules: [{ predicate: "merchant_allow", value: ["nike.com", "Nike"], quotedClause: "Nike Member store credit" }],
+  },
 ];
 
 export async function seedJudge(): Promise<void> {
@@ -52,9 +86,9 @@ export async function seedJudge(): Promise<void> {
         type: r.type,
         valueUsd: r.valueUsd,
         termsRaw: r.termsRaw,
-        rules: [],
+        rules: r.rules as object[],
         status: "active",
-        parseConfidence: 0,
+        parseConfidence: 1,
         expiresAt: inDays(r.expiresInDays),
       })),
     }),
