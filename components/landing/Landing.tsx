@@ -276,12 +276,6 @@ export function Landing() {
             </details>
           ))}
         </div>
-        <p className="mt-10 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-card)] p-5 text-center text-[14px] text-[var(--color-muted)]">
-          <span className="font-semibold text-[var(--color-fg)]">Backing the future of agentic commerce?</span> RePal is raising — let&apos;s talk.{" "}
-          <a href="mailto:aakashdeep@xphoraai.com" className="font-medium text-[var(--color-brand)] hover:underline">aakashdeep@xphoraai.com</a>
-          {" · "}
-          <a href="tel:+916394958060" className="font-medium text-[var(--color-brand)] hover:underline">+91&nbsp;63949&nbsp;58060</a>
-        </p>
       </section>
 
       {/* premium closing — CTA + multi-column footer */}

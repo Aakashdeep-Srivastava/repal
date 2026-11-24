@@ -136,7 +136,7 @@ export function SiteFooter() {
           </div>
           <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-[12.5px] text-white/50 sm:flex-row">
             <span>© {2026} RePal · rewards to real money, on PayPal</span>
-            <div className="flex gap-5"><a href="mailto:aakashdeep@xphoraai.com" className="hover:text-white">Invest</a><Link href="/privacy" className="hover:text-white">Privacy</Link><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/wallet" className="hover:text-white">Dashboard</Link></div>
+            <div className="flex gap-5"><Link href="/privacy" className="hover:text-white">Privacy</Link><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/wallet" className="hover:text-white">Dashboard</Link></div>
           </div>
         </div>
       </div>
