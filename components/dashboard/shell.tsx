@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { AiStatusChip } from "@/components/dashboard/AiStatusChip";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { fetchWallet, fetchMe, fetchInsights, logout, type WalletReward } from "@/lib/client";
@@ -222,6 +223,7 @@ export function DashboardShell({ title, subtitle, children }: { title: React.Rea
           <div className="flex items-center gap-3">
             <button onClick={() => setPaletteOpen(true)} className="hidden items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2.5 text-sm text-[var(--color-muted)] shadow-sm transition-colors hover:border-[var(--color-brand)]/40 sm:flex"><I.sparkle className="h-4 w-4 text-[var(--color-brand)]" /><span>Ask RePal anything…</span><kbd className="ml-6 rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-1.5 py-0.5 text-[11px]">⌘K</kbd></button>
             <button onClick={() => setPaletteOpen(true)} aria-label="Search" className="grid h-10 w-10 place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm sm:hidden"><I.search className="h-5 w-5" /></button>
+            <AiStatusChip />
             <ThemeToggle />
             <NotificationsBell expiring={expiring} recent={insights?.recent ?? []} />
           </div>
