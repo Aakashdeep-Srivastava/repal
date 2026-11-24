@@ -78,8 +78,8 @@ export function StackEngine() {
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-teal)]" />Sandbox · sample rewards
             </span>
 
-            <h1 className="font-display mt-6 text-[clamp(2.3rem,6vw,4.3rem)] font-medium leading-[1.0] tracking-[-0.02em]">
-              One tap.<br />Every eligible reward,<br /><em className="italic text-[var(--color-brand)]">stacked into one payment.</em>
+            <h1 className="font-display mt-6 max-w-2xl text-[clamp(1.55rem,2.7vw,2.1rem)] font-medium leading-[1.12] tracking-[-0.02em]">
+              One tap. Every eligible reward,<br /><em className="italic text-[var(--color-brand)]">stacked into one payment.</em>
             </h1>
 
             <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2 text-[14px] text-[var(--color-muted)]">
@@ -92,13 +92,13 @@ export function StackEngine() {
             <div className="mt-7 flex flex-wrap items-end gap-x-8 gap-y-4">
               <div>
                 <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--color-muted)]">{done ? "One PayPal payment" : "Running total"}</div>
-                <NumberFlow value={due / 100} format={{ style: "currency", currency: "USD", currencyDisplay: "narrowSymbol" }} className="font-display tnum mt-1 text-[clamp(2.8rem,9vw,5.2rem)] font-semibold leading-none tracking-[-0.03em] text-[var(--color-fg)]" style={{ textShadow: "0 0 50px color-mix(in oklab, var(--color-brand) 16%, transparent)" }} transformTiming={{ duration: 720, easing: "cubic-bezier(.22,1,.36,1)" }} />
+                <NumberFlow value={due / 100} format={{ style: "currency", currency: "USD", currencyDisplay: "narrowSymbol" }} className="font-display tnum mt-1 text-[clamp(2.1rem,5.5vw,3.4rem)] font-semibold leading-none tracking-[-0.03em] text-[var(--color-fg)]" style={{ textShadow: "0 0 50px color-mix(in oklab, var(--color-brand) 16%, transparent)" }} transformTiming={{ duration: 720, easing: "cubic-bezier(.22,1,.36,1)" }} />
               </div>
               <AnimatePresence>
                 {applied.length > 0 && (
                   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-2">
                     <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--color-muted)]">You save</div>
-                    <NumberFlow value={(result.priceCents - due) / 100} format={{ style: "currency", currency: "USD", currencyDisplay: "narrowSymbol" }} className="font-display tnum mt-1 text-[clamp(1.6rem,4vw,2.4rem)] font-medium leading-none text-[var(--color-teal)]" />
+                    <NumberFlow value={(result.priceCents - due) / 100} format={{ style: "currency", currency: "USD", currencyDisplay: "narrowSymbol" }} className="font-display tnum mt-1 text-[clamp(1.3rem,3vw,1.85rem)] font-medium leading-none text-[var(--color-teal)]" />
                   </motion.div>
                 )}
               </AnimatePresence>
