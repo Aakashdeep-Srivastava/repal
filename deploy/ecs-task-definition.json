@@ -151,18 +151,6 @@
           "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/GOOGLE_CLIENT_SECRET"
         },
         {
-          "name": "GROQ_API_KEY",
-          "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/GROQ_API_KEY"
-        },
-        {
-          "name": "OPENROUTER_API_KEY",
-          "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/OPENROUTER_API_KEY"
-        },
-        {
-          "name": "GEMINI_API_KEY",
-          "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/GEMINI_API_KEY"
-        },
-        {
           "name": "PAYPAL_CLIENT_ID__CLEARTRIP",
           "valueFrom": "arn:aws:secretsmanager:us-west-2:413790912706:secret:repal/PAYPAL_CLIENT_ID__CLEARTRIP-gexVGg"
         },
