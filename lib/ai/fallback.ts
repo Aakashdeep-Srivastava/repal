@@ -76,6 +76,36 @@ export function resetCooldowns(): void {
   cooldownUntil.clear();
 }
 
+// ─── Activity tracker (best-effort, per-instance) ─────────────────────
+// Records which provider last served a call and whether it had to fail over,
+// so the UI can honestly show "running on Groq" / "switched to Groq".
+export interface AiActivity {
+  /** Friendly provider name that last succeeded (e.g. "Groq"). */
+  provider: string;
+  /** Set only when that success came AFTER a fail-over from another provider. */
+  switchedFrom?: string;
+  /** epoch ms of the last successful call. */
+  at: number;
+}
+let lastActivity: AiActivity | null = null;
+export function getAiActivity(): AiActivity | null {
+  return lastActivity;
+}
+
+const FRIENDLY: Record<string, string> = {
+  groq: "Groq",
+  "google.generative-ai": "Gemini",
+  google: "Gemini",
+  openrouter: "OpenRouter",
+  "amazon-bedrock": "Bedrock",
+  bedrock: "Bedrock",
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+};
+function friendly(provider: string): string {
+  return FRIENDLY[provider] ?? provider;
+}
+
 // ─── Error classification ─────────────────────────────────────────────
 function statusOf(err: unknown): number | undefined {
   const e = err as { statusCode?: number; status?: number };
@@ -187,11 +217,19 @@ export function createFallbackModel(
     const order = warm.length > 0 ? warm : chain;
 
     let lastErr: unknown;
+    let leftBehind: string | undefined; // provider we just failed over FROM
     for (const m of order) {
       const key = keyOf(m);
       for (let attempt = 0; ; attempt++) {
         try {
-          return await m[method](options);
+          const result = await m[method](options);
+          // Success — record who served it (and whether we fell over to get here).
+          lastActivity = {
+            provider: friendly(m.provider),
+            at: Date.now(),
+            ...(leftBehind ? { switchedFrom: leftBehind } : {}),
+          };
+          return result;
         } catch (e) {
           lastErr = e;
           const cls = classifyError(e);
@@ -205,6 +243,7 @@ export function createFallbackModel(
           // provider_down, or transient retries exhausted → cool it + fail over
           const cooldown = cls === "provider_down" ? PROVIDER_DOWN_COOLDOWN_MS : TRANSIENT_COOLDOWN_MS;
           cooldownUntil.set(key, Date.now() + cooldown);
+          leftBehind = friendly(m.provider);
           break; // next provider
         }
       }
