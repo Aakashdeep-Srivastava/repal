@@ -42,7 +42,6 @@
     "@ai-sdk/google": "^4.0.118",
     "@ai-sdk/openai": "^4.0.111",
     "@aws-sdk/credential-providers": "^3.1164.0",
-    "@bryntum/scheduler-enterprise": "^8.0.0",
     "@channel3/sdk": "^4.8.0",
     "@gsap/react": "^2.1.2",
     "@number-flow/react": "^0.6.2",
