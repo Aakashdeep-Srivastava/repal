@@ -12,6 +12,7 @@ import {
 import { ProductVisual } from "@/components/shop/ProductVisual";
 import { RewardMapping } from "@/components/shop/RewardMapping";
 import { SavingsBreakdown } from "@/components/shop/SavingsBreakdown";
+import { ConnectedSourcesBar } from "@/components/shop/ConnectedSourcesBar";
 import { sharedId } from "@/lib/motion/tokens";
 import { useJourney } from "@/lib/store/journey";
 import { fetchWallet } from "@/lib/client";
@@ -284,6 +285,7 @@ export default function ProductDetailPage() {
 
         {eligQ.data && winner && (
           <>
+            <ConnectedSourcesBar rewards={Object.values(rewardsById)} />
             <RewardMapping
               eligible={winner.useRewards}
               rejected={eligQ.data.rejected}
