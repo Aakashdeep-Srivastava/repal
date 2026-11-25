@@ -66,6 +66,7 @@ export function Landing() {
   const router = useRouter();
   const qc = useQueryClient();
   const root = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   // Invalidate the cached ["me"] (populated as null while logged out) so the
   // wallet shell shows the signed-in identity instead of stale "Guest"/"there".
   const demo = useMutation({
@@ -103,6 +104,20 @@ export function Landing() {
     gsap.from(".demo-frame", {
       opacity: 0, y: 64, scale: 0.95, duration: 1.05, ease: "power3.out",
       scrollTrigger: { trigger: ".demo-frame", start: "top 82%" },
+    });
+
+    // Play the demo only while it is on screen; pause when it scrolls away.
+    // (Muted, so programmatic play() is permitted; users can unmute via controls.)
+    ScrollTrigger.create({
+      trigger: ".demo-frame",
+      start: "top 75%",
+      end: "bottom 25%",
+      onToggle: (self) => {
+        const v = videoRef.current;
+        if (!v) return;
+        if (self.isActive) void v.play().catch(() => {});
+        else v.pause();
+      },
     });
 
     // Ambient life — gated behind prefers-reduced-motion so it never nags users
@@ -173,6 +188,7 @@ export function Landing() {
         </div>
         <div className="demo-frame mx-auto mt-9 max-w-4xl overflow-hidden rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[0_30px_80px_-30px_rgba(37,99,235,.5)]">
           <video
+            ref={videoRef}
             className="block w-full"
             src="/media/repal-demo-desktop.mp4"
             poster="/media/repal-demo-poster.jpg"
@@ -180,7 +196,6 @@ export function Landing() {
             muted
             loop
             playsInline
-            autoPlay
             preload="metadata"
             aria-label="RePal product demo — stacking rewards into one PayPal payment"
           />
