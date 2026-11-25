@@ -38,10 +38,9 @@ Your rewards are scattered across a dozen apps — coupons, gift cards, cashback
 &nbsp;[📱 Vertical / Reel (9:16)](https://repal.shop/media/repal-demo-vertical.mp4)&nbsp; ·
 &nbsp;[⚡ Try it live →](https://repal.shop/stack)
 
-</div>
+*(The preview above is a clip — tap it or the links for the full, narrated 40-second demo.)*
 
-<!-- Plays inline on GitHub once this is on `main`. -->
-<video src="https://github.com/Aakashdeep-Srivastava/repal/raw/main/public/media/repal-demo-desktop.mp4" controls width="100%"></video>
+</div>
 
 ---
 

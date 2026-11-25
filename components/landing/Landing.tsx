@@ -142,7 +142,33 @@ export function Landing() {
         <p className="hero-in mx-auto mt-5 max-w-xl text-[16px] text-[var(--color-muted)] sm:text-[18px]">RePal reads your rewards&apos; fine print, stacks every valid offer, and pays with PayPal — then hands you a signed receipt proving what you saved. All within the limits you set.</p>
         <div className="hero-in mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"><PrimaryCTA /><DemoCTA /></div>
         <div className="hero-in mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13.5px] font-medium text-[var(--color-muted)]">{trust.map(([l, I]) => <span key={l} className="inline-flex items-center gap-1.5"><I className="h-4 w-4 text-[#2563eb]" />{l}</span>)}</div>
-        <a href="#how" className="hero-in mx-auto mt-10 grid h-9 w-9 animate-bounce place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm"><Ic.arrowD className="h-4 w-4" /></a>
+        <a href="#demo" className="hero-in mx-auto mt-10 grid h-9 w-9 animate-bounce place-items-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted)] shadow-sm"><Ic.arrowD className="h-4 w-4" /></a>
+      </section>
+
+      {/* DEMO VIDEO — the fastest way to "get it": watch the real /stack flow */}
+      <section id="demo" className="mx-auto max-w-5xl px-5 pt-24 text-center">
+        <div className="reveal flex flex-col items-center">
+          <Pill>See it in action</Pill>
+          <h2 className="font-display mt-5 text-[32px] font-bold leading-[1.08] tracking-tight sm:text-[46px]">Watch rewards become{" "}
+            <em className="italic" style={{ background: GRAD, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }}>one payment.</em>
+          </h2>
+          <p className="mt-4 max-w-xl text-[15px] text-[var(--color-muted)] sm:text-[16px]">A 40-second walkthrough: RePal reads the fine print on 9 rewards, voids what can&apos;t stack, and combines the 4 that fit — <strong className="text-[var(--color-fg)]">$249.99 → $157.59</strong>, saving $92.40 in one PayPal payment.</p>
+        </div>
+        <div className="reveal mx-auto mt-9 max-w-4xl overflow-hidden rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[0_30px_80px_-30px_rgba(37,99,235,.5)]">
+          <video
+            className="block w-full"
+            src="/media/repal-demo-desktop.mp4"
+            poster="/media/repal-demo-poster.jpg"
+            controls
+            muted
+            loop
+            playsInline
+            autoPlay
+            preload="metadata"
+            aria-label="RePal product demo — stacking rewards into one PayPal payment"
+          />
+        </div>
+        <div className="reveal mt-4 text-[13px] text-[var(--color-muted)]">🔊 Unmute for the narrated version &nbsp;·&nbsp; <a href="/media/repal-demo-vertical.mp4" className="font-semibold text-[#2563eb] hover:underline">vertical cut</a> &nbsp;·&nbsp; <a href="/stack" className="font-semibold text-[#2563eb] hover:underline">try it live →</a></div>
       </section>
 
       {/* FLOW — rewards in one place → agent → best price, then the 4 steps */}
