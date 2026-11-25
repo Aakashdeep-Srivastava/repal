@@ -14,7 +14,20 @@ import { SITE_URL } from "@/lib/site";
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date("2026-11-23");
   return [
-    { url: `${SITE_URL}/`, lastModified },
+    {
+      url: `${SITE_URL}/`,
+      lastModified,
+      // Video sitemap extension — surfaces the demo clip to Google Video search.
+      videos: [
+        {
+          title: "RePal — stack every reward into one PayPal payment",
+          thumbnail_loc: `${SITE_URL}/media/repal-demo-poster.jpg`,
+          description:
+            "RePal reads the fine print on nine rewards, voids the ones that cannot stack, and combines the four that fit — $249.99 down to $157.59, saving $92.40 in one PayPal payment.",
+          content_loc: `${SITE_URL}/media/repal-demo-desktop.mp4`,
+        },
+      ],
+    },
     { url: `${SITE_URL}/about`, lastModified },
     { url: `${SITE_URL}/security`, lastModified },
     { url: `${SITE_URL}/privacy`, lastModified },

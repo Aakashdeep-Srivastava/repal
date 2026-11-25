@@ -23,6 +23,28 @@ Your rewards are scattered across a dozen apps — coupons, gift cards, cashback
 
 </div>
 
+---
+
+## 🎬 See it in action
+
+<div align="center">
+
+[![RePal — stack every reward into one PayPal payment](docs/assets/demo.gif)](https://repal.shop/media/repal-demo-desktop.mp4)
+
+*RePal reads the fine print on **9 rewards**, voids what can't stack, and combines the **4 that fit** — **$249.99 → $157.59**, saving **$92.40** in one PayPal payment.*
+
+**▶ Watch the full 40-second demo:**
+&nbsp;[🖥️ Desktop (16:9)](https://repal.shop/media/repal-demo-desktop.mp4)&nbsp; ·
+&nbsp;[📱 Vertical / Reel (9:16)](https://repal.shop/media/repal-demo-vertical.mp4)&nbsp; ·
+&nbsp;[⚡ Try it live →](https://repal.shop/stack)
+
+</div>
+
+<!-- Plays inline on GitHub once this is on `main`. -->
+<video src="https://github.com/Aakashdeep-Srivastava/repal/raw/main/public/media/repal-demo-desktop.mp4" controls width="100%"></video>
+
+---
+
 > 🧭 **Litmus test — why PayPal is the core, not a checkout button:** remove PayPal and the agent *cannot act, get paid, or pay you back.* The mandate **is** a PayPal **Vault** token; cashback settles via PayPal **Payouts**; every move is a signed, verifiable receipt.
 >
 > 🔒 **Prime directive:** the **LLM never computes money.** The optimizer and policy engine are **deterministic, temperature‑0, and unit‑tested** — the model only *reads, plans, explains, and asks.* Every PayPal call passes a signed policy gate first.
@@ -150,6 +172,21 @@ npm test                          # ✅ deterministic core (optimizer, policy, r
 | `scripts/` | `paypal-mcp.ts` (MCP server), smoke tests, seeds |
 | `prisma/` | Schema, migrations, seed · `workers/` reward ingestion + expiry scan |
 | `docs/` | [`TECH_PRD.md`](docs/TECH_PRD.md) · [`DEPLOY_AWS.md`](docs/DEPLOY_AWS.md) · [`MCP.md`](docs/MCP.md) · [`PAYPAL_SETUP.md`](docs/PAYPAL_SETUP.md) |
+
+---
+
+## 🤝 Contributing & collaborating
+
+RePal is open source (MIT) and built in the open — PRs, issues, and ideas are welcome.
+
+1. **Fork & branch** — `git checkout -b feat/your-idea`
+2. **Set up** — follow [Quick start](#-quick-start); keep `npm test` green (the deterministic core is unit‑tested).
+3. **Keep the prime directive** — *the LLM never computes money.* New money paths go through the optimizer + policy gate, with a signed receipt and a test.
+4. **Open a PR** — describe the change and link any issue. CI (keyless GitHub OIDC → ECR → ECS) runs on every PR.
+
+**Good first areas:** reward‑source parsers (`lib/`), new merchant catalog entries, UI polish on `/wallet` · `/insights` · `/rescue`, and edge‑case coverage in `lib/stack/`.
+
+🐛 [Open an issue](https://github.com/Aakashdeep-Srivastava/repal/issues) &nbsp;·&nbsp; 💬 [Start a discussion](https://github.com/Aakashdeep-Srivastava/repal/discussions) &nbsp;·&nbsp; ⭐ Star the repo if RePal is useful to you
 
 ---
 
