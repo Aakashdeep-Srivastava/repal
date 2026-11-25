@@ -98,6 +98,23 @@ export function Landing() {
       .fromTo(".flow-pulse", { left: "0%", opacity: 0 }, { opacity: 1, duration: 0.2, ease: "none" })
       .to(".flow-pulse", { left: "100%", duration: 1.3, ease: "none" }, 0)
       .to(".flow-pulse", { opacity: 0, duration: 0.25, ease: "none" }, 1.1);
+
+    // Demo video — a premium entrance: rises and scales up as it enters view.
+    gsap.from(".demo-frame", {
+      opacity: 0, y: 64, scale: 0.95, duration: 1.05, ease: "power3.out",
+      scrollTrigger: { trigger: ".demo-frame", start: "top 82%" },
+    });
+
+    // Ambient life — gated behind prefers-reduced-motion so it never nags users
+    // who opt out. gsap.matchMedia() is tracked by this context and auto-reverts.
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.to(".hero-blob", {
+        y: 26, duration: 7, ease: "sine.inOut", repeat: -1, yoyo: true,
+        stagger: { each: 1.6, from: "edges" },
+      });
+      gsap.to(".agent-orb", { scale: 1.04, duration: 2.4, ease: "sine.inOut", repeat: -1, yoyo: true });
+    });
   }, { scope: root });
 
   const NAV = [["How it Works", "#how"], ["Rewards", "#money"], ["Security", "#trust"], ["For Merchants", "#personas"], ["Resources", "#how"]];
@@ -116,8 +133,8 @@ export function Landing() {
   return (
     <main ref={root} className="relative min-h-dvh overflow-x-hidden bg-[var(--color-bg)] text-[var(--color-fg)]">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-40 top-0 h-[520px] w-[520px] rounded-full opacity-40 blur-3xl" style={{ background: "radial-gradient(circle,#93c5fd,transparent 60%)" }} />
-        <div className="absolute -right-40 top-40 h-[560px] w-[560px] rounded-full opacity-40 blur-3xl" style={{ background: "radial-gradient(circle,#8fd0ff,transparent 60%)" }} />
+        <div className="hero-blob absolute -left-40 top-0 h-[520px] w-[520px] rounded-full opacity-40 blur-3xl" style={{ background: "radial-gradient(circle,#93c5fd,transparent 60%)" }} />
+        <div className="hero-blob absolute -right-40 top-40 h-[560px] w-[560px] rounded-full opacity-40 blur-3xl" style={{ background: "radial-gradient(circle,#8fd0ff,transparent 60%)" }} />
       </div>
 
       {/* NAV */}
@@ -154,7 +171,7 @@ export function Landing() {
           </h2>
           <p className="mt-4 max-w-xl text-[15px] text-[var(--color-muted)] sm:text-[16px]">A 40-second walkthrough: RePal reads the fine print on 9 rewards, voids what can&apos;t stack, and combines the 4 that fit — <strong className="text-[var(--color-fg)]">$249.99 → $157.59</strong>, saving $92.40 in one PayPal payment.</p>
         </div>
-        <div className="reveal mx-auto mt-9 max-w-4xl overflow-hidden rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[0_30px_80px_-30px_rgba(37,99,235,.5)]">
+        <div className="demo-frame mx-auto mt-9 max-w-4xl overflow-hidden rounded-[22px] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[0_30px_80px_-30px_rgba(37,99,235,.5)]">
           <video
             className="block w-full"
             src="/media/repal-demo-desktop.mp4"
@@ -209,7 +226,7 @@ export function Landing() {
                 <div className="h-0 w-0 border-y-[7px] border-l-[11px] border-y-transparent border-l-[#065f46]" />
               </div>
               {/* the orb (compact) */}
-              <div className="relative grid h-24 w-24 place-items-center overflow-hidden rounded-[26px] shadow-[0_28px_60px_-22px_rgba(37,99,235,.75)]" style={{ background: GRAD }}>
+              <div className="agent-orb relative grid h-24 w-24 place-items-center overflow-hidden rounded-[26px] shadow-[0_28px_60px_-22px_rgba(37,99,235,.75)]" style={{ background: GRAD }}>
                 <span aria-hidden className="absolute -inset-5 -z-10 rounded-full opacity-45 blur-2xl" style={{ background: GRAD }} />
                 <span aria-hidden className="absolute inset-0 bg-[radial-gradient(120%_90%_at_25%_15%,rgba(255,255,255,.55),transparent_55%)]" />
                 <Mark className="relative h-12 w-12 brightness-0 invert" />
